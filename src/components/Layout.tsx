@@ -61,7 +61,7 @@ export default function Layout({ children }: LayoutProps) {
                   "text-lg font-medium transition-colors hover:text-blue-600",
                   isActive("/about") ? "text-blue-600" : "text-gray-600",
                 )}
-                style={{ fontFamily: "Abril Fatface, display" }}
+                style={{ fontFamily: "Alata, sans-serif" }}
               >
                 About
               </Link>
@@ -108,7 +108,7 @@ export default function Layout({ children }: LayoutProps) {
                 "text-sm font-medium transition-colors hover:text-blue-600",
                 isActive("/about") ? "text-blue-600" : "text-gray-600",
               )}
-              style={{ fontFamily: "Abril Fatface, display" }}
+              style={{ fontFamily: "Alata, sans-serif" }}
             >
               About
             </Link>
