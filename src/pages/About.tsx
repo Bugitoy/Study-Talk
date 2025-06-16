@@ -12,8 +12,20 @@ export default function About() {
           <div>
             <Card className="rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
               <CardContent className="p-0">
-                <div className="aspect-square flex items-center justify-center" style={{ backgroundImage: "linear-gradient(to bottom right, #FFECD2, #FFDECA)" }}>
-                  <div className="w-48 h-48 rounded-full flex items-center justify-center" style={{ backgroundImage: "linear-gradient(to bottom right, #F7D379, #F9B288)" }}
+                <div
+                  className="aspect-square flex items-center justify-center"
+                  style={{
+                    backgroundImage:
+                      "linear-gradient(to bottom right, #FFECD2, #FFDECA)",
+                  }}
+                >
+                  <div
+                    className="w-48 h-48 rounded-full flex items-center justify-center"
+                    style={{
+                      backgroundImage:
+                        "linear-gradient(to bottom right, #F7D379, #F9B288)",
+                    }}
+                  >
                     <span className="text-6xl font-bold text-white">T</span>
                   </div>
                 </div>
@@ -116,19 +128,19 @@ export default function About() {
                   <span>Authentic pronunciation guides for every word</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Heart className="w-4 h-4 text-red-500 flex-shrink-0" />
+                  <Heart className="w-4 h-4 text-orange-500 flex-shrink-0" />
                   <span>Contextual examples from real usage</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Heart className="w-4 h-4 text-red-500 flex-shrink-0" />
+                  <Heart className="w-4 h-4 text-orange-500 flex-shrink-0" />
                   <span>Save and organize your favorite words</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Heart className="w-4 h-4 text-red-500 flex-shrink-0" />
+                  <Heart className="w-4 h-4 text-orange-500 flex-shrink-0" />
                   <span>Regular updates with new vocabulary</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Heart className="w-4 h-4 text-red-500 flex-shrink-0" />
+                  <Heart className="w-4 h-4 text-orange-500 flex-shrink-0" />
                   <span>Cultural context and usage notes</span>
                 </li>
               </ul>
