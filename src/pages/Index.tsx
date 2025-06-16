@@ -61,8 +61,7 @@ export default function Index() {
             onClick={() => setLanguage("en")}
             className="rounded-lg px-8 py-3 text-lg font-medium overflow-hidden"
             style={{
-              backgroundColor:
-                language === "en" ? "rgba(162, 196, 240, 1)" : undefined,
+              backgroundColor: language === "en" ? "#F7D379" : undefined,
             }}
           >
             English - Setswana
@@ -72,8 +71,7 @@ export default function Index() {
             onClick={() => setLanguage("tn")}
             className="rounded-lg px-8 py-3 text-lg font-medium overflow-hidden"
             style={{
-              backgroundColor:
-                language === "tn" ? "rgba(162, 196, 240, 1)" : undefined,
+              backgroundColor: language === "tn" ? "#F7D379" : undefined,
             }}
           >
             Setswana - English
@@ -117,7 +115,7 @@ export default function Index() {
                     setSelectedLetter("");
                   }}
                   placeholder="Search words..."
-                  className="pl-12 pr-12 py-4 text-lg rounded-lg border-2 border-gray-200 focus:border-blue-400 transition-colors"
+                  className="pl-12 pr-12 py-4 text-lg rounded-lg border-2 border-gray-200 focus:border-orange-400 transition-colors"
                 />
                 {(searchQuery || selectedLetter) && (
                   <Button
@@ -143,7 +141,7 @@ export default function Index() {
                     <div className="flex items-start justify-between">
                       <Link
                         to={`/word/${word.id}`}
-                        className="flex-1 space-y-2 hover:text-blue-600 transition-colors"
+                        className="flex-1 space-y-2 hover:text-orange-600 transition-colors"
                       >
                         <div className="flex items-center gap-3">
                           <h3 className="text-2xl font-bold text-gray-900">
@@ -173,7 +171,7 @@ export default function Index() {
                             {word.partOfSpeech}
                           </span>
                           <span>→</span>
-                          <span className="font-medium">
+                          <span className="font-medium text-orange-600">
                             {word.translation}
                           </span>
                         </div>

@@ -55,7 +55,12 @@ export default function WordDetail() {
 
         {/* Word Card */}
         <Card className="rounded-3xl border-2 border-gray-200 shadow-lg overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 pb-8">
+          <CardHeader
+            className="pb-8"
+            style={{
+              backgroundImage: "linear-gradient(to right, #FFECD2, #FFDECA)",
+            }}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <CardTitle className="text-4xl font-bold text-gray-900">
@@ -109,7 +114,7 @@ export default function WordDetail() {
                 <h3 className="text-xl font-semibold text-gray-900 mb-3">
                   Translation
                 </h3>
-                <p className="text-2xl font-medium text-blue-600">
+                <p className="text-2xl font-medium text-orange-600">
                   {word.translation}
                 </p>
               </div>
@@ -133,8 +138,11 @@ export default function WordDetail() {
                   <div className="space-y-3">
                     {word.examples.map((example, index) => (
                       <div key={index} className="flex items-start gap-3">
-                        <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                          <span className="text-sm font-semibold text-blue-600">
+                        <div
+                          className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
+                          style={{ backgroundColor: "#F7D379" }}
+                        >
+                          <span className="text-sm font-semibold text-gray-800">
                             {index + 1}
                           </span>
                         </div>

@@ -155,8 +155,8 @@ export default function Account() {
             <Card className="rounded-2xl border border-gray-200 shadow-sm">
               <CardContent className="p-6">
                 <div className="text-center">
-                  <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center">
-                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <div className="w-32 h-32 mx-auto mb-6 rounded-full flex items-center justify-center" style={{ backgroundImage: "linear-gradient(to bottom right, #FFECD2, #FFDECA)" }}>
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundImage: "linear-gradient(to bottom right, #F7D379, #F9B288)" }}
                       <User className="w-8 h-8 text-white" />
                     </div>
                   </div>

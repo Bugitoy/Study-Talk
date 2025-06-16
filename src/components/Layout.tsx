@@ -16,13 +16,25 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div
+      className="min-h-screen"
+      style={{
+        backgroundImage:
+          "linear-gradient(to bottom right, #FFECD2, #DCEAF7, #FFDECA)",
+      }}
+    >
       <header className="border-b border-gray-200 bg-white/80 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(to bottom right, #F7D379, #F9B288)",
+                }}
+              >
                 <span className="text-white font-bold text-lg">T</span>
               </div>
               <span
@@ -38,8 +50,8 @@ export default function Layout({ children }: LayoutProps) {
               <Link
                 to="/"
                 className={cn(
-                  "text-lg font-medium transition-colors hover:text-blue-600",
-                  isActive("/") ? "text-blue-600" : "text-gray-600",
+                  "text-lg font-medium transition-colors hover:text-orange-600",
+                  isActive("/") ? "text-orange-600" : "text-gray-600",
                 )}
                 style={{ fontFamily: "Alata, sans-serif" }}
               >
@@ -48,8 +60,8 @@ export default function Layout({ children }: LayoutProps) {
               <Link
                 to="/saved"
                 className={cn(
-                  "text-lg font-medium transition-colors hover:text-blue-600",
-                  isActive("/saved") ? "text-blue-600" : "text-gray-600",
+                  "text-lg font-medium transition-colors hover:text-orange-600",
+                  isActive("/saved") ? "text-orange-600" : "text-gray-600",
                 )}
                 style={{ fontFamily: "Alata, sans-serif" }}
               >
@@ -58,8 +70,8 @@ export default function Layout({ children }: LayoutProps) {
               <Link
                 to="/about"
                 className={cn(
-                  "text-lg font-medium transition-colors hover:text-blue-600",
-                  isActive("/about") ? "text-blue-600" : "text-gray-600",
+                  "text-lg font-medium transition-colors hover:text-orange-600",
+                  isActive("/about") ? "text-orange-600" : "text-gray-600",
                 )}
                 style={{ fontFamily: "Alata, sans-serif" }}
               >
@@ -85,8 +97,8 @@ export default function Layout({ children }: LayoutProps) {
             <Link
               to="/"
               className={cn(
-                "text-sm font-medium transition-colors hover:text-blue-600",
-                isActive("/") ? "text-blue-600" : "text-gray-600",
+                "text-sm font-medium transition-colors hover:text-orange-600",
+                isActive("/") ? "text-orange-600" : "text-gray-600",
               )}
               style={{ fontFamily: "Alata, sans-serif" }}
             >
@@ -95,8 +107,8 @@ export default function Layout({ children }: LayoutProps) {
             <Link
               to="/saved"
               className={cn(
-                "text-sm font-medium transition-colors hover:text-blue-600",
-                isActive("/saved") ? "text-blue-600" : "text-gray-600",
+                "text-sm font-medium transition-colors hover:text-orange-600",
+                isActive("/saved") ? "text-orange-600" : "text-gray-600",
               )}
               style={{ fontFamily: "Alata, sans-serif" }}
             >
@@ -105,8 +117,8 @@ export default function Layout({ children }: LayoutProps) {
             <Link
               to="/about"
               className={cn(
-                "text-sm font-medium transition-colors hover:text-blue-600",
-                isActive("/about") ? "text-blue-600" : "text-gray-600",
+                "text-sm font-medium transition-colors hover:text-orange-600",
+                isActive("/about") ? "text-orange-600" : "text-gray-600",
               )}
               style={{ fontFamily: "Alata, sans-serif" }}
             >
