@@ -51,10 +51,12 @@ export default function Saved() {
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Saved Words</h1>
-          <p className="text-gray-600">
+      <div className="max-w-6xl mx-auto flex flex-col">
+        <div className="mb-8 flex flex-col">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2 mx-auto">
+            Saved Words
+          </h1>
+          <p className="text-gray-600 mx-auto">
             Your starred words for quick reference
           </p>
         </div>
@@ -77,7 +79,7 @@ export default function Saved() {
         ) : (
           <>
             {/* Language Toggle */}
-            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mb-8">
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mx-auto mb-8">
               <Button
                 variant={language === "en" ? "default" : "outline"}
                 onClick={() => setLanguage("en")}

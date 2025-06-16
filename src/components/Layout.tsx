@@ -25,7 +25,12 @@ export default function Layout({ children }: LayoutProps) {
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-lg">T</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">Thanodi</span>
+              <span
+                className="text-xl font-bold text-gray-900"
+                style={{ fontFamily: "Alata, sans-serif" }}
+              >
+                Thanodi
+              </span>
             </Link>
 
             {/* Navigation */}
@@ -36,6 +41,7 @@ export default function Layout({ children }: LayoutProps) {
                   "text-lg font-medium transition-colors hover:text-blue-600",
                   isActive("/") ? "text-blue-600" : "text-gray-600",
                 )}
+                style={{ fontFamily: "Alata, sans-serif" }}
               >
                 Dictionary
               </Link>
@@ -45,6 +51,7 @@ export default function Layout({ children }: LayoutProps) {
                   "text-lg font-medium transition-colors hover:text-blue-600",
                   isActive("/saved") ? "text-blue-600" : "text-gray-600",
                 )}
+                style={{ fontFamily: "Alata, sans-serif" }}
               >
                 Saved
               </Link>
@@ -54,6 +61,7 @@ export default function Layout({ children }: LayoutProps) {
                   "text-lg font-medium transition-colors hover:text-blue-600",
                   isActive("/about") ? "text-blue-600" : "text-gray-600",
                 )}
+                style={{ fontFamily: "Abril Fatface, display" }}
               >
                 About
               </Link>
@@ -80,6 +88,7 @@ export default function Layout({ children }: LayoutProps) {
                 "text-sm font-medium transition-colors hover:text-blue-600",
                 isActive("/") ? "text-blue-600" : "text-gray-600",
               )}
+              style={{ fontFamily: "Alata, sans-serif" }}
             >
               Dictionary
             </Link>
@@ -89,6 +98,7 @@ export default function Layout({ children }: LayoutProps) {
                 "text-sm font-medium transition-colors hover:text-blue-600",
                 isActive("/saved") ? "text-blue-600" : "text-gray-600",
               )}
+              style={{ fontFamily: "Alata, sans-serif" }}
             >
               Saved
             </Link>
@@ -98,6 +108,7 @@ export default function Layout({ children }: LayoutProps) {
                 "text-sm font-medium transition-colors hover:text-blue-600",
                 isActive("/about") ? "text-blue-600" : "text-gray-600",
               )}
+              style={{ fontFamily: "Abril Fatface, display" }}
             >
               About
             </Link>
