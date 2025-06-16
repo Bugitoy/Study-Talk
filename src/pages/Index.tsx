@@ -53,20 +53,28 @@ export default function Index() {
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto flex flex-col">
         {/* Language Toggle */}
-        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mb-8">
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mx-auto mb-8">
           <Button
             variant={language === "en" ? "default" : "outline"}
             onClick={() => setLanguage("en")}
-            className="rounded-full px-8 py-3 text-lg font-medium"
+            className="rounded-lg px-8 py-3 text-lg font-medium overflow-hidden"
+            style={{
+              backgroundColor:
+                language === "en" ? "rgba(162, 196, 240, 1)" : undefined,
+            }}
           >
             English - Setswana
           </Button>
           <Button
             variant={language === "tn" ? "default" : "outline"}
             onClick={() => setLanguage("tn")}
-            className="rounded-full px-8 py-3 text-lg font-medium"
+            className="rounded-lg px-8 py-3 text-lg font-medium overflow-hidden"
+            style={{
+              backgroundColor:
+                language === "tn" ? "rgba(162, 196, 240, 1)" : undefined,
+            }}
           >
             Setswana - English
           </Button>
@@ -109,7 +117,7 @@ export default function Index() {
                     setSelectedLetter("");
                   }}
                   placeholder="Search words..."
-                  className="pl-12 pr-12 py-4 text-lg rounded-2xl border-2 border-gray-200 focus:border-blue-400 transition-colors"
+                  className="pl-12 pr-12 py-4 text-lg rounded-lg border-2 border-gray-200 focus:border-blue-400 transition-colors"
                 />
                 {(searchQuery || selectedLetter) && (
                   <Button
@@ -131,7 +139,7 @@ export default function Index() {
                   key={word.id}
                   className="overflow-hidden rounded-2xl border border-gray-200 hover:shadow-md transition-shadow"
                 >
-                  <CardContent className="p-6">
+                  <CardContent className="p-6 -mb-0.5">
                     <div className="flex items-start justify-between">
                       <Link
                         to={`/word/${word.id}`}
