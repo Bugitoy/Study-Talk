@@ -14,24 +14,23 @@ export default function SavedPage() {
   const [language, setLanguage] = useState<"en" | "tn">("en");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLetter, setSelectedLetter] = useState<string>("");
-
-  const starredWords = getStarredWords();
+  const [words, setWords] = useState(getStarredWords());
 
   const filteredWords = useMemo(() => {
-    let words = starredWords.filter((word) => word.language === language);
+    let filteredList = words.filter((word) => word.language === language);
 
     if (searchQuery) {
-      words = words.filter((word) =>
+      filteredList = filteredList.filter((word) =>
         word.word.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     } else if (selectedLetter) {
-      words = words.filter((word) =>
+      filteredList = filteredList.filter((word) =>
         word.word.toLowerCase().startsWith(selectedLetter.toLowerCase()),
       );
     }
 
-    return words;
-  }, [language, searchQuery, selectedLetter, starredWords]);
+    return filteredList;
+  }, [language, searchQuery, selectedLetter, words]);
 
   const clearSearch = () => {
     setSearchQuery("");
@@ -39,11 +38,14 @@ export default function SavedPage() {
   };
 
   const toggleStarred = (wordId: string) => {
-    // In a real app, this would update the backend
-    const word = starredWords.find((w) => w.id === wordId);
-    if (word) {
-      word.starred = !word.starred;
-    }
+    setWords(
+      (prevWords) =>
+        prevWords
+          .map((word) =>
+            word.id === wordId ? { ...word, starred: !word.starred } : word,
+          )
+          .filter((word) => word.starred), // Remove from saved list if unstarred
+    );
   };
 
   const playPronunciation = (word: DictionaryWord) => {
