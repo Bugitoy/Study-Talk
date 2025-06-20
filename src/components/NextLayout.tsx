@@ -71,6 +71,16 @@ export default function NextLayout({ children }: LayoutProps) {
                 Saved
               </Link>
               <Link
+                href="/pricing"
+                className={cn(
+                  "text-lg font-medium transition-colors hover:text-orange-600",
+                  isActive("/pricing") ? "text-orange-600" : "text-gray-600",
+                )}
+                style={{ fontFamily: "Alata, sans-serif" }}
+              >
+                Pricing
+              </Link>
+              <Link
                 href="/about"
                 className={cn(
                   "text-lg font-medium transition-colors hover:text-orange-600",
@@ -116,6 +126,16 @@ export default function NextLayout({ children }: LayoutProps) {
               style={{ fontFamily: "Alata, sans-serif" }}
             >
               Saved
+            </Link>
+            <Link
+              href="/pricing"
+              className={cn(
+                "text-sm font-medium transition-colors hover:text-orange-600",
+                isActive("/pricing") ? "text-orange-600" : "text-gray-600",
+              )}
+              style={{ fontFamily: "Alata, sans-serif" }}
+            >
+              Pricing
             </Link>
             <Link
               href="/about"
