@@ -8,13 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Star, Volume2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getWordById, mockWords } from "@/lib/data";
+import { useWords } from "@/lib/words-context";
 
 export default function WordDetailPage() {
   const params = useParams();
   const id = params?.id as string;
-  const initialWord = id ? getWordById(id) : null;
-  const [word, setWord] = useState(initialWord);
+  const { getWordById, toggleStarred } = useWords();
+  const word = id ? getWordById(id) : null;
 
   if (!word) {
     return (
@@ -36,12 +36,9 @@ export default function WordDetailPage() {
     );
   }
 
-  const toggleStarred = () => {
+  const handleToggleStarred = () => {
     if (word) {
-      setWord((prevWord) => ({
-        ...prevWord,
-        starred: !prevWord.starred,
-      }));
+      toggleStarred(word.id);
     }
   };
 
@@ -91,7 +88,7 @@ export default function WordDetailPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={toggleStarred}
+                onClick={handleToggleStarred}
                 className="w-12 h-12 rounded-full hover:bg-white/50"
               >
                 <Star
