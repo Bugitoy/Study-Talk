@@ -64,7 +64,7 @@ const pricingList: PricingProps[] = [
       "Offline access",
     ],
     href: "/api/auth/login",
-    paymentLink: process.env.STRIPE_MONTHLY_PLAN_LINK,
+    paymentLink: process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PLAN_LINK,
     billing: "/month",
   },
   {
@@ -83,7 +83,7 @@ const pricingList: PricingProps[] = [
       "Priority support",
     ],
     href: "/api/auth/login",
-    paymentLink: process.env.STRIPE_YEARLY_PLAN_LINK,
+    paymentLink: process.env.NEXT_PUBLIC_STRIPE_YEARLY_PLAN_LINK,
     billing: "/year",
   },
 ];
