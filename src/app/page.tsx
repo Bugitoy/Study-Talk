@@ -20,20 +20,27 @@ export default function HomePage() {
   const [language, setLanguage] = useState<"en" | "tn">("en");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLetter, setSelectedLetter] = useState<string>("");
+  const [words, setWords] = useState(mockWords);
 
   const filteredWords = useMemo(() => {
-    let words = getWordsByLanguage(language);
+    let filteredList = getWordsByLanguage(language);
 
     if (searchQuery) {
-      words = searchWords(searchQuery, language);
+      filteredList = searchWords(searchQuery, language);
     } else if (selectedLetter) {
-      words = words.filter((word) =>
+      filteredList = filteredList.filter((word) =>
         word.word.toLowerCase().startsWith(selectedLetter.toLowerCase()),
       );
     }
 
-    return words.slice(0, 20); // Limit to 20 words for better performance
-  }, [language, searchQuery, selectedLetter]);
+    // Map with current starred state from local words state
+    return filteredList
+      .map((word) => ({
+        ...word,
+        starred: words.find((w) => w.id === word.id)?.starred || false,
+      }))
+      .slice(0, 20); // Limit to 20 words for better performance
+  }, [language, searchQuery, selectedLetter, words]);
 
   const clearSearch = () => {
     setSearchQuery("");
@@ -41,11 +48,11 @@ export default function HomePage() {
   };
 
   const toggleStarred = (wordId: string) => {
-    // In a real app, this would update the backend
-    const word = mockWords.find((w) => w.id === wordId);
-    if (word) {
-      word.starred = !word.starred;
-    }
+    setWords((prevWords) =>
+      prevWords.map((word) =>
+        word.id === wordId ? { ...word, starred: !word.starred } : word,
+      ),
+    );
   };
 
   const playPronunciation = (word: DictionaryWord) => {
