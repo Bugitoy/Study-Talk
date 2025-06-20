@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryProvider } from "./providers";
 import { WordsProvider } from "@/lib/words-context";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import DevErrorHandler from "@/components/DevErrorHandler";
 
 export const metadata: Metadata = {
   title: "Thanodi - Setswana English Dictionary",
@@ -21,6 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body style={{ fontFamily: "Alata, sans-serif" }}>
+        <DevErrorHandler />
         <ErrorBoundary>
           <ReactQueryProvider>
             <WordsProvider>
