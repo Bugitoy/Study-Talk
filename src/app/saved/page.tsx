@@ -8,16 +8,21 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search, X, Star, Volume2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getStarredWords, alphabet, DictionaryWord } from "@/lib/data";
+import { alphabet, DictionaryWord } from "@/lib/data";
+import { useWords } from "@/lib/words-context";
 
 export default function SavedPage() {
   const [language, setLanguage] = useState<"en" | "tn">("en");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLetter, setSelectedLetter] = useState<string>("");
-  const [words, setWords] = useState(getStarredWords());
+  const { words, toggleStarred } = useWords();
+
+  const starredWords = words.filter((word) => word.starred);
 
   const filteredWords = useMemo(() => {
-    let filteredList = words.filter((word) => word.language === language);
+    let filteredList = starredWords.filter(
+      (word) => word.language === language,
+    );
 
     if (searchQuery) {
       filteredList = filteredList.filter((word) =>
@@ -30,22 +35,11 @@ export default function SavedPage() {
     }
 
     return filteredList;
-  }, [language, searchQuery, selectedLetter, words]);
+  }, [language, searchQuery, selectedLetter, starredWords]);
 
   const clearSearch = () => {
     setSearchQuery("");
     setSelectedLetter("");
-  };
-
-  const toggleStarred = (wordId: string) => {
-    setWords(
-      (prevWords) =>
-        prevWords
-          .map((word) =>
-            word.id === wordId ? { ...word, starred: !word.starred } : word,
-          )
-          .filter((word) => word.starred), // Remove from saved list if unstarred
-    );
   };
 
   const playPronunciation = (word: DictionaryWord) => {
