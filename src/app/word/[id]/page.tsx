@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import NextLayout from "@/components/NextLayout";
@@ -12,7 +13,8 @@ import { getWordById, mockWords } from "@/lib/data";
 export default function WordDetailPage() {
   const params = useParams();
   const id = params?.id as string;
-  const word = id ? getWordById(id) : null;
+  const initialWord = id ? getWordById(id) : null;
+  const [word, setWord] = useState(initialWord);
 
   if (!word) {
     return (
@@ -35,8 +37,12 @@ export default function WordDetailPage() {
   }
 
   const toggleStarred = () => {
-    // In a real app, this would update the backend
-    word.starred = !word.starred;
+    if (word) {
+      setWord((prevWord) => ({
+        ...prevWord,
+        starred: !prevWord.starred,
+      }));
+    }
   };
 
   const playPronunciation = () => {
