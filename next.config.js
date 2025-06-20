@@ -18,10 +18,6 @@ const nextConfig = {
   experimental: {
     webpackBuildWorker: true,
   },
-  // Configure dev server
-  devIndicators: {
-    buildActivity: false,
-  },
 };
 
 module.exports = nextConfig;
