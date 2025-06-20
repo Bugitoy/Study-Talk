@@ -9,50 +9,38 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Search, X, Star, Volume2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  mockWords,
   alphabet,
   getWordsByLanguage,
   searchWords,
   DictionaryWord,
 } from "@/lib/data";
+import { useWords } from "@/lib/words-context";
 
 export default function HomePage() {
   const [language, setLanguage] = useState<"en" | "tn">("en");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLetter, setSelectedLetter] = useState<string>("");
-  const [words, setWords] = useState(mockWords);
+  const { words, toggleStarred } = useWords();
 
   const filteredWords = useMemo(() => {
-    let filteredList = getWordsByLanguage(language);
+    let filteredList = words.filter((word) => word.language === language);
 
     if (searchQuery) {
-      filteredList = searchWords(searchQuery, language);
+      filteredList = filteredList.filter((word) =>
+        word.word.toLowerCase().includes(searchQuery.toLowerCase()),
+      );
     } else if (selectedLetter) {
       filteredList = filteredList.filter((word) =>
         word.word.toLowerCase().startsWith(selectedLetter.toLowerCase()),
       );
     }
 
-    // Map with current starred state from local words state
-    return filteredList
-      .map((word) => ({
-        ...word,
-        starred: words.find((w) => w.id === word.id)?.starred || false,
-      }))
-      .slice(0, 20); // Limit to 20 words for better performance
+    return filteredList.slice(0, 20); // Limit to 20 words for better performance
   }, [language, searchQuery, selectedLetter, words]);
 
   const clearSearch = () => {
     setSearchQuery("");
     setSelectedLetter("");
-  };
-
-  const toggleStarred = (wordId: string) => {
-    setWords((prevWords) =>
-      prevWords.map((word) =>
-        word.id === wordId ? { ...word, starred: !word.starred } : word,
-      ),
-    );
   };
 
   const playPronunciation = (word: DictionaryWord) => {
