@@ -12,6 +12,9 @@ import DevErrorHandler from "@/components/DevErrorHandler";
 export const metadata: Metadata = {
   title: "Thanodi - Setswana English Dictionary",
   description: "Your bridge between Setswana and English languages",
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({

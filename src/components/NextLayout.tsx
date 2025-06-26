@@ -26,7 +26,7 @@ export default function NextLayout({ children }: LayoutProps) {
           "linear-gradient(to bottom right, #FFECD2, #DCEAF7, #FFDECA)",
       }}
     >
-      <header className="border-b border-gray-200 bg-white/80 backdrop-blur-sm">
+      <header className="border-2 border-gray-300 bg-white/80 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
@@ -59,16 +59,6 @@ export default function NextLayout({ children }: LayoutProps) {
                 style={{ fontFamily: "Alata, sans-serif" }}
               >
                 Dictionary
-              </Link>
-              <Link
-                href="/saved"
-                className={cn(
-                  "text-lg font-medium transition-colors hover:text-orange-600",
-                  isActive("/saved") ? "text-orange-600" : "text-gray-600",
-                )}
-                style={{ fontFamily: "Alata, sans-serif" }}
-              >
-                Saved
               </Link>
               <Link
                 href="/pricing"
@@ -116,16 +106,6 @@ export default function NextLayout({ children }: LayoutProps) {
               style={{ fontFamily: "Alata, sans-serif" }}
             >
               Dictionary
-            </Link>
-            <Link
-              href="/saved"
-              className={cn(
-                "text-sm font-medium transition-colors hover:text-orange-600",
-                isActive("/saved") ? "text-orange-600" : "text-gray-600",
-              )}
-              style={{ fontFamily: "Alata, sans-serif" }}
-            >
-              Saved
             </Link>
             <Link
               href="/pricing"

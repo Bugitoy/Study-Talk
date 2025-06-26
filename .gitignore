@@ -36,3 +36,22 @@ out/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Credential files
+google-tts.json
+*.json.key
+*.pem
+*.p12
+*.pfx
+service-account*.json
+credentials*.json
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
