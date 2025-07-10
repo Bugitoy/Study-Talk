@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  server:
+    build: .
+    container_name: node-server
+    ports:
+      - "3001:3001"
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PWD=myredispassword
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7
+    container_name: redis
+    command: redis-server --requirepass myredispassword
+    ports:
+      - "6379:6379"

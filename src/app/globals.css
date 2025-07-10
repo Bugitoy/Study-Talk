@@ -91,4 +91,24 @@
   .thanodi-button {
     @apply rounded-full px-6 py-3 font-medium transition-all hover:shadow-md;
   }
+
+  .show-block {
+    display: block;
+    background-color: #19232d;
+    border-radius: 10px;
+    padding: 35px;
+    margin:10px;
+    width: 30%;
+  }
+
+  /* Hide Stream SDK messages that cause delays */
+  [data-testid*="video"] > div:not([data-testid*="preview"]),
+  [data-testid*="camera"] > div:not([data-testid*="preview"]),
+  .str-video__video-preview-container > div:not(.str-video__video-preview),
+  .str-video__audio-preview-container > div:not(.str-video__audio-preview),
+  [class*="str-video__"] [class*="message"],
+  [class*="str-video__"] [class*="notification"],
+  [class*="str-video__"] [class*="toast"] {
+    display: none !important;
+  }
 }

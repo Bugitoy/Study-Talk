@@ -55,3 +55,8 @@ credentials*.json
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# Websockets specific ignores
+websockets/.dockerignore
+websockets/.env
+websockets/*

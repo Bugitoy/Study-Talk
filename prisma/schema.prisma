@@ -90,3 +90,9 @@ model StarredWord {
 
   @@unique([userId, wordId])
 }
+
+model Room {
+  id     String  @id @default(auto()) @map("_id") @db.ObjectId
+  status String?
+}
+

@@ -85,7 +85,7 @@ export default function WordDetailPage() {
             <p className="text-gray-500">
               The word you're looking for doesn't exist or has been removed.
             </p>
-            <Link href="/">
+            <Link href="/dictionary">
               <Button className="bg-orange-500 hover:bg-orange-600 text-white rounded-lg">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Dictionary
@@ -102,7 +102,7 @@ export default function WordDetailPage() {
       <div className="container mx-auto p-4 space-y-6 min-h-screen bg-gradient-to-br from-cream-100 to-blue-100">
         {/* Back Button */}
         <div className="max-w-4xl mx-auto">
-          <Link href="/">
+          <Link href="/dictionary">
             <Button
               variant="outline"
               className="border-blue-200 hover:bg-blue-50 rounded-lg"
@@ -230,4 +230,4 @@ export default function WordDetailPage() {
       </div>
     </NextLayout>
   );
-}
+} 

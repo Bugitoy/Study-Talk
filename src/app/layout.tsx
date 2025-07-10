@@ -8,6 +8,9 @@ import { ReactQueryProvider } from "./providers";
 import { WordsProvider } from "@/lib/words-context";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import DevErrorHandler from "@/components/DevErrorHandler";
+import StreamVideoProvider from "./StreamClientProvider";
+import '@stream-io/video-react-sdk/dist/css/styles.css';
+import { SocketProvider } from "./SocketProvider";
 
 export const metadata: Metadata = {
   title: "Thanodi - Setswana English Dictionary",
@@ -30,9 +33,13 @@ export default function RootLayout({
           <ReactQueryProvider>
             <WordsProvider>
               <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                {children}
+                <StreamVideoProvider>
+                  <SocketProvider>
+                    <Toaster />
+                    <Sonner />
+                    {children}
+                  </SocketProvider>
+                </StreamVideoProvider>
               </TooltipProvider>
             </WordsProvider>
           </ReactQueryProvider>

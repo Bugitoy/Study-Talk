@@ -125,6 +125,28 @@ const sampleWords = [
     partOfSpeech: "lesupi",
     examples: ["Eno ke buka e e botoka", "Ke morutabana yo o botoka"],
   },
+   {
+    word: "a",
+    language: Language.tn,
+    translation: "",
+    definition: "Concord of Ma~",
+    pronunciation: "/a/",
+    partOfSpeech: "lefoko",
+    examples: [
+      "Setswana: Matlho a magolo, English: Big eyes",
+    ],
+  },
+   {
+    word: "a",
+    language: Language.tn,
+    translation: "Let",
+    definition: "To allow",
+    pronunciation: "/a/",
+    partOfSpeech: "leemedi",
+    examples: [
+      "Setswana: A ba tle, English: Let them come"
+    ],
+}
 ];
 
 async function main() {

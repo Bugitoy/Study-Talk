@@ -1,6 +1,6 @@
 "use client";
 
-import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
+import { useKindeBrowserClient, LogoutLink } from "@kinde-oss/kinde-auth-nextjs";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import NextLayout from "@/components/NextLayout";
 import { Button } from "@/components/ui/button";
@@ -249,34 +249,44 @@ export default function AccountPage() {
 
                 <Separator />
 
-                <div>
+                <div className="flex flex-wrap items-center gap-4">
                   {isValidUser && isSubscribed ? (
-                    <Button 
-                      variant="destructive" 
-                      className="rounded-full px-8"
-                      onClick={handleCancelSubscription}
-                      disabled={createPortalSessionMutation.isPending}
-                    >
-                      {createPortalSessionMutation.isPending ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Opening...
-                        </>
-                      ) : (
-                        "Cancel subscription"
-                      )}
-                    </Button>
+                    <>
+                      <Button 
+                        variant="destructive" 
+                        className="rounded-full px-8"
+                        onClick={handleCancelSubscription}
+                        disabled={createPortalSessionMutation.isPending}
+                      >
+                        {createPortalSessionMutation.isPending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Opening...
+                          </>
+                        ) : (
+                          "Cancel subscription"
+                        )}
+                      </Button>
+                      <LogoutLink>
+                        <Button variant="outline" className="rounded-full px-8">
+                          Logout
+                        </Button>
+                      </LogoutLink>
+                    </>
                   ) : (
-                    <div className="text-center py-4">
-                      <p className="text-gray-500 text-sm">
-                        {!isAuthenticated 
-                          ? "Please sign in to manage your subscription"
-                          : !isValidUser
-                          ? "Account information not available"
-                          : "No active subscription to cancel"
-                        }
-                      </p>
-                    </div>
+                    isAuthenticated ? (
+                      <LogoutLink>
+                        <Button variant="outline" className="rounded-full px-8">
+                          Logout
+                  </Button>
+                      </LogoutLink>
+                    ) : (
+                      <div className="text-center py-4">
+                        <p className="text-gray-500 text-sm">
+                          Please sign in to manage your account
+                        </p>
+                      </div>
+                    )
                   )}
                 </div>
               </CardContent>
@@ -285,10 +295,10 @@ export default function AccountPage() {
 
           {/* Profile Picture Section */}
           {isAuthenticated && (
-            <div>
-              <Card className="rounded-2xl border border-gray-200 shadow-sm">
-                <CardContent className="p-6">
-                  <div className="text-center">
+          <div>
+            <Card className="rounded-2xl border border-gray-200 shadow-sm">
+              <CardContent className="p-6">
+                <div className="text-center">
                     {isValidUser && userInfo.image ? (
                       <div className="w-32 h-32 mx-auto mb-6 rounded-full overflow-hidden">
                         <img
@@ -298,39 +308,39 @@ export default function AccountPage() {
                         />
                       </div>
                     ) : (
-                      <div
-                        className="w-32 h-32 mx-auto mb-6 rounded-full flex items-center justify-center"
-                        style={{
-                          backgroundImage:
-                            "linear-gradient(to bottom right, #FFECD2, #FFDECA)",
-                        }}
-                      >
-                        <div
-                          className="w-16 h-16 rounded-full flex items-center justify-center"
-                          style={{
-                            backgroundImage:
-                              "linear-gradient(to bottom right, #F7D379, #F9B288)",
-                          }}
-                        >
-                          <User className="w-8 h-8 text-white" />
-                        </div>
-                      </div>
+                  <div
+                    className="w-32 h-32 mx-auto mb-6 rounded-full flex items-center justify-center"
+                    style={{
+                      backgroundImage:
+                        "linear-gradient(to bottom right, #FFECD2, #FFDECA)",
+                    }}
+                  >
+                    <div
+                      className="w-16 h-16 rounded-full flex items-center justify-center"
+                      style={{
+                        backgroundImage:
+                          "linear-gradient(to bottom right, #F7D379, #F9B288)",
+                      }}
+                    >
+                      <User className="w-8 h-8 text-white" />
+                    </div>
+                  </div>
                     )}
 
-                    <h3 className="font-semibold text-gray-900 mb-2">
-                      Profile Picture
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Upload a photo to personalize your account
-                    </p>
+                  <h3 className="font-semibold text-gray-900 mb-2">
+                    Profile Picture
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Upload a photo to personalize your account
+                  </p>
 
-                    <Button variant="outline" className="rounded-full">
-                      Upload Photo
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                  <Button variant="outline" className="rounded-full">
+                    Upload Photo
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
           )}
         </div>
       </div>
