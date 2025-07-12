@@ -97,7 +97,7 @@ model Room {
 }
 
 model QuizRoom {
-  id     String  @id @default(cuid()) @map("_id") // Use cuid() for UUIDs
+  id     String  @id  @default(auto()) @map("_id") @db.ObjectId
   name   String
   timePerQuestion Int
   questions QuizQuestion[] 
@@ -127,4 +127,16 @@ model QuizAnswer {
   createdAt DateTime @default(now())
   room QuizRoom @relation(fields: [roomId], references: [id])
   question QuizQuestion @relation(fields: [questionId], references: [id])
+}
+
+model TopicQuestion {
+  id     String  @id @default(auto()) @map("_id") @db.ObjectId
+  topic String
+  question String
+  optionA String
+  optionB String
+  optionC String
+  optionD String
+  correct String
+  createdAt DateTime @default(now())
 }

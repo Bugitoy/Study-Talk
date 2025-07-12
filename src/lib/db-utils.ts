@@ -349,3 +349,12 @@ export async function getQuizResults(roomId: string) {
     return {}
   }
 }
+
+export async function getTopicQuestions(topic: string) {
+  try {
+    return await prisma.topicQuestion.findMany({ where: { topic } })
+  } catch (error) {
+    console.error('Error fetching topic questions:', error)
+    return []
+  }
+}

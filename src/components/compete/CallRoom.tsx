@@ -72,8 +72,11 @@ const CallRoom = () => {
 
   const currentQuestion = quizRoom?.questions[currentIdx];
   
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+
   const sendAnswer = async (answer: string) => {
     if (!quizRoom || !currentQuestion || !user) return;
+    setSelectedAnswer(answer);
     await fetch(`/api/quiz-room/${quizRoom.id}/answer`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -84,6 +87,10 @@ const CallRoom = () => {
       }),
     });
   };
+
+  useEffect(() => {
+    setSelectedAnswer(null);
+  }, [currentIdx, quizRoom]);
 
   if (callingState !== CallingState.JOINED) return <Loader />;
 
@@ -148,36 +155,56 @@ const CallRoom = () => {
             {/* Answer sheet */}
             <div className=" flex flex-col items-center justify-center w-[35rem] h-[40rem] mx-auto gap-5">
         
-              <button onClick={() => sendAnswer('A')} className="bg-thanodi-lightPeach border border-gray-300 rounded-[30px] shadow-md flex items-center 
-                              justify-center text-xl font-bold text-gray-600 p-5"> 
-                  <h1 className="text-3xl font-bold text-gray-600 mr-5">A</h1>
-                  <p className="text-gray-600 font-light text-center w-[30rem]">
-                      {currentQuestion?.optionA}
-                  </p>
+              <button
+                onClick={() => sendAnswer('A')}
+                className={cn(
+                  'bg-thanodi-lightPeach border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xl font-bold text-gray-600 p-5',
+                  selectedAnswer === 'A' && 'bg-gray-400')
+                }
+              >
+                <h1 className="text-3xl font-bold text-gray-600 mr-5">A</h1>
+                <p className="text-gray-600 font-light text-center w-[30rem]">
+                  {currentQuestion?.optionA}
+                </p>
               </button>
 
-              <button onClick={() => sendAnswer('B')} className="bg-thanodi-blue border border-gray-300 rounded-[30px] shadow-md flex items-center 
-                              justify-center text-xl font-bold text-gray-600 p-5"> 
-                  <h1 className="text-3xl font-bold text-gray-600 mr-5">B</h1>
-                  <p className="text-gray-600 font-light text-center w-[30rem]">
-                      {currentQuestion?.optionB}
-                  </p>
+              <button
+                onClick={() => sendAnswer('B')}
+                className={cn(
+                  'bg-thanodi-blue border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xl font-bold text-gray-600 p-5',
+                  selectedAnswer === 'B' && 'bg-gray-400')
+                }
+              >
+                <h1 className="text-3xl font-bold text-gray-600 mr-5">B</h1>
+                <p className="text-gray-600 font-light text-center w-[30rem]">
+                  {currentQuestion?.optionB}
+                </p>
               </button>
         
-              <button onClick={() => sendAnswer('C')} className="bg-thanodi-lightBlue border border-gray-300 rounded-[30px] shadow-md flex items-center 
-                              justify-center text-xl font-bold text-gray-600 p-5"> 
-                  <h1 className="text-3xl font-bold text-gray-600 mr-5">C</h1>
-                  <p className="text-gray-600 font-light text-center w-[30rem]">
-                      {currentQuestion?.optionC}
-                  </p>
+              <button
+                onClick={() => sendAnswer('C')}
+                className={cn(
+                  'bg-thanodi-lightBlue border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xl font-bold text-gray-600 p-5',
+                  selectedAnswer === 'C' && 'bg-gray-400')
+                }
+              >
+                <h1 className="text-3xl font-bold text-gray-600 mr-5">C</h1>
+                <p className="text-gray-600 font-light text-center w-[30rem]">
+                  {currentQuestion?.optionC}
+                </p>
               </button>
 
-              <button onClick={() => sendAnswer('D')} className="bg-thanodi-cream border border-gray-300 rounded-[30px] shadow-md flex items-center 
-                              justify-center text-xl font-bold text-gray-600 p-5"> 
-                  <h1 className="text-3xl font-bold text-gray-600 mr-5">D</h1>
-                  <p className="text-gray-600 font-light text-center w-[30rem]">
-                      {currentQuestion?.optionD}
-                  </p>
+              <button
+                onClick={() => sendAnswer('D')}
+                className={cn(
+                  'bg-thanodi-cream border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xl font-bold text-gray-600 p-5',
+                  selectedAnswer === 'D' && 'bg-gray-400')
+                }
+              >
+                <h1 className="text-3xl font-bold text-gray-600 mr-5">D</h1>
+                <p className="text-gray-600 font-light text-center w-[30rem]">
+                  {currentQuestion?.optionD}
+                </p>
               </button>
               
             </div>

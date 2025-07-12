@@ -13,7 +13,8 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "db:seed": "tsx scripts/seed-database.ts"
+    "db:seed": "tsx scripts/seed-database.ts",
+    "db:seed-questions": "tsx scripts/seed-questions.ts"
   },
   "dependencies": {
     "@google-cloud/text-to-speech": "^6.1.0",

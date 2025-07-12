@@ -1,10 +1,18 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import TopicCard from "@/components/compete/TopicCard";
 import { Call, useStreamVideoClient } from "@stream-io/video-react-sdk";
 import { useToast } from "@/components/ui/use-toast";
 import { useState, useEffect } from "react";
+type QuizQuestion = {
+  question: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+  correct: string;
+};
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import NextLayout from "@/components/NextLayout";
 import { ObjectId } from 'bson';
@@ -71,24 +79,21 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
         },
       });
       setCallDetail(call);
-      const sampleQuestions = [
-        {
-          question: 'Sample Question 1',
-          optionA: 'Option A1',
-          optionB: 'Option B1',
-          optionC: 'Option C1',
-          optionD: 'Option D1',
-          correct: 'Option A',
-        },
-        {
-          question: 'Sample Question 2',
-          optionA: 'Option A2',
-          optionB: 'Option B2',
-          optionC: 'Option C2',
-          optionD: 'Option D2',
-          correct: 'Option B',
-        },
-      ];
+      let sampleQuestions: QuizQuestion[] = [];
+      if (selectedTopic) {
+        const res = await fetch(`/api/questions?topic=${encodeURIComponent(selectedTopic.title)}`);
+        if (res.ok) {
+          const data = await res.json();
+          sampleQuestions = data.map((q: any) => ({
+            question: q.question,
+            optionA: q.optionA,
+            optionB: q.optionB,
+            optionC: q.optionC,
+            optionD: q.optionD,
+            correct: q.correct,
+          }));
+        }
+      }
       const storedSettings = localStorage.getItem('roomSettings');
       if (storedSettings) {
         const settings = JSON.parse(storedSettings);
