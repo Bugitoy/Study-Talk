@@ -41,31 +41,49 @@ const CallRoom = () => {
   
   const { data: quizRoom } = useQuizRoom(id as string);
 
-  const [ roomSettings, setRoomSettings ] = useState<any>(null);
+  const [roomSettings, setRoomSettings] = useState<any>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const call = useCall();
+  // for more detail about types of CallingState see: https://getstream.io/video/docs/react/ui-cookbook/ringing-call/#incoming-call-panel
+  const callingState = useCallCallingState();
 
   const [currentIdx, setCurrentIdx] = useState(0);
   // Start with Infinity so the first question isn't skipped before the
   // initial timePerQuestion value is loaded from the quiz room settings.
   const [timeLeft, setTimeLeft] = useState(Infinity);
-  const [quizEnded, setQuizEnded] = useState(true);
-  const { data: results } = useQuizResults(quizEnded ? (id as string) : '');
+  const [quizEnded, setQuizEnded] = useState(false);
+  const { data: results } = useQuizResults(
+    quizEnded ? (id as string) : "",
+    quizEnded ? (sessionId ?? undefined) : undefined,
+  );
   const { user } = useKindeBrowserClient();
 
   useEffect(() => {
-    const stored = localStorage.getItem('roomSettings');
+    const stored = localStorage.getItem("roomSettings");
     if (stored) {
       setRoomSettings(JSON.parse(stored));
     }
   }, []);
 
-  // for more detail about types of CallingState see: https://getstream.io/video/docs/react/ui-cookbook/ringing-call/#incoming-call-panel
-  const callingState = useCallCallingState();
+  useEffect(() => {
+    const createSession = async () => {
+      if (!quizRoom || sessionId || callingState !== CallingState.JOINED)
+        return;
+      const res = await fetch(`/api/quiz-room/${quizRoom.id}/session`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setSessionId(json.sessionId);
+      }
+    };
+    createSession();
+  }, [quizRoom, callingState, sessionId]);
 
   useEffect(() => {
     if (!roomSettings || !call || callingState !== CallingState.JOINED) return;
-    if (roomSettings.mic === 'off') call.microphone.disable();
-    if (roomSettings.camera === 'off') call.camera.disable();
+    if (roomSettings.mic === "off") call.microphone.disable();
+    if (roomSettings.camera === "off") call.camera.disable();
   }, [roomSettings, call, callingState]);
 
   useEffect(() => {
@@ -104,7 +122,7 @@ const CallRoom = () => {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
 
   const sendAnswer = async (answerKey: 'A' | 'B' | 'C' | 'D') => {
-    if (!quizRoom || !currentQuestion || !user) return;
+    if (!quizRoom || !currentQuestion || !user || !sessionId) return;
     setSelectedAnswer(answerKey);
 
     const answerText =
@@ -117,11 +135,12 @@ const CallRoom = () => {
         : currentQuestion.optionD;
 
     await fetch(`/api/quiz-room/${quizRoom.id}/answer`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         userId: user.id,
         questionId: currentQuestion.id,
+        sessionId,
         answer: answerText,
       }),
     });
@@ -345,7 +364,7 @@ const CallRoom = () => {
             <CallStatsButton />
 
             <button onClick={() => setShowParticipants((prev) => !prev)}>
-            <div className=" cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]  ">
+            <div className=" cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] ">
                 <Users size={20} className="text-white" />
             </div>
             </button>

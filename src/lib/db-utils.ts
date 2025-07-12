@@ -315,27 +315,50 @@ export async function getQuizRoom(id: string) {
   }
 }
 
+export async function createQuizSession(roomId: string) {
+  try {
+    const session = await prisma.quizSession.create({
+      data: { roomId },
+    });
+    return session.id;
+  } catch (error) {
+    console.error("Error creating quiz session:", error);
+    throw error;
+  }
+}
+
 export async function saveQuizAnswer(data: {
   roomId: string;
+  sessionId: string;
   questionId: string;
   userId: string;
   answer: string;
 }) {
   try {
-    await prisma.quizAnswer.create({ data });
+    await prisma.quizAnswer.upsert({
+      where: {
+        sessionId_questionId_userId: {
+          sessionId: data.sessionId,
+          questionId: data.questionId,
+          userId: data.userId,
+        },
+      },
+      update: { answer: data.answer },
+      create: data,
+    });
   } catch (error) {
     console.error("Error saving quiz answer:", error);
     throw error;
   }
 }
 
-export async function getQuizResults(roomId: string) {
+export async function getQuizResults(roomId: string, sessionId?: string) {
   try {
     const questions = await prisma.quizQuestion.findMany({
       where: { roomId },
     });
     const answers = await prisma.quizAnswer.findMany({
-      where: { roomId },
+      where: sessionId ? { roomId, sessionId } : { roomId },
     });
     const userIds = Array.from(new Set(answers.map((a) => a.userId)));
     const users = await prisma.user.findMany({

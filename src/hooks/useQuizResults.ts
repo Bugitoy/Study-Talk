@@ -14,7 +14,7 @@ export interface QuizResultsData {
   users: QuizResultsUser[];
 }
 
-export function useQuizResults(roomId: string) {
+export function useQuizResults(roomId: string, sessionId?: string) {
   const [data, setData] = useState<QuizResultsData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -22,7 +22,8 @@ export function useQuizResults(roomId: string) {
     if (!roomId) return;
     const load = async () => {
       try {
-        const res = await fetch(`/api/quiz-room/${roomId}/results`);
+        const query = sessionId ? `?sessionId=${sessionId}` : "";
+        const res = await fetch(`/api/quiz-room/${roomId}/results${query}`);
         if (res.ok) {
           const json = await res.json();
           setData(json);
@@ -32,7 +33,7 @@ export function useQuizResults(roomId: string) {
       }
     };
     load();
-  }, [roomId]);
+  }, [roomId, sessionId]);    
 
   return { data, loading };
 }

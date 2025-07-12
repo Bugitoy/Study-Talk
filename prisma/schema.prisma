@@ -59,15 +59,15 @@ model Subscription {
 }
 
 model Word {
-  id           String  @id @default(cuid()) @map("_id")
-  word         String
-  language     Language
-  translation  String
-  definition   String
+  id            String   @id @default(cuid()) @map("_id")
+  word          String
+  language      Language
+  translation   String
+  definition    String
   pronunciation String?
-  audioUrl     String?
-  partOfSpeech String
-  examples     String[]
+  audioUrl      String?
+  partOfSpeech  String
+  examples      String[]
 
   StarredWords StarredWord[]
 
@@ -97,46 +97,60 @@ model Room {
 }
 
 model QuizRoom {
-  id     String  @id  @default(auto()) @map("_id") @db.ObjectId
-  name   String
+ id              String         @id @default(auto()) @map("_id") @db.ObjectId
+  name            String
   timePerQuestion Int
-  questions QuizQuestion[] 
-  answers QuizAnswer[]
+  sessions        QuizSession[]
+  questions       QuizQuestion[]
+  answers         QuizAnswer[]
+  createdAt       DateTime       @default(now())
+}
+
+model QuizSession {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  roomId    String   @db.ObjectId
   createdAt DateTime @default(now())
+
+  room    QuizRoom     @relation(fields: [roomId], references: [id])
+  answers QuizAnswer[]
 }
 
 model QuizQuestion {
-  id     String  @id @default(auto()) @map("_id") @db.ObjectId
-  roomId String  @db.ObjectId
+  id       String       @id @default(auto()) @map("_id") @db.ObjectId
+  roomId   String       @db.ObjectId
   question String
-  optionA String
-  optionB String
-  optionC String
-  optionD String
-  correct String
-  room QuizRoom @relation(fields: [roomId], references: [id])
-  answers QuizAnswer[]
+  optionA  String
+  optionB  String
+  optionC  String
+  optionD  String
+  correct  String
+  room     QuizRoom     @relation(fields: [roomId], references: [id])
+  answers  QuizAnswer[]
 }
 
 model QuizAnswer {
-  id     String  @id @default(auto()) @map("_id") @db.ObjectId
-  roomId String  @db.ObjectId
-  questionId String  @db.ObjectId
-  userId String
-  answer String
-  createdAt DateTime @default(now())
-  room QuizRoom @relation(fields: [roomId], references: [id])
-  question QuizQuestion @relation(fields: [questionId], references: [id])
+  id         String       @id @default(auto()) @map("_id") @db.ObjectId
+  roomId     String       @db.ObjectId
+  sessionId  String       @db.ObjectId
+  questionId String       @db.ObjectId
+  userId     String
+  answer     String
+  createdAt  DateTime     @default(now())
+  room       QuizRoom     @relation(fields: [roomId], references: [id])
+  session    QuizSession  @relation(fields: [sessionId], references: [id])
+  question   QuizQuestion @relation(fields: [questionId], references: [id])
+
+  @@unique([sessionId, questionId, userId])
 }
 
 model TopicQuestion {
-  id     String  @id @default(auto()) @map("_id") @db.ObjectId
-  topic String
-  question String
-  optionA String
-  optionB String
-  optionC String
-  optionD String
-  correct String
+ id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  topic     String
+  question  String
+  optionA   String
+  optionB   String
+  optionC   String
+  optionD   String
+  correct   String
   createdAt DateTime @default(now())
 }
