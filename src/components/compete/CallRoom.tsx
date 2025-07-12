@@ -45,8 +45,10 @@ const CallRoom = () => {
   const call = useCall();
 
   const [currentIdx, setCurrentIdx] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(0);
-  const [quizEnded, setQuizEnded] = useState(false);
+  // Start with Infinity so the first question isn't skipped before the
+  // initial timePerQuestion value is loaded from the quiz room settings.
+  const [timeLeft, setTimeLeft] = useState(Infinity);
+  const [quizEnded, setQuizEnded] = useState(true);
   const { data: results } = useQuizResults(quizEnded ? (id as string) : '');
   const { user } = useKindeBrowserClient();
 
@@ -101,16 +103,26 @@ const CallRoom = () => {
   
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
 
-  const sendAnswer = async (answer: string) => {
+  const sendAnswer = async (answerKey: 'A' | 'B' | 'C' | 'D') => {
     if (!quizRoom || !currentQuestion || !user) return;
-    setSelectedAnswer(answer);
+    setSelectedAnswer(answerKey);
+
+    const answerText =
+      answerKey === 'A'
+        ? currentQuestion.optionA
+        : answerKey === 'B'
+        ? currentQuestion.optionB
+        : answerKey === 'C'
+        ? currentQuestion.optionC
+        : currentQuestion.optionD;
+
     await fetch(`/api/quiz-room/${quizRoom.id}/answer`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         userId: user.id,
         questionId: currentQuestion.id,
-        answer,
+        answer: answerText,
       }),
     });
   };
@@ -238,29 +250,29 @@ const CallRoom = () => {
             </>
             )}
             {quizEnded && (
-            <div className="w-[50rem] h-[35rem] mx-auto mr-10 p-10 bg-white/50 rounded-[30px] shadow-md text-gray-700 flex flex-col">
+            <div className="w-[70rem] h-[35rem] mx-auto mr-10 p-10 bg-white/50 rounded-[30px] shadow-md text-gray-700 flex flex-col">
                <h2 className="text-3xl font-bold mb-4 text-center">Results</h2>
                {results ? (
                  <div className="space-y-4 overflow-y-auto flex-1">
                  <div>
-                   <h3 className="text-xl font-semibold mb-2">
+                   <h3 className="text-xl font-semibold mb-5">
                      Questions Asked
                    </h3>
-                   <ol className="list-decimal list-inside space-y-1 text-gray-600">
+                   <ol className="list-decimal list-inside space-y-2 text-gray-600 mb-6">
                      {results.questions.map((q) => (
                        <li key={q.id}>{q.question}</li>
                      ))}
                    </ol>
                  </div>
-                 <div className="space-y-6">
+                 <div className="space-y-10">
                    {results.users
                      .sort((a, b) => b.score - a.score)
                      .map((u) => (
                        <div
                          key={u.userId}
-                         className="border-t border-gray-300 pt-2"
+                         className="border-t border-gray-300 py-5"
                        >
-                         <p className="font-semibold text-gray-700">
+                         <p className="font-semibold text-gray-700 mb-5">
                            {u.username} - Score: {u.score}
                          </p>
                          <div className="ml-4">
