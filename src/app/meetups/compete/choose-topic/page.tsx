@@ -1,12 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import TopicCard from "@/components/compete/TopicCard";
 import { Call, useStreamVideoClient } from "@stream-io/video-react-sdk";
 import { useToast } from "@/components/ui/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import NextLayout from "@/components/NextLayout";
+import { ObjectId } from 'bson';
 
 const initialValues = {
     dateTime: new Date(),
@@ -26,17 +27,36 @@ const pastelColors = [
 export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete: (isSetupComplete: boolean) => void 
 }) {
   const router = useRouter();
-  
   const client = useStreamVideoClient();
   const { user } = useKindeBrowserClient();
   const [values, setValues] = useState(initialValues);
   const [callDetail, setCallDetail] = useState<Call>();
+  const [selectedTopic, setSelectedTopic] = useState<
+        { title: string, description: string; backgroundImage: string } | null>(null);
   const { toast } = useToast();
+  const [roomSettings, setRoomSettings] = useState<{ topicName?: string }>({});
+
+  useEffect(() => {
+    const storedSettings = localStorage.getItem('roomSettings');
+    if (storedSettings) {
+      const settings = JSON.parse(storedSettings);
+      setRoomSettings(settings);
+    }
+  }, []);
+
+  const saveTopicToLocalStorage = (topicName: string) => {
+    const storedSettings = localStorage.getItem('roomSettings');
+    if (storedSettings) {
+      const settings = JSON.parse(storedSettings);
+      settings.topicName = topicName;
+      localStorage.setItem('roomSettings', JSON.stringify(settings));
+    }
+  };
 
   const createMeeting = async () => {
     if (!client || !user) return;
     try {
-      const id = crypto.randomUUID();
+      const id = new ObjectId().toString(); // Generate a valid ObjectID
       const call = client.call('default', id);
       if (!call) throw new Error('Failed to create meeting');
       const startsAt =
@@ -51,6 +71,41 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
         },
       });
       setCallDetail(call);
+      const sampleQuestions = [
+        {
+          question: 'Sample Question 1',
+          optionA: 'Option A1',
+          optionB: 'Option B1',
+          optionC: 'Option C1',
+          optionD: 'Option D1',
+          correct: 'Option A',
+        },
+        {
+          question: 'Sample Question 2',
+          optionA: 'Option A2',
+          optionB: 'Option B2',
+          optionC: 'Option C2',
+          optionD: 'Option D2',
+          correct: 'Option B',
+        },
+      ];
+      const storedSettings = localStorage.getItem('roomSettings');
+      if (storedSettings) {
+        const settings = JSON.parse(storedSettings);
+        const roomName = settings.roomName || 'Unnamed Room';
+        const timePerQuestion = settings.timePerQuestion || null;
+
+        await fetch('/api/quiz-room', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            id: call.id,
+            name: roomName,
+            timePerQuestion,
+            questions: sampleQuestions,
+          }),
+        });
+      }
       if (!values.description) {
         router.push(`/meetups/compete/room/${call.id}`);
       }
@@ -111,6 +166,17 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
     router.push("/room-lobby");
   };
 
+  type Topic = {
+    title: string;
+    description: string;
+    backgroundImage: string;
+  };
+
+  const handleTopicClick = (topic: Topic) => {
+    setSelectedTopic(topic);
+    saveTopicToLocalStorage(topic.title);
+  };
+
   return (
     <NextLayout>
     <div className="p-6 max-w-7xl mx-auto">
@@ -128,8 +194,8 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
                 title={topic.title}
                 description={topic.description}
                 backgroundImage={topic.backgroundImage}
-                className={pastelColors[Math.floor(Math.random() * pastelColors.length)]}
-                handleClick={() => router.push('/meetups/study-groups')}
+                className={`${pastelColors[idx % pastelColors.length]} ${selectedTopic?.title === topic.title ? 'opacity-50' : ''}`}
+                handleClick={() => handleTopicClick(topic)}
               />
             ))}
         </div>

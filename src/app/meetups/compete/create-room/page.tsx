@@ -22,6 +22,10 @@ export default function CreateRoom() {
     setRoomSettings((prev) => ({ ...prev, [key]: value }));
   };
 
+  const saveRoomSettingsToLocalStorage = () => {
+    localStorage.setItem('roomSettings', JSON.stringify(roomSettings));
+  };
+
   return (
     <NextLayout>
     <div className="p-6 max-w-xl mx-auto">
@@ -55,13 +59,15 @@ export default function CreateRoom() {
       <div className="mb-4">
         <label className="block mb-2 font-medium">Time per Question (sec):</label>
         <div className="flex gap-2 flex-wrap">
-          {[5, 10, 15, 20, 25, 30].map((num) => (
+          {[5, 10, 15, 20, 25, 30, 'Unlimited'].map((num) => (
             <button
               key={num}
               className={`px-4 py-2 rounded-[8px] ${
-                roomSettings.timePerQuestion === num ? "bg-thanodi-peach text-white" : ""
+                (num === 'Unlimited' && roomSettings.timePerQuestion === null) || roomSettings.timePerQuestion === num
+                  ? "bg-thanodi-peach text-white"
+                  : ""
               }`}
-              onClick={() => setValue("timePerQuestion", num)}
+              onClick={() => setValue("timePerQuestion", num === 'Unlimited' ? null : num)}
             >
               {num}
             </button>
@@ -154,7 +160,10 @@ export default function CreateRoom() {
 
       <button
         className="w-full bg-orange-300 text-white py-3 rounded-[8px] text-lg font-semibold hover:bg-orange-200 transition-colors"
-        onClick={() => router.push('/meetups/compete/choose-topic')}
+        onClick={() => {
+          saveRoomSettingsToLocalStorage();
+          router.push('/meetups/compete/choose-topic');
+        }}
       >
         NEXT
       </button>

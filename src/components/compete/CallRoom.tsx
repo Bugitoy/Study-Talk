@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   CallControls,
   CallParticipantsList,
@@ -9,7 +9,7 @@ import {
   SpeakerLayout,
   useCallStateHooks,
 } from '@stream-io/video-react-sdk';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import { Users, LayoutList } from 'lucide-react';
 
 import {
@@ -22,20 +22,68 @@ import Loader from '@/components/Loader';
 import EndCallButton from '@/components/EndCallButton';
 import { cn } from '@/lib/utils';
 
+import { useQuizRoom } from '@/hooks/useQuizRoom';
+import { useQuizResults } from '@/hooks/useQuizResults';
+import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs';
+
 type CallLayoutType = 'grid' | 'speaker-left' | 'speaker-right';
 
 
 const CallRoom = () => {
   const searchParams = useSearchParams();
   const isPersonalRoom = !!searchParams.get('personal');
-  const topicName = searchParams.get('name') || 'Unnamed topic';
   const router = useRouter();
   const [layout, setLayout] = useState<CallLayoutType>('speaker-left');
   const [showParticipants, setShowParticipants] = useState(false);
   const { useCallCallingState } = useCallStateHooks();
+  const { id } = useParams();
+  
+  const { data: quizRoom } = useQuizRoom(id as string);
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [quizEnded, setQuizEnded] = useState(false);
+  const { data: results } = useQuizResults(quizEnded ? (id as string) : '');
+  const { user } = useKindeBrowserClient();
 
   // for more detail about types of CallingState see: https://getstream.io/video/docs/react/ui-cookbook/ringing-call/#incoming-call-panel
   const callingState = useCallCallingState();
+
+  useEffect(() => {
+    if (quizRoom && callingState === CallingState.JOINED) {
+      setTimeLeft(quizRoom.timePerQuestion === null ? Infinity : quizRoom.timePerQuestion);
+    }
+  }, [quizRoom, callingState]);
+
+  useEffect(() => {
+    if (!quizRoom || quizEnded || callingState !== CallingState.JOINED) return;
+    if (timeLeft <= 0 && timeLeft !== Infinity) {
+      if (currentIdx < quizRoom.questions.length - 1) {
+        setCurrentIdx((i) => i + 1);
+        setTimeLeft(quizRoom.timePerQuestion === null ? Infinity : quizRoom.timePerQuestion);
+      } else {
+        setQuizEnded(true);
+      }
+    }
+    if (timeLeft !== Infinity) {
+      const t = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
+      return () => clearTimeout(t);
+    }
+  }, [currentIdx, quizRoom, timeLeft, quizEnded, callingState]);
+
+  const currentQuestion = quizRoom?.questions[currentIdx];
+  
+  const sendAnswer = async (answer: string) => {
+    if (!quizRoom || !currentQuestion || !user) return;
+    await fetch(`/api/quiz-room/${quizRoom.id}/answer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: user.id,
+        questionId: currentQuestion.id,
+        answer,
+      }),
+    });
+  };
 
   if (callingState !== CallingState.JOINED) return <Loader />;
 
@@ -56,7 +104,7 @@ const CallRoom = () => {
       <div className="absolute top-0 left-0 w-full flex flex-col items-center z-20 p-6 pointer-events-none">
         <div className="backdrop-blur-sm rounded-xl p-6 shadow-md mb-2 pointer-events-auto rounded-[8px]">
           <h1 className="text-4xl font-semibold text-[#19232d] text-center">
-            Topic: {topicName}
+            Room Name: {quizRoom?.name}
           </h1>
         </div>
       </div>
@@ -64,92 +112,98 @@ const CallRoom = () => {
       {/* video layout */}
       <div className="relative flex size-full items-center justify-center">
         <div className=" flex flex-row items-center gap-5">
+          {!quizEnded && (
+            <>
             {/* Question sheet */}
-            <div className="relative w-[35rem] h-[40rem] mx-auto mr-10">
-                {/* Bottom Card */}
-                <div className="absolute w-[32rem] h-[40rem] inset-0 translate-y-[-35px] ml-[10px]
-                                translate-x-[28px] bg-rose-200 border border-white rounded-[30px] shadow-md 
-                                flex items-center justify-center text-xl font-bold text-gray-600">
-                </div>
+            <div className="relative w-[35rem] h-[40rem] mx-auto mr-[28rem]">
+              {/* Bottom Card */}
+              <div className="absolute w-[32rem] h-[40rem] inset-0 translate-y-[-35px] ml-[10px]
+                              translate-x-[28px] bg-rose-200 border border-white rounded-[30px] shadow-md 
+                              flex items-center justify-center text-xl font-bold text-gray-600">
+              </div>
 
-                {/* Middle Card */}
-                <div className="absolute w-[35rem] h-[40rem] inset-0 translate-y-[-18px] translate-x-[14px] 
-                                bg-red-200 border border-white rounded-[30px] shadow-md flex items-center justify-center 
-                                text-xl font-bold text-gray-600">
-                </div>
+              {/* Middle Card */}
+              <div className="absolute w-[35rem] h-[40rem] inset-0 translate-y-[-18px] translate-x-[14px] 
+                              bg-red-200 border border-white rounded-[30px] shadow-md flex items-center justify-center 
+                              text-xl font-bold text-gray-600">
+              </div>
 
-                {/* Top Card */}
-                <div className="bg-red-100 absolute w-[37rem] h-[40rem] inset-0 border border-white rounded-[30px] 
-                                shadow-md flex items-center justify-center text-xl font-bold text-gray-600">
-                    <div className="flex flex-col items-center justify-center"> 
-                        <h1 className="text-3xl font-bold text-gray-600 mb-7">Question:</h1>
-                        <p className="text-gray-600 font-light text-center w-[30rem]">
-                            Lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quos. Lorem ipsum dolor 
-                            sit amet consectetur adipisicing elit. Cumque culpa sit ex labore aliquid delectus molestiae 
-                            voluptatem quas iusto, quidem aperiam sequi harum debitis tenetur corporis eos tempore libero! 
-                            Eligendi? Lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quos. Lorem ipsum dolor 
-                            sit amet consectetur adipisicing elit. Cumque culpa sit ex labore aliquid delectus molestiae 
-                            voluptatem quas iusto, quidem aperiam sequi harum debitis tenetur corporis eos tempore libero! 
-                            Eligendi? Lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quos. Lorem ipsum dolor 
-                            sit amet consectetur adipisicing elit. Cumque culpa sit ex labore aliquid delectus molestiae 
-                            voluptatem quas iusto, quidem aperiam sequi harum debitis tenetur corporis eos tempore libero! 
-                            Eligendi?
+              {/* Top Card */}
+              <div className="bg-red-100 absolute w-[37rem] h-[40rem] inset-0 border border-white rounded-[30px] 
+                              shadow-md flex items-center justify-center text-xl font-bold text-gray-600">
+                  <div className="flex flex-col items-center justify-center"> 
+                      <h1 className="text-3xl font-bold text-gray-600 mb-7">Question:</h1>
+                      <p className="text-gray-600 font-light text-center w-[30rem]">
+                          {currentQuestion?.question}
                         </p>
-                    </div>
-                </div>
+                        {timeLeft === Infinity ? (
+                          <p className="mt-4 text-gray-500">Time: unlimited</p>
+                        ) : (
+                          <p className="mt-4 text-gray-500">Time left: {timeLeft}s</p>
+                        )}
+                  </div>
+              </div>
             </div>
 
             {/* Answer sheet */}
             <div className=" flex flex-col items-center justify-center w-[35rem] h-[40rem] mx-auto gap-5">
         
-                    <div className="bg-thanodi-lightPeach border border-gray-300 rounded-[30px] shadow-md flex items-center 
-                                    justify-center text-xl font-bold text-gray-600 p-5"> 
-                        <h1 className="text-3xl font-bold text-gray-600 mr-5">A</h1>
-                        <p className="text-gray-600 font-light text-center w-[30rem]">
-                            Lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quos. Lorem ipsum dolor 
-                            sit amet consectetur adipisicing elit. Cumque culpa sit ex labore aliquid delectus molestiae 
-                            voluptatem quas iusto.
-                        </p>
-                    </div>
-      
-                    <div className="bg-thanodi-blue border border-gray-300 rounded-[30px] shadow-md flex items-center 
-                                    justify-center text-xl font-bold text-gray-600 p-5"> 
-                        <h1 className="text-3xl font-bold text-gray-600 mr-5">B</h1>
-                        <p className="text-gray-600 font-light text-center w-[30rem]">
-                            Lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quos. Lorem ipsum dolor 
-                            sit amet consectetur adipisicing elit. Cumque culpa sit ex labore aliquid delectus molestiae 
-                            voluptatem quas iusto.
-                        </p>
-                    </div>
-             
-                    <div className="bg-thanodi-lightBlue border border-gray-300 rounded-[30px] shadow-md flex items-center 
-                                    justify-center text-xl font-bold text-gray-600 p-5"> 
-                        <h1 className="text-3xl font-bold text-gray-600 mr-5">C</h1>
-                        <p className="text-gray-600 font-light text-center w-[30rem]">
-                            Lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quos. Lorem ipsum dolor 
-                            sit amet consectetur adipisicing elit. Cumque culpa sit ex labore aliquid delectus molestiae 
-                            voluptatem quas iusto.
-                        </p>
-                    </div>
+              <button onClick={() => sendAnswer('A')} className="bg-thanodi-lightPeach border border-gray-300 rounded-[30px] shadow-md flex items-center 
+                              justify-center text-xl font-bold text-gray-600 p-5"> 
+                  <h1 className="text-3xl font-bold text-gray-600 mr-5">A</h1>
+                  <p className="text-gray-600 font-light text-center w-[30rem]">
+                      {currentQuestion?.optionA}
+                  </p>
+              </button>
 
-                    <div className="bg-thanodi-cream border border-gray-300 rounded-[30px] shadow-md flex items-center 
-                                    justify-center text-xl font-bold text-gray-600 p-5"> 
-                        <h1 className="text-3xl font-bold text-gray-600 mr-5">D</h1>
-                        <p className="text-gray-600 font-light text-center w-[30rem]">
-                            Lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quos. Lorem ipsum dolor 
-                            sit amet consectetur adipisicing elit. Cumque culpa sit ex labore aliquid delectus molestiae 
-                            voluptatem quas iusto.
-                        </p>
-                    </div>
+              <button onClick={() => sendAnswer('B')} className="bg-thanodi-blue border border-gray-300 rounded-[30px] shadow-md flex items-center 
+                              justify-center text-xl font-bold text-gray-600 p-5"> 
+                  <h1 className="text-3xl font-bold text-gray-600 mr-5">B</h1>
+                  <p className="text-gray-600 font-light text-center w-[30rem]">
+                      {currentQuestion?.optionB}
+                  </p>
+              </button>
+        
+              <button onClick={() => sendAnswer('C')} className="bg-thanodi-lightBlue border border-gray-300 rounded-[30px] shadow-md flex items-center 
+                              justify-center text-xl font-bold text-gray-600 p-5"> 
+                  <h1 className="text-3xl font-bold text-gray-600 mr-5">C</h1>
+                  <p className="text-gray-600 font-light text-center w-[30rem]">
+                      {currentQuestion?.optionC}
+                  </p>
+              </button>
+
+              <button onClick={() => sendAnswer('D')} className="bg-thanodi-cream border border-gray-300 rounded-[30px] shadow-md flex items-center 
+                              justify-center text-xl font-bold text-gray-600 p-5"> 
+                  <h1 className="text-3xl font-bold text-gray-600 mr-5">D</h1>
+                  <p className="text-gray-600 font-light text-center w-[30rem]">
+                      {currentQuestion?.optionD}
+                  </p>
+              </button>
               
             </div>
-
+            </>
+            )}
+            {quizEnded && (
+            <div className="w-[50rem] h-[35rem] mx-auto mr-10 p-10 bg-white/50 rounded-[30px] shadow-md text-gray-700 flex flex-col">
+               <h2 className="text-3xl font-bold mb-4 text-center">Results</h2>
+               {results ? (
+                 <ul className="space-y-2 flex-1 overflow-y-auto">
+                   {Object.entries(results).sort((a,b) => b[1]-a[1]).map(([userId, score]) => (
+                     <li key={userId} className="flex flex-col justify-between text-gray-600 gap-2">
+                       <span className="text-gray-600">{userId}</span>
+                       <span className="text-gray-600">{score}</span>
+                     </li>
+                   ))}
+                 </ul>
+               ) : (
+                 <p className="text-center">Loading...</p>
+               )}
+            </div>
+            )}
             {/* Call video */}
             <div className="relative w-full max-w-2xl mx-auto mb-8">
                 <CallLayout />
-            </div>
-
-            
+            </div> 
         </div>
         <div
           className={cn('h-[calc(100vh-86px)] hidden ml-2', {
