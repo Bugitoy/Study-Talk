@@ -1,11 +1,11 @@
-import { PrismaClient, Language } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 const sampleWords = [
   {
     word: "Amazing",
-    language: Language.en,
+    language: "en",
     translation: "Makatsa",
     definition: "Describes something that is spectacular",
     pronunciation: "/əˈmeɪzɪŋ/",
@@ -16,7 +16,7 @@ const sampleWords = [
   },
   {
     word: "Apple",
-    language: Language.en,
+    language: "en",
     translation: "Apole",
     definition: "A type of fruit",
     pronunciation: "/ˈæpəl/",
@@ -25,7 +25,7 @@ const sampleWords = [
   },
   {
     word: "Bear",
-    language: Language.en,
+    language: "en",
     translation: "Bere",
     definition: "A type of animal",
     pronunciation: "/bɛər/",
@@ -34,7 +34,7 @@ const sampleWords = [
   },
   {
     word: "Cat",
-    language: Language.en,
+    language: "en",
     translation: "Katse",
     definition: "A small domestic animal",
     pronunciation: "/kæt/",
@@ -46,7 +46,7 @@ const sampleWords = [
   },
   {
     word: "Dog",
-    language: Language.en,
+    language: "en",
     translation: "Ntša",
     definition: "A domestic animal, often kept as a pet",
     pronunciation: "/dɔːɡ/",
@@ -55,7 +55,7 @@ const sampleWords = [
   },
   {
     word: "Elephant",
-    language: Language.en,
+    language: "en",
     translation: "Tlou",
     definition: "A large African or Asian mammal",
     pronunciation: "/ˈɛlɪfənt/",
@@ -67,7 +67,7 @@ const sampleWords = [
   },
   {
     word: "Fish",
-    language: Language.en,
+    language: "en",
     translation: "Tlhapi",
     definition: "An aquatic animal",
     pronunciation: "/fɪʃ/",
@@ -76,7 +76,7 @@ const sampleWords = [
   },
   {
     word: "Good",
-    language: Language.en,
+    language: "en",
     translation: "Botoka",
     definition: "Having the right or desired qualities",
     pronunciation: "/ɡʊd/",
@@ -85,7 +85,7 @@ const sampleWords = [
   },
   {
     word: "House",
-    language: Language.en,
+    language: "en",
     translation: "Ntlo",
     definition: "A building for human habitation",
     pronunciation: "/haʊs/",
@@ -97,7 +97,7 @@ const sampleWords = [
   },
   {
     word: "Makatsa",
-    language: Language.tn,
+    language: "tn",
     translation: "Amazing",
     definition: "Go bontsha selo se se gakgamatsang",
     pronunciation: "/ma-ka-tsa/",
@@ -106,7 +106,7 @@ const sampleWords = [
   },
   {
     word: "Ntlo",
-    language: Language.tn,
+    language: "tn",
     translation: "House",
     definition: "Lefelo la go nna",
     pronunciation: "/n-tlo/",
@@ -118,7 +118,7 @@ const sampleWords = [
   },
   {
     word: "Botoka",
-    language: Language.tn,
+    language: "tn",
     translation: "Good",
     definition: "Se se nang le mekgwa e e siameng",
     pronunciation: "/bo-to-ka/",
@@ -127,7 +127,7 @@ const sampleWords = [
   },
    {
     word: "a",
-    language: Language.tn,
+    language: "tn",
     translation: "",
     definition: "Concord of Ma~",
     pronunciation: "/a/",
@@ -138,7 +138,7 @@ const sampleWords = [
   },
    {
     word: "a",
-    language: Language.tn,
+    language: "tn",
     translation: "Let",
     definition: "To allow",
     pronunciation: "/a/",

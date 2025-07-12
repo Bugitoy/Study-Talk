@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import TopicCard from "@/components/compete/TopicCard";
 import { Call, useStreamVideoClient } from "@stream-io/video-react-sdk";
 import { useToast } from "@/components/ui/use-toast";
@@ -23,14 +23,17 @@ const pastelColors = [
     'bg-thanodi-lightBlue',
   ];
 
-export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete: (isSetupComplete: boolean) => void 
-}) {
+export default function ChooseTopic() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const timePerQuestion = Number(searchParams.get('time')) || 5;
+  const roomName = searchParams.get('name') || '';
   
   const client = useStreamVideoClient();
   const { user } = useKindeBrowserClient();
   const [values, setValues] = useState(initialValues);
   const [callDetail, setCallDetail] = useState<Call>();
+  const [selectedTopic, setSelectedTopic] = useState<{ title: string; description: string; backgroundImage: string } | null>(null);
   const { toast } = useToast();
 
   const createMeeting = async () => {
@@ -51,6 +54,34 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
         },
       });
       setCallDetail(call);
+      const sampleQuestions = [
+        {
+          question: 'Sample Question 1',
+          optionA: 'A1',
+          optionB: 'B1',
+          optionC: 'C1',
+          optionD: 'D1',
+          correct: 'A',
+        },
+        {
+          question: 'Sample Question 2',
+          optionA: 'A2',
+          optionB: 'B2',
+          optionC: 'C2',
+          optionD: 'D2',
+          correct: 'B',
+        },
+      ];
+      await fetch('/api/quiz-room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: call.id,
+          name: roomName,
+          timePerQuestion,
+          questions: sampleQuestions,
+        }),
+      });
       if (!values.description) {
         router.push(`/meetups/compete/room/${call.id}`);
       }
@@ -123,14 +154,14 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
         
         <div className="grid grid-cols-4 gap-10 mb-8">
             {topicsData.map((topic, idx) => (
-              <TopicCard
-                key={idx}
-                title={topic.title}
-                description={topic.description}
-                backgroundImage={topic.backgroundImage}
-                className={pastelColors[Math.floor(Math.random() * pastelColors.length)]}
-                handleClick={() => router.push('/meetups/study-groups')}
-              />
+                <TopicCard
+                  key={idx}
+                  title={topic.title}
+                  description={topic.description}
+                  backgroundImage={topic.backgroundImage}
+                  className={pastelColors[Math.floor(Math.random() * pastelColors.length)]}
+                  handleClick={() => setSelectedTopic(topic)}
+                />
             ))}
         </div>
         

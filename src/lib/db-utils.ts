@@ -270,3 +270,82 @@ export async function getUserInfo(userId: string) {
     return null;
   }
 }
+
+export async function createQuizRoom(data: {
+  id: string
+  name: string
+  timePerQuestion: number
+  questions: {
+    question: string
+    optionA: string
+    optionB: string
+    optionC: string
+    optionD: string
+    correct: string
+  }[]
+}) {
+  try {
+    const room = await prisma.quizRoom.create({
+      data: {
+        id: data.id,
+        name: data.name,
+        timePerQuestion: data.timePerQuestion,
+        questions: {
+          create: data.questions,
+        },
+      },
+      include: { questions: true },
+    })
+    return room
+  } catch (error) {
+    console.error('Error creating quiz room:', error)
+    throw error
+  }
+}
+
+export async function getQuizRoom(id: string) {
+  try {
+    return await prisma.quizRoom.findUnique({
+      where: { id },
+      include: { questions: true },
+    })
+  } catch (error) {
+    console.error('Error fetching quiz room:', error)
+    return null
+  }
+}
+
+export async function saveQuizAnswer(data: {
+  roomId: string
+  questionId: string
+  userId: string
+  answer: string
+}) {
+  try {
+    await prisma.quizAnswer.create({ data })
+  } catch (error) {
+    console.error('Error saving quiz answer:', error)
+    throw error
+  }
+}
+
+export async function getQuizResults(roomId: string) {
+  try {
+    const questions = await prisma.quizQuestion.findMany({
+      where: { roomId },
+    })
+    const answers = await prisma.quizAnswer.findMany({
+      where: { roomId },
+    })
+    const correctMap = new Map(questions.map((q) => [q.id, q.correct]))
+    const scores: Record<string, number> = {}
+    answers.forEach((a) => {
+      const isCorrect = correctMap.get(a.questionId) === a.answer
+      scores[a.userId] = (scores[a.userId] || 0) + (isCorrect ? 1 : 0)
+    })
+    return scores
+  } catch (error) {
+    console.error('Error getting quiz results:', error)
+    return {}
+  }
+}

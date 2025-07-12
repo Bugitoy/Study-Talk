@@ -96,3 +96,35 @@ model Room {
   status String?
 }
 
+model QuizRoom {
+  id              String         @id @default(auto()) @map("_id") @db.ObjectId
+  name            String
+  timePerQuestion Int
+  questions       QuizQuestion[]
+  createdAt       DateTime       @default(now())
+}
+
+model QuizQuestion {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  roomId    String    @db.ObjectId
+  question  String
+  optionA   String
+  optionB   String
+  optionC   String
+  optionD   String
+  correct   String
+  room      QuizRoom  @relation(fields: [roomId], references: [id])
+  answers   QuizAnswer[]
+}
+
+model QuizAnswer {
+  id         String       @id @default(auto()) @map("_id") @db.ObjectId
+  roomId     String       @db.ObjectId
+  questionId String       @db.ObjectId
+  userId     String
+  answer     String
+  createdAt  DateTime     @default(now())
+  room       QuizRoom     @relation(fields: [roomId], references: [id])
+  question   QuizQuestion @relation(fields: [questionId], references: [id])
+}
+

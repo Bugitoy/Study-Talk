@@ -154,7 +154,9 @@ export default function CreateRoom() {
 
       <button
         className="w-full bg-orange-300 text-white py-3 rounded-[8px] text-lg font-semibold hover:bg-orange-200 transition-colors"
-        onClick={() => router.push('/meetups/compete/choose-topic')}
+        onClick={() =>
+          router.push(`/meetups/compete/choose-topic?time=${roomSettings.timePerQuestion}&name=${encodeURIComponent(roomSettings.roomName)}`)
+        }
       >
         NEXT
       </button>

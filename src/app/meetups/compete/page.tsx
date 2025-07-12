@@ -31,7 +31,7 @@ const initialValues = {
     link: '/meetups/compete/room/',
   };
 
-const Compete = ({setIsSetupComplete}: {setIsSetupComplete: (isSetupComplete: boolean) => void}) => {
+const Compete = () => {
   const [search, setSearch] = useState('');
 
   const router = useRouter();
