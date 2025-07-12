@@ -24,6 +24,8 @@ const CallSetup = ({
   const callHasEnded = !!callEndedAt;
 
   const call = useCall();
+  const [roomSettings, setRoomSettings] = useState<any>(null);
+  const [roomFull, setRoomFull] = useState(false);
 
   if (!call) {
     throw new Error(
@@ -35,6 +37,17 @@ const CallSetup = ({
   const [isMicCamToggled, setIsMicCamToggled] = useState(false);
 
   useEffect(() => {
+    const stored = localStorage.getItem('roomSettings');
+    if (stored) {
+      const settings = JSON.parse(stored);
+      setRoomSettings(settings);
+      if (settings.mic === 'off' && settings.camera === 'off') {
+        setIsMicCamToggled(true);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     if (isMicCamToggled) {
       call.camera.disable();
       call.microphone.disable();
@@ -43,6 +56,20 @@ const CallSetup = ({
       call.microphone.enable();
     }
   }, [isMicCamToggled, call.camera, call.microphone]);
+
+  useEffect(() => {
+    if (!roomSettings) return;
+    if (roomSettings.mic === 'off') {
+      call.microphone.disable();
+    }
+    if (roomSettings.camera === 'off') {
+      call.camera.disable();
+    }
+    const max = roomSettings.participants;
+    if (max && call.state.members.length >= max) {
+      setRoomFull(true);
+    }
+  }, [roomSettings, call]);
 
   if (callTimeNotArrived)
     return (
@@ -56,6 +83,11 @@ const CallSetup = ({
       <Alert
         title="The call has been ended by the host"
       />
+    );
+
+  if (roomFull)
+    return (
+      <Alert title="This room has reached the participant limit" />
     );
 
   return (

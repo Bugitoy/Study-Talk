@@ -99,10 +99,12 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
         const settings = JSON.parse(storedSettings);
         const roomName = settings.roomName || 'Unnamed Room';
         const timePerQuestion = settings.timePerQuestion || null;
+        const numQuestions = settings.numQuestions || sampleQuestions.length;
+        sampleQuestions = sampleQuestions.slice(0, numQuestions);
 
         await fetch('/api/quiz-room', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json'},
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             id: call.id,
             name: roomName,
@@ -140,7 +142,7 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
       backgroundImage: "/Images/meetups/topics/animals.png"
     },
     {
-      title: "Multivariable Calculus",
+      title: "Calculus",
       description: "This quiz contains questions about the different types of integrals and the different types of derivatives.",
       backgroundImage: "/Images/meetups/topics/calculus.png"
     },

@@ -8,6 +8,7 @@ import {
   PaginatedGridLayout,
   SpeakerLayout,
   useCallStateHooks,
+  useCall,
 } from '@stream-io/video-react-sdk';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import { Users, LayoutList } from 'lucide-react';
@@ -39,27 +40,49 @@ const CallRoom = () => {
   const { id } = useParams();
   
   const { data: quizRoom } = useQuizRoom(id as string);
+
+  const [ roomSettings, setRoomSettings ] = useState<any>(null);
+  const call = useCall();
+
   const [currentIdx, setCurrentIdx] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
   const [quizEnded, setQuizEnded] = useState(false);
   const { data: results } = useQuizResults(quizEnded ? (id as string) : '');
   const { user } = useKindeBrowserClient();
 
+  useEffect(() => {
+    const stored = localStorage.getItem('roomSettings');
+    if (stored) {
+      setRoomSettings(JSON.parse(stored));
+    }
+  }, []);
+
   // for more detail about types of CallingState see: https://getstream.io/video/docs/react/ui-cookbook/ringing-call/#incoming-call-panel
   const callingState = useCallCallingState();
 
   useEffect(() => {
+    if (!roomSettings || !call || callingState !== CallingState.JOINED) return;
+    if (roomSettings.mic === 'off') call.microphone.disable();
+    if (roomSettings.camera === 'off') call.camera.disable();
+  }, [roomSettings, call, callingState]);
+
+  useEffect(() => {
     if (quizRoom && callingState === CallingState.JOINED) {
-      setTimeLeft(quizRoom.timePerQuestion === null ? Infinity : quizRoom.timePerQuestion);
+      const t = roomSettings?.timePerQuestion ?? quizRoom.timePerQuestion;
+      setTimeLeft(t === null ? Infinity : t);
     }
-  }, [quizRoom, callingState]);
+  }, [quizRoom, callingState, roomSettings]);
 
   useEffect(() => {
     if (!quizRoom || quizEnded || callingState !== CallingState.JOINED) return;
+    const questions = roomSettings?.numQuestions
+      ? quizRoom.questions.slice(0, roomSettings.numQuestions)
+      : quizRoom.questions;
     if (timeLeft <= 0 && timeLeft !== Infinity) {
-      if (currentIdx < quizRoom.questions.length - 1) {
+      if (currentIdx < questions.length - 1) {
         setCurrentIdx((i) => i + 1);
-        setTimeLeft(quizRoom.timePerQuestion === null ? Infinity : quizRoom.timePerQuestion);
+        const t = roomSettings?.timePerQuestion ?? quizRoom.timePerQuestion;
+        setTimeLeft(t === null ? Infinity : t);
       } else {
         setQuizEnded(true);
       }
@@ -68,9 +91,13 @@ const CallRoom = () => {
       const t = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
       return () => clearTimeout(t);
     }
-  }, [currentIdx, quizRoom, timeLeft, quizEnded, callingState]);
+  }, [currentIdx, quizRoom, timeLeft, quizEnded, callingState, roomSettings]);
 
-  const currentQuestion = quizRoom?.questions[currentIdx];
+  const questions = roomSettings?.numQuestions
+    ? quizRoom?.questions?.slice(0, roomSettings.numQuestions) || []
+    : quizRoom?.questions || [];
+
+    const currentQuestion = questions[currentIdx];
   
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
 
@@ -214,17 +241,53 @@ const CallRoom = () => {
             <div className="w-[50rem] h-[35rem] mx-auto mr-10 p-10 bg-white/50 rounded-[30px] shadow-md text-gray-700 flex flex-col">
                <h2 className="text-3xl font-bold mb-4 text-center">Results</h2>
                {results ? (
-                 <ul className="space-y-2 flex-1 overflow-y-auto">
-                   {Object.entries(results).sort((a,b) => b[1]-a[1]).map(([userId, score]) => (
-                     <li key={userId} className="flex flex-col justify-between text-gray-600 gap-2">
-                       <span className="text-gray-600">{userId}</span>
-                       <span className="text-gray-600">{score}</span>
-                     </li>
-                   ))}
-                 </ul>
-               ) : (
-                 <p className="text-center">Loading...</p>
-               )}
+                 <div className="space-y-4 overflow-y-auto flex-1">
+                 <div>
+                   <h3 className="text-xl font-semibold mb-2">
+                     Questions Asked
+                   </h3>
+                   <ol className="list-decimal list-inside space-y-1 text-gray-600">
+                     {results.questions.map((q) => (
+                       <li key={q.id}>{q.question}</li>
+                     ))}
+                   </ol>
+                 </div>
+                 <div className="space-y-6">
+                   {results.users
+                     .sort((a, b) => b.score - a.score)
+                     .map((u) => (
+                       <div
+                         key={u.userId}
+                         className="border-t border-gray-300 pt-2"
+                       >
+                         <p className="font-semibold text-gray-700">
+                           {u.username} - Score: {u.score}
+                         </p>
+                         <div className="ml-4">
+                           <p className="font-medium text-green-700">
+                             Correct
+                           </p>
+                           <ul className="list-disc list-inside text-green-700">
+                             {u.correct.map((q) => (
+                               <li key={q}>{q}</li>
+                             ))}
+                           </ul>
+                           <p className="font-medium text-red-700 mt-2">
+                             Wrong
+                           </p>
+                           <ul className="list-disc list-inside text-red-700">
+                             {u.wrong.map((q) => (
+                               <li key={q}>{q}</li>
+                             ))}
+                           </ul>
+                         </div>
+                       </div>
+                     ))}
+                 </div>
+               </div>
+             ) : (
+               <p className="text-center">Loading...</p>
+             )}
             </div>
             )}
             {/* Call video */}

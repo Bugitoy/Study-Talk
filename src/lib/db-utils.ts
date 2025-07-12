@@ -272,17 +272,17 @@ export async function getUserInfo(userId: string) {
 }
 
 export async function createQuizRoom(data: {
-  id: string
-  name: string
-  timePerQuestion: number
+  id: string;
+  name: string;
+  timePerQuestion: number;
   questions: {
-    question: string
-    optionA: string
-    optionB: string
-    optionC: string
-    optionD: string
-    correct: string
-  }[]
+    question: string;
+    optionA: string;
+    optionB: string;
+    optionC: string;
+    optionD: string;
+    correct: string;
+  }[];
 }) {
   try {
     const room = await prisma.quizRoom.create({
@@ -295,11 +295,11 @@ export async function createQuizRoom(data: {
         },
       },
       include: { questions: true },
-    })
-    return room
+    });
+    return room;
   } catch (error) {
-    console.error('Error creating quiz room:', error)
-    throw error
+    console.error("Error creating quiz room:", error);
+    throw error;
   }
 }
 
@@ -308,24 +308,24 @@ export async function getQuizRoom(id: string) {
     return await prisma.quizRoom.findUnique({
       where: { id },
       include: { questions: true },
-    })
+    });
   } catch (error) {
-    console.error('Error fetching quiz room:', error)
-    return null
+    console.error("Error fetching quiz room:", error);
+    return null;
   }
 }
 
 export async function saveQuizAnswer(data: {
-  roomId: string
-  questionId: string
-  userId: string
-  answer: string
+  roomId: string;
+  questionId: string;
+  userId: string;
+  answer: string;
 }) {
   try {
-    await prisma.quizAnswer.create({ data })
+    await prisma.quizAnswer.create({ data });
   } catch (error) {
-    console.error('Error saving quiz answer:', error)
-    throw error
+    console.error("Error saving quiz answer:", error);
+    throw error;
   }
 }
 
@@ -333,28 +333,62 @@ export async function getQuizResults(roomId: string) {
   try {
     const questions = await prisma.quizQuestion.findMany({
       where: { roomId },
-    })
+    });
     const answers = await prisma.quizAnswer.findMany({
       where: { roomId },
-    })
-    const correctMap = new Map(questions.map((q) => [q.id, q.correct]))
-    const scores: Record<string, number> = {}
+    });
+    const userIds = Array.from(new Set(answers.map((a) => a.userId)));
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, name: true },
+    });
+    const userMap = new Map(users.map((u) => [u.id, u.name || u.id]));
+    const questionMap = new Map(questions.map((q) => [q.id, q]));
+    const results: Record<
+      string,
+      {
+        userId: string;
+        username: string | null;
+        score: number;
+        correct: string[];
+        wrong: string[];
+      }
+    > = {};
     answers.forEach((a) => {
-      const isCorrect = correctMap.get(a.questionId) === a.answer
-      scores[a.userId] = (scores[a.userId] || 0) + (isCorrect ? 1 : 0)
-    })
-    return scores
+      const q = questionMap.get(a.questionId);
+      if (!q) return;
+      if (!results[a.userId]) {
+        results[a.userId] = {
+          userId: a.userId,
+          username: userMap.get(a.userId) || a.userId,
+          score: 0,
+          correct: [],
+          wrong: [],
+        };
+      }
+      const userRes = results[a.userId];
+      if (q.correct === a.answer) {
+        userRes.score += 1;
+        userRes.correct.push(q.question);
+      } else {
+        userRes.wrong.push(q.question);
+      }
+    });
+    return {
+      questions: questions.map((q) => ({ id: q.id, question: q.question })),
+      users: Object.values(results),
+    };
   } catch (error) {
-    console.error('Error getting quiz results:', error)
-    return {}
+    console.error("Error getting quiz results:", error);
+    return { questions: [], users: [] };
   }
 }
 
 export async function getTopicQuestions(topic: string) {
   try {
-    return await prisma.topicQuestion.findMany({ where: { topic } })
+    return await prisma.topicQuestion.findMany({ where: { topic } });
   } catch (error) {
-    console.error('Error fetching topic questions:', error)
-    return []
+    console.error("Error fetching topic questions:", error);
+    return [];
   }
 }
