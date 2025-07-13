@@ -432,3 +432,12 @@ export async function getTopicQuestions(topic: string) {
     return [];
   }
 }
+
+export async function getTopics() {
+  try {
+    return await prisma.topic.findMany();
+  } catch (error) {
+    console.error("Error fetching topics:", error);
+    return [];
+  }
+}

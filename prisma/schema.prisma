@@ -154,3 +154,11 @@ model TopicQuestion {
   correct   String
   createdAt DateTime @default(now())
 }
+
+model Topic {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  title          String   @unique
+  description    String
+  backgroundImage String
+  createdAt      DateTime @default(now())
+}

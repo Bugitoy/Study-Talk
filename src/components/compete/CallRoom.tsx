@@ -86,12 +86,31 @@ const CallRoom = () => {
     }
   }, [quizRoom, callingState, roomSettings, quizStarted]);
 
+const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+
+  const submitAnswer = async (answerText: string) => {
+    if (!quizRoom || !currentQuestion || !user || !sessionId) return;
+    await fetch(`/api/quiz-room/${quizRoom.id}/answer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: user.id,
+        questionId: currentQuestion.id,
+        sessionId,
+        answer: answerText,
+      }),
+    });
+  };
+
   useEffect(() => {
     if (!quizStarted || !quizRoom || quizEnded || callingState !== CallingState.JOINED) return;
     const questions = roomSettings?.numQuestions
       ? quizRoom.questions.slice(0, roomSettings.numQuestions)
       : quizRoom.questions;
     if (timeLeft <= 0 && timeLeft !== Infinity) {
+      if (!selectedAnswer) {
+        submitAnswer("blank");
+      }
       if (currentIdx < questions.length - 1) {
         setCurrentIdx((i) => i + 1);
         const t = roomSettings?.timePerQuestion ?? quizRoom.timePerQuestion;
@@ -104,7 +123,7 @@ const CallRoom = () => {
       const t = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
       return () => clearTimeout(t);
     }
-  }, [currentIdx, quizRoom, timeLeft, quizEnded, callingState, roomSettings, quizStarted]);
+  }, [currentIdx, quizRoom, timeLeft, quizEnded, callingState, roomSettings, quizStarted, selectedAnswer]);
 
   const questions = roomSettings?.numQuestions
     ? quizRoom?.questions?.slice(0, roomSettings.numQuestions) || []
@@ -112,7 +131,6 @@ const CallRoom = () => {
 
     const currentQuestion = questions[currentIdx];
   
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
 
   const sendAnswer = async (answerKey: 'A' | 'B' | 'C' | 'D') => {
     if (!quizRoom || !currentQuestion || !user || !sessionId) return;
@@ -127,16 +145,7 @@ const CallRoom = () => {
         ? currentQuestion.optionC
         : currentQuestion.optionD;
 
-    await fetch(`/api/quiz-room/${quizRoom.id}/answer`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId: user.id,
-        questionId: currentQuestion.id,
-        sessionId,
-        answer: answerText,
-      }),
-    });
+        await submitAnswer(answerText);
   };
 
   useEffect(() => {
@@ -306,14 +315,16 @@ const CallRoom = () => {
                         {u.answers.map((a) => (
                           <li key={a.questionId}>
                             <span className="font-medium">{a.question}</span>
-                            <div className={cn(a.isCorrect ? 'text-green-700 ml-5' : 'text-red-700 ml-5')}>{a.answer}</div>
+                            <div className={cn(a.isCorrect ? 'text-green-700 ml-5' : 'text-red-700 ml-5')}>
+                                {a.answer === 'blank' ? 'blank' : a.answer}
+                            </div>
                             {!a.isCorrect && (
                               <div className="text-green-700 ml-5">Correct answer: {a.correctAnswer}</div>
                             )}
                           </li>
                         ))}
                       </ol>
-                      <div className="flex gap-[15rem] items-center justify-center mt-10">
+                      <div className="flex gap-[10rem] items-center justify-center mt-10">
                         <button className="bg-thanodi-lightPeach border border-gray-300 rounded-[12px] shadow-md flex items-center justify-center text-lg font-bold text-gray-600 p-3">
                           Restart Quiz
                         </button>

@@ -15,7 +15,8 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx scripts/seed-database.ts",
     "db:seed-questions": "tsx scripts/seed-questions.ts",
-    "db:clear": "npx tsx scripts/clear-data.ts"
+    "db:clear": "npx tsx scripts/clear-data.ts",
+    "db:seed-topics": "tsx scripts/seed-topics.ts"
   },
   "dependencies": {
     "@google-cloud/text-to-speech": "^6.1.0",

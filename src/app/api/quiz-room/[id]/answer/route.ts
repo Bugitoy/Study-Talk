@@ -7,7 +7,7 @@ export async function POST(
 ) {
   try {
     const { userId, questionId, answer, sessionId } = await request.json();
-    if (!userId || !questionId || !answer || !sessionId) {
+    if (!userId || !questionId || answer === undefined || !sessionId) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
     const { id } = await params;
