@@ -144,16 +144,21 @@ const CallRoom = () => {
 
   if (callingState !== CallingState.JOINED) return <Loader />;
 
-  const CallLayout = () => {
-    switch (layout) {
-      case 'grid':
-        return <PaginatedGridLayout />;
-      case 'speaker-right':
-        return <SpeakerLayout participantsBarPosition="left" />;
-      default:
-        return <SpeakerLayout participantsBarPosition="right" />;
-    }
-  };
+  let LayoutComponent;
+  let layoutProps = {};
+  switch (layout) {
+    case 'grid':
+      LayoutComponent = PaginatedGridLayout;
+      break;
+    case 'speaker-right':
+      LayoutComponent = SpeakerLayout;
+      layoutProps = { participantsBarPosition: 'left' };
+      break;
+    default:
+      LayoutComponent = SpeakerLayout;
+      layoutProps = { participantsBarPosition: 'right' };
+      break;
+  }
 
   return (
     <section className="relative h-screen w-full pt-4 text-white">
@@ -173,7 +178,7 @@ const CallRoom = () => {
           <>
             
             {/* Question sheet */}
-            <div className="relative w-[35rem] h-[40rem] mx-auto mr-[28rem]">
+            <div className="relative w-[35rem] h-[40rem] mx-auto mr-[2rem]">
               {/* Bottom Card */}
               <div className="absolute w-[32rem] h-[40rem] inset-0 translate-y-[-35px] ml-[10px]
                               translate-x-[28px] bg-rose-200 border border-white rounded-[30px] shadow-md 
@@ -316,7 +321,7 @@ const CallRoom = () => {
             )}
             {/* Call video */}
             <div className="relative w-full max-w-2xl mx-auto mb-8">
-                <CallLayout />
+                <LayoutComponent {...layoutProps} />
             </div> 
         </div>
         <div
