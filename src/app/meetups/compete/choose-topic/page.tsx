@@ -176,6 +176,7 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
                 backgroundImage={topic.backgroundImage}
                 className={`${pastelColors[idx % pastelColors.length]}`}
                 handleClick={() => handleTopicClick(topic)}
+                isSelected={selectedTopic?.title === topic.title}
               />
             ))}
         </div>

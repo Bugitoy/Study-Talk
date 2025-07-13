@@ -8,9 +8,10 @@ interface TopicCardProps {
   description: string;
   handleClick?: () => void;
   backgroundImage?: string;
+  isSelected?: boolean;
 }
 
-const TopicCard = ({ className, title, description, handleClick, backgroundImage }: TopicCardProps) => {
+const TopicCard = ({ className, title, description, handleClick, backgroundImage, isSelected }: TopicCardProps) => {
   return (
     <section
       className={
@@ -29,7 +30,12 @@ const TopicCard = ({ className, title, description, handleClick, backgroundImage
         />
       )}
 
-      <div className={cn("relative bg-white/90 backdrop-blur-md flex flex-col rounded-[14px] gap-2 p-7 h-[13rem] z-10", className)}>
+      {/* Dark overlay when selected */}
+      {isSelected && (
+        <div className="absolute inset-0 bg-black opacity-40 z-10 pointer-events-none rounded-[14px]" />
+      )}
+
+      <div className={cn("relative bg-white/90 backdrop-blur-md flex flex-col rounded-[14px] gap-2 p-7 h-[13rem] z-20", className)}>
         <h1 className="text-2xl font-bold text-gray-600">{title}</h1>
         <p className="text-lg font-normal text-gray-600">{description}</p>
       </div>

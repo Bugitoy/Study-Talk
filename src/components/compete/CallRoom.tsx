@@ -341,7 +341,7 @@ const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
             </div>
           )}
           {/* Call video */}
-          <div className="relative w-full max-w-2xl mx-auto mb-8">
+          <div className="relative w-[50rem] max-w-2xl mb-8">
               <LayoutComponent {...layoutProps} />
           </div> 
         </div>
