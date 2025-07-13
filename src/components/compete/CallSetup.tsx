@@ -1,14 +1,13 @@
-'use client';
-import { useEffect, useState } from 'react';
+"use client";
+import { useEffect, useState } from "react";
 import {
   DeviceSettings,
   VideoPreview,
   useCall,
   useCallStateHooks,
-} from '@stream-io/video-react-sdk';
-import Alert from '@/components/Alert';
-import { Button } from '@/components/ui/button';
-import { PhoneOff } from 'lucide-react';
+} from "@stream-io/video-react-sdk";
+import Alert from "@/components/Alert";
+import { Button } from "@/components/ui/button";
 
 const CallSetup = ({
   setIsSetupComplete,
@@ -26,10 +25,11 @@ const CallSetup = ({
   const call = useCall();
   const [roomSettings, setRoomSettings] = useState<any>(null);
   const [roomFull, setRoomFull] = useState(false);
+  const quizAlreadyStarted = call?.state.custom?.quizStarted;
 
   if (!call) {
     throw new Error(
-      'useStreamCall must be used within a StreamCall component.',
+      "useStreamCall must be used within a StreamCall component.",
     );
   }
 
@@ -37,11 +37,11 @@ const CallSetup = ({
   const [isMicCamToggled, setIsMicCamToggled] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem('roomSettings');
+    const stored = localStorage.getItem("roomSettings");
     if (stored) {
       const settings = JSON.parse(stored);
       setRoomSettings(settings);
-      if (settings.mic === 'off' && settings.camera === 'off') {
+      if (settings.mic === "off" && settings.camera === "off") {
         setIsMicCamToggled(true);
       }
     }
@@ -59,10 +59,10 @@ const CallSetup = ({
 
   useEffect(() => {
     if (!roomSettings) return;
-    if (roomSettings.mic === 'off') {
+    if (roomSettings.mic === "off") {
       call.microphone.disable();
     }
-    if (roomSettings.camera === 'off') {
+    if (roomSettings.camera === "off") {
       call.camera.disable();
     }
     const max = roomSettings.participants;
@@ -78,21 +78,19 @@ const CallSetup = ({
       />
     );
 
+  if (quizAlreadyStarted) return <Alert title="The quiz has already started" />;
+
   if (callHasEnded)
-    return (
-      <Alert
-        title="The call has been ended by the host"
-      />
-    );
+    return <Alert title="The call has been ended by the host" />;
 
   if (roomFull)
-    return (
-      <Alert title="This room has reached the participant limit" />
-    );
+    return <Alert title="This room has reached the participant limit" />;
 
   return (
     <div className="flex h-screen w-full flex-col items-center justify-center gap-3 text-white">
-      <h1 className="text-center text-6xl font-bold mb-10 text-blue-400">Setup</h1>
+      <h1 className="text-center text-6xl font-bold mb-10 text-blue-400">
+        Setup
+      </h1>
       <VideoPreview />
       <div className="flex h-16 items-center justify-center gap-3">
         <label className="flex items-center justify-center gap-2 text-xl text-blue-400">
@@ -117,5 +115,4 @@ const CallSetup = ({
     </div>
   );
 };
-
 export default CallSetup;

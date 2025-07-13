@@ -1,5 +1,5 @@
-'use client';
-import React, { useState, useEffect } from 'react';
+"use client";
+import React, { useState, useEffect } from "react";
 import {
   CallControls,
   CallParticipantsList,
@@ -9,40 +9,45 @@ import {
   SpeakerLayout,
   useCallStateHooks,
   useCall,
-} from '@stream-io/video-react-sdk';
-import { useRouter, useParams } from 'next/navigation';
-import { Users, LayoutList } from 'lucide-react';
+} from "@stream-io/video-react-sdk";
+import { useRouter, useParams } from "next/navigation";
+import { Users, LayoutList } from "lucide-react";
 
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import Loader from '@/components/Loader';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/dropdown-menu";
+import Loader from "@/components/Loader";
+import { cn } from "@/lib/utils";
 
-import { useQuizRoom } from '@/hooks/useQuizRoom';
-import { useQuizResults } from '@/hooks/useQuizResults';
-import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs';
+import { useQuizRoom } from "@/hooks/useQuizRoom";
+import { useQuizResults } from "@/hooks/useQuizResults";
+import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 
-type CallLayoutType = 'grid' | 'speaker-left' | 'speaker-right';
-
+type CallLayoutType = "grid" | "speaker-left" | "speaker-right";
 
 const CallRoom = () => {
   const router = useRouter();
-  const [layout, setLayout] = useState<CallLayoutType>('speaker-left');
+  const [layout, setLayout] = useState<CallLayoutType>("speaker-left");
   const [showParticipants, setShowParticipants] = useState(false);
-  const { useCallCallingState } = useCallStateHooks();
+  const { useCallCallingState, useLocalParticipant } = useCallStateHooks();
   const { id } = useParams();
-  
+
   const { data: quizRoom } = useQuizRoom(id as string);
 
   const [roomSettings, setRoomSettings] = useState<any>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [startTimestamp, setStartTimestamp] = useState<number | null>(null);
   const call = useCall();
   // for more detail about types of CallingState see: https://getstream.io/video/docs/react/ui-cookbook/ringing-call/#incoming-call-panel
   const callingState = useCallCallingState();
+  const localParticipant = useLocalParticipant();
+  const isHost =
+    localParticipant &&
+    call?.state.createdBy &&
+    localParticipant.userId === call.state.createdBy.id;
 
   const [currentIdx, setCurrentIdx] = useState(0);
   // Start with Infinity so the first question isn't skipped before the
@@ -57,36 +62,68 @@ const CallRoom = () => {
   const { user } = useKindeBrowserClient();
 
   useEffect(() => {
+    if (quizStarted && callingState !== CallingState.JOINED && !isHost) {
+      router.push("/meetups/compete");
+    }
+  }, [quizStarted, callingState, isHost, router]);
+
+  useEffect(() => {
     const stored = localStorage.getItem("roomSettings");
     if (stored) {
       setRoomSettings(JSON.parse(stored));
     }
   }, []);
 
-  useEffect(() => {
-    const createSession = async () => {
-      if (!quizStarted || !quizRoom || sessionId || callingState !== CallingState.JOINED)
-        return;
-      const res = await fetch(`/api/quiz-room/${quizRoom.id}/session`, {
-        method: "POST",
+  const handleStartQuiz = async () => {
+    if (!isHost || !quizRoom) return;
+    const res = await fetch(`/api/quiz-room/${quizRoom.id}/session`, {
+      method: "POST",
+    });
+    if (res.ok) {
+      const json = await res.json();
+      setSessionId(json.sessionId);
+      setStartTimestamp(Date.now());
+      await call.update({
+        custom: {
+          quizStarted: true,
+          sessionId: json.sessionId,
+          currentIdx: 0,
+          startTime: Date.now(),
+          quizEnded: false,
+        },
       });
-      if (res.ok) {
-        const json = await res.json();
-        setSessionId(json.sessionId);
-      }
-    };
-    createSession();
-  }, [quizRoom, callingState, sessionId, quizStarted]);
+    }
+  };
 
+  useEffect(() => {
+    if (!call) return;
+    const sub = call.state.custom$.subscribe((custom: any) => {
+      if (custom.quizStarted) setQuizStarted(true);
+      if (custom.sessionId) setSessionId(custom.sessionId);
+      if (typeof custom.currentIdx === "number")
+        setCurrentIdx(custom.currentIdx);
+      if (typeof custom.startTime === "number") {
+        setStartTimestamp(custom.startTime);
+        const t = roomSettings?.timePerQuestion ?? quizRoom?.timePerQuestion;
+        if (t !== null && t !== undefined) {
+          const elapsed = Math.floor((Date.now() - custom.startTime) / 1000);
+          setTimeLeft(t === null ? Infinity : Math.max(0, t - elapsed));
+        }
+      }
+      if (custom.quizEnded) setQuizEnded(true);
+    });
+    return () => sub.unsubscribe();
+  }, [call, roomSettings, quizRoom]);
 
   useEffect(() => {
     if (quizStarted && quizRoom && callingState === CallingState.JOINED) {
       const t = roomSettings?.timePerQuestion ?? quizRoom.timePerQuestion;
       setTimeLeft(t === null ? Infinity : t);
+      setStartTimestamp(Date.now());
     }
   }, [quizRoom, callingState, roomSettings, quizStarted]);
 
-const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
 
   const submitAnswer = async (answerText: string) => {
     if (!quizRoom || !currentQuestion || !user || !sessionId) return;
@@ -103,49 +140,83 @@ const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   };
 
   useEffect(() => {
-    if (!quizStarted || !quizRoom || quizEnded || callingState !== CallingState.JOINED) return;
+    if (
+      !quizStarted ||
+      !quizRoom ||
+      quizEnded ||
+      callingState !== CallingState.JOINED
+    )
+      return;
     const questions = roomSettings?.numQuestions
       ? quizRoom.questions.slice(0, roomSettings.numQuestions)
       : quizRoom.questions;
-    if (timeLeft <= 0 && timeLeft !== Infinity) {
+    if (timeLeft <= 0 && timeLeft !== Infinity && isHost) {
       if (!selectedAnswer) {
         submitAnswer("blank");
       }
       if (currentIdx < questions.length - 1) {
+        const now = Date.now();
         setCurrentIdx((i) => i + 1);
+        call.update({
+          custom: {
+            ...call.state.custom,
+            currentIdx: currentIdx + 1,
+            startTime: now,
+          },
+        });
         const t = roomSettings?.timePerQuestion ?? quizRoom.timePerQuestion;
         setTimeLeft(t === null ? Infinity : t);
+        setStartTimestamp(now);
       } else {
-        setQuizEnded(true);
+        call.update({ custom: { ...call.state.custom, quizEnded: true } });
       }
     }
     if (timeLeft !== Infinity) {
-      const t = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
+      const t = setTimeout(() => {
+        if (startTimestamp) {
+          const q = roomSettings?.timePerQuestion ?? quizRoom.timePerQuestion;
+          const left =
+            q === null
+              ? Infinity
+              : q - Math.floor((Date.now() - startTimestamp) / 1000);
+          setTimeLeft(left);
+        }
+      }, 1000);
       return () => clearTimeout(t);
     }
-  }, [currentIdx, quizRoom, timeLeft, quizEnded, callingState, roomSettings, quizStarted, selectedAnswer]);
+  }, [
+    currentIdx,
+    quizRoom,
+    timeLeft,
+    quizEnded,
+    callingState,
+    roomSettings,
+    quizStarted,
+    selectedAnswer,
+    isHost,
+    startTimestamp,
+  ]);
 
   const questions = roomSettings?.numQuestions
     ? quizRoom?.questions?.slice(0, roomSettings.numQuestions) || []
     : quizRoom?.questions || [];
 
-    const currentQuestion = questions[currentIdx];
-  
+  const currentQuestion = questions[currentIdx];
 
-  const sendAnswer = async (answerKey: 'A' | 'B' | 'C' | 'D') => {
+  const sendAnswer = async (answerKey: "A" | "B" | "C" | "D") => {
     if (!quizRoom || !currentQuestion || !user || !sessionId) return;
     setSelectedAnswer(answerKey);
 
     const answerText =
-      answerKey === 'A'
+      answerKey === "A"
         ? currentQuestion.optionA
-        : answerKey === 'B'
-        ? currentQuestion.optionB
-        : answerKey === 'C'
-        ? currentQuestion.optionC
-        : currentQuestion.optionD;
+        : answerKey === "B"
+          ? currentQuestion.optionB
+          : answerKey === "C"
+            ? currentQuestion.optionC
+            : currentQuestion.optionD;
 
-        await submitAnswer(answerText);
+    await submitAnswer(answerText);
   };
 
   useEffect(() => {
@@ -157,184 +228,213 @@ const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   let LayoutComponent;
   let layoutProps = {};
   switch (layout) {
-    case 'grid':
+    case "grid":
       LayoutComponent = PaginatedGridLayout;
       break;
-    case 'speaker-right':
+    case "speaker-right":
       LayoutComponent = SpeakerLayout;
-      layoutProps = { participantsBarPosition: 'left' };
+      layoutProps = { participantsBarPosition: "left" };
       break;
     default:
       LayoutComponent = SpeakerLayout;
-      layoutProps = { participantsBarPosition: 'right' };
+      layoutProps = { participantsBarPosition: "right" };
       break;
   }
 
   return (
     <section className="relative h-screen w-full pt-2 text-white">
-  
-    <div className="absolute top-0 left-0 w-full flex flex-col items-center z-20 p-6 pointer-events-none">
-      <div className="backdrop-blur-sm rounded-xl p-6 shadow-md pointer-events-auto rounded-[8px]">
-        <h1 className="text-4xl font-semibold text-[#19232d] text-center">
-          Room Name: {quizRoom?.name}
-        </h1>
+      <div className="absolute top-0 left-0 w-full flex flex-col items-center z-20 p-6 pointer-events-none">
+        <div className="backdrop-blur-sm rounded-xl p-6 shadow-md pointer-events-auto rounded-[8px]">
+          <h1 className="text-4xl font-semibold text-[#19232d] text-center">
+            Room Name: {quizRoom?.name}
+          </h1>
+        </div>
       </div>
-    </div>
-        
-    {/* video layout */}
-    <div className="relative flex size-full items-center justify-center">
-      <div className=" flex flex-row items-center gap-5">
-        {!quizEnded && (
-          <>
+
+      {/* video layout */}
+      <div className="relative flex size-full items-center justify-center">
+        <div className=" flex flex-row items-center gap-5">
+          {!quizEnded && (
+            <>
               {!quizStarted ? (
-              <div className="relative w-[35rem] h-[40rem] mx-auto mr-[2rem] flex items-center justify-center">
-                <button
-                  onClick={() => setQuizStarted(true)}
-                  className="bg-thanodi-lightPeach border border-gray-300 rounded-[8px] shadow-md px-8 py-4 text-xl font-bold text-gray-600"
-                >
-                  Start Quiz
-                </button>
-              </div>
-            ) : (
-              <>
-                {/* Question sheet */}
-                <div className="relative w-[35rem] h-[40rem] mx-auto mr-[2rem]">
-                  {/* Bottom Card */}
-                  <div className="absolute w-[32rem] h-[40rem] inset-0 translate-y-[-35px] ml-[10px]
+                <div className="relative w-[35rem] h-[40rem] mx-auto mr-[2rem] flex items-center justify-center">
+                  {isHost ? (
+                    <button
+                      onClick={handleStartQuiz}
+                      className="bg-thanodi-lightPeach border border-gray-300 rounded-[8px] shadow-md px-8 py-4 text-xl font-bold text-gray-600"
+                    >
+                      Start Quiz
+                    </button>
+                  ) : (
+                    <p className="text-gray-700 font-semibold">
+                      Waiting for host to start...
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {/* Question sheet */}
+                  <div className="relative w-[35rem] h-[40rem] mx-auto mr-[2rem]">
+                    {/* Bottom Card */}
+                    <div
+                      className="absolute w-[32rem] h-[40rem] inset-0 translate-y-[-35px] ml-[10px]
                               translate-x-[28px] bg-rose-200 border border-white rounded-[30px] shadow-md
-                              flex items-center justify-center text-xl font-bold text-gray-600">
-                  </div>
+                              flex items-center justify-center text-xl font-bold text-gray-600"
+                    ></div>
 
-                  {/* Middle Card */}
-                  <div className="absolute w-[35rem] h-[40rem] inset-0 translate-y-[-18px] translate-x-[14px]
+                    {/* Middle Card */}
+                    <div
+                      className="absolute w-[35rem] h-[40rem] inset-0 translate-y-[-18px] translate-x-[14px]
                               bg-red-200 border border-white rounded-[30px] shadow-md flex items-center justify-center
-                              text-xl font-bold text-gray-600">
-                  </div>
+                              text-xl font-bold text-gray-600"
+                    ></div>
 
-                  {/* Top Card */}
-                  <div className="bg-red-100 absolute w-[37rem] h-[40rem] inset-0 border border-white rounded-[30px]
-                              shadow-md flex items-center justify-center text-xl font-bold text-gray-600">
+                    {/* Top Card */}
+                    <div
+                      className="bg-red-100 absolute w-[37rem] h-[40rem] inset-0 border border-white rounded-[30px]
+                              shadow-md flex items-center justify-center text-xl font-bold text-gray-600"
+                    >
                       <div className="flex flex-col items-center justify-center">
-                          <h1 className="text-3xl font-bold text-gray-600 mb-7">Question:</h1>
-                          <p className="text-gray-600 font-light text-center w-[30rem]">
-                              {currentQuestion?.question}
-                            </p>
-                            {timeLeft === Infinity ? (
-                              <p className="mt-4 text-gray-500">Time: unlimited</p>
-                            ) : (
-                              <p className="mt-4 text-gray-500">Time left: {timeLeft}s</p>
-                            )}
+                        <h1 className="text-3xl font-bold text-gray-600 mb-7">
+                          Question:
+                        </h1>
+                        <p className="text-gray-600 font-light text-center w-[30rem]">
+                          {currentQuestion?.question}
+                        </p>
+                        {timeLeft === Infinity ? (
+                          <p className="mt-4 text-gray-500">Time: unlimited</p>
+                        ) : (
+                          <p className="mt-4 text-gray-500">
+                            Time left: {timeLeft}s
+                          </p>
+                        )}
                       </div>
+                    </div>
                   </div>
-                </div>
 
-                {/* Answer sheet */}
-                <div className=" flex flex-col items-center justify-center w-[35rem] h-[40rem] mx-auto gap-5">
+                  {/* Answer sheet */}
+                  <div className=" flex flex-col items-center justify-center w-[35rem] h-[40rem] mx-auto gap-5">
+                    <button
+                      onClick={() => sendAnswer("A")}
+                      className={cn(
+                        "bg-thanodi-lightPeach border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xl font-bold text-gray-600 p-5",
+                        selectedAnswer === "A" && "bg-gray-400",
+                      )}
+                    >
+                      <h1 className="text-3xl font-bold text-gray-600 mr-5">
+                        A
+                      </h1>
+                      <p className="text-gray-600 font-light text-center w-[30rem]">
+                        {currentQuestion?.optionA}
+                      </p>
+                    </button>
 
-                  <button
-                    onClick={() => sendAnswer('A')}
-                    className={cn(
-                      'bg-thanodi-lightPeach border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xl font-bold text-gray-600 p-5',
-                      selectedAnswer === 'A' && 'bg-gray-400')
-                    }
-                  >
-                    <h1 className="text-3xl font-bold text-gray-600 mr-5">A</h1>
-                    <p className="text-gray-600 font-light text-center w-[30rem]">
-                      {currentQuestion?.optionA}
-                    </p>
-                  </button>
+                    <button
+                      onClick={() => sendAnswer("B")}
+                      className={cn(
+                        "bg-thanodi-blue border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xl font-bold text-gray-600 p-5",
+                        selectedAnswer === "B" && "bg-gray-400",
+                      )}
+                    >
+                      <h1 className="text-3xl font-bold text-gray-600 mr-5">
+                        B
+                      </h1>
+                      <p className="text-gray-600 font-light text-center w-[30rem]">
+                        {currentQuestion?.optionB}
+                      </p>
+                    </button>
 
-                  <button
-                    onClick={() => sendAnswer('B')}
-                    className={cn(
-                      'bg-thanodi-blue border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xl font-bold text-gray-600 p-5',
-                      selectedAnswer === 'B' && 'bg-gray-400')
-                    }
-                  >
-                    <h1 className="text-3xl font-bold text-gray-600 mr-5">B</h1>
-                    <p className="text-gray-600 font-light text-center w-[30rem]">
-                      {currentQuestion?.optionB}
-                    </p>
-                  </button>
+                    <button
+                      onClick={() => sendAnswer("C")}
+                      className={cn(
+                        "bg-thanodi-lightBlue border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xl font-bold text-gray-600 p-5",
+                        selectedAnswer === "C" && "bg-gray-400",
+                      )}
+                    >
+                      <h1 className="text-3xl font-bold text-gray-600 mr-5">
+                        C
+                      </h1>
+                      <p className="text-gray-600 font-light text-center w-[30rem]">
+                        {currentQuestion?.optionC}
+                      </p>
+                    </button>
 
-                  <button
-                    onClick={() => sendAnswer('C')}
-                    className={cn(
-                      'bg-thanodi-lightBlue border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xl font-bold text-gray-600 p-5',
-                      selectedAnswer === 'C' && 'bg-gray-400')
-                    }
-                  >
-                    <h1 className="text-3xl font-bold text-gray-600 mr-5">C</h1>
-                    <p className="text-gray-600 font-light text-center w-[30rem]">
-                      {currentQuestion?.optionC}
-                    </p>
-                  </button>
-
-                  <button
-                    onClick={() => sendAnswer('D')}
-                    className={cn(
-                      'bg-thanodi-cream border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xl font-bold text-gray-600 p-5',
-                      selectedAnswer === 'D' && 'bg-gray-400')
-                    }
-                  >
-                    <h1 className="text-3xl font-bold text-gray-600 mr-5">D</h1>
-                    <p className="text-gray-600 font-light text-center w-[30rem]">
-                      {currentQuestion?.optionD}
-                    </p>
-                  </button>
-
-                </div>
-              </>
-            )}
-          </>
+                    <button
+                      onClick={() => sendAnswer("D")}
+                      className={cn(
+                        "bg-thanodi-cream border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xl font-bold text-gray-600 p-5",
+                        selectedAnswer === "D" && "bg-gray-400",
+                      )}
+                    >
+                      <h1 className="text-3xl font-bold text-gray-600 mr-5">
+                        D
+                      </h1>
+                      <p className="text-gray-600 font-light text-center w-[30rem]">
+                        {currentQuestion?.optionD}
+                      </p>
+                    </button>
+                  </div>
+                </>
+              )}
+            </>
           )}
           {quizEnded && (
             <div className="w-[70rem] h-[35rem] mx-auto mr-10 p-10 bg-white/50 rounded-[30px] shadow-md text-gray-700 flex flex-col">
               <h2 className="text-3xl font-bold mb-4 text-center">Results</h2>
               {results ? (
-              <div className="space-y-10 overflow-y-auto flex-1">
-                {results.users
-                  .sort((a, b) => b.score - a.score)
-                  .map((u) => (
-                    <div
-                      key={u.userId}
-                      className="border-t border-gray-300 py-5"
-                    >
-                      <p className="font-semibold text-gray-700 mb-2">
-                        {u.username} - Score: {u.score}
-                      </p>
-                      <div className="flex gap-4 ml-4 mb-4">
-                        <p className="font-medium text-green-700">
-                          Correct: {u.answers.filter((a) => a.isCorrect).length}
+                <div className="space-y-10 overflow-y-auto flex-1">
+                  {results.users
+                    .sort((a, b) => b.score - a.score)
+                    .map((u) => (
+                      <div
+                        key={u.userId}
+                        className="border-t border-gray-300 py-5"
+                      >
+                        <p className="font-semibold text-gray-700 mb-2">
+                          {u.username} - Score: {u.score}
                         </p>
-                        <p className="font-medium text-red-700">
-                          Wrong: {u.answers.filter((a) => !a.isCorrect).length}
-                        </p>
+                        <div className="flex gap-4 ml-4 mb-4">
+                          <p className="font-medium text-green-700">
+                            Correct:{" "}
+                            {u.answers.filter((a) => a.isCorrect).length}
+                          </p>
+                          <p className="font-medium text-red-700">
+                            Wrong:{" "}
+                            {u.answers.filter((a) => !a.isCorrect).length}
+                          </p>
+                        </div>
+                        <ol className="list-decimal list-inside space-y-2 ml-4 text-gray-700">
+                          {u.answers.map((a) => (
+                            <li key={a.questionId}>
+                              <span className="font-medium">{a.question}</span>
+                              <div
+                                className={cn(
+                                  a.isCorrect
+                                    ? "text-green-700 ml-5"
+                                    : "text-red-700 ml-5",
+                                )}
+                              >
+                                {a.answer === "blank" ? "blank" : a.answer}
+                              </div>
+                              {!a.isCorrect && (
+                                <div className="text-green-700 ml-5">
+                                  Correct answer: {a.correctAnswer}
+                                </div>
+                              )}
+                            </li>
+                          ))}
+                        </ol>
+                        <div className="flex gap-[10rem] items-center justify-center mt-10">
+                          <button className="bg-thanodi-lightPeach border border-gray-300 rounded-[12px] shadow-md flex items-center justify-center text-lg font-bold text-gray-600 p-3">
+                            Restart Quiz
+                          </button>
+                          <button className="bg-thanodi-lightPeach border border-gray-300 rounded-[12px] shadow-md flex items-center justify-center text-lg font-bold text-gray-600 p-3">
+                            Choose a different topic
+                          </button>
+                        </div>
                       </div>
-                      <ol className="list-decimal list-inside space-y-2 ml-4 text-gray-700">
-                        {u.answers.map((a) => (
-                          <li key={a.questionId}>
-                            <span className="font-medium">{a.question}</span>
-                            <div className={cn(a.isCorrect ? 'text-green-700 ml-5' : 'text-red-700 ml-5')}>
-                                {a.answer === 'blank' ? 'blank' : a.answer}
-                            </div>
-                            {!a.isCorrect && (
-                              <div className="text-green-700 ml-5">Correct answer: {a.correctAnswer}</div>
-                            )}
-                          </li>
-                        ))}
-                      </ol>
-                      <div className="flex gap-[10rem] items-center justify-center mt-10">
-                        <button className="bg-thanodi-lightPeach border border-gray-300 rounded-[12px] shadow-md flex items-center justify-center text-lg font-bold text-gray-600 p-3">
-                          Restart Quiz
-                        </button>
-                        <button className="bg-thanodi-lightPeach border border-gray-300 rounded-[12px] shadow-md flex items-center justify-center text-lg font-bold text-gray-600 p-3">
-                          Choose a different topic
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-              </div>
+                    ))}
+                </div>
               ) : (
                 <p className="text-center">Loading...</p>
               )}
@@ -342,12 +442,12 @@ const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
           )}
           {/* Call video */}
           <div className="relative w-[50rem] max-w-2xl mb-8">
-              <LayoutComponent {...layoutProps} />
-          </div> 
+            <LayoutComponent {...layoutProps} />
+          </div>
         </div>
         <div
-          className={cn('h-[calc(100vh-86px)] hidden ml-2', {
-            'show-block': showParticipants,
+          className={cn("h-[calc(100vh-86px)] hidden ml-2", {
+            "show-block": showParticipants,
           })}
         >
           <CallParticipantsList onClose={() => setShowParticipants(false)} />
@@ -355,41 +455,37 @@ const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
       </div>
 
       {/* call controls */}
-        <div className="fixed bottom-0 left-0 right-0 rounded-t-xl flex w-full items-center justify-center gap-5 flex-wrap p-4 bg-black/20 backdrop-blur-sm">
-            <CallControls onLeave={() => router.push(`/meetups/compete`)} />
-            <DropdownMenu>
+      <div className="fixed bottom-0 left-0 right-0 rounded-t-xl flex w-full items-center justify-center gap-5 flex-wrap p-4 bg-black/20 backdrop-blur-sm">
+        <CallControls onLeave={() => router.push(`/meetups/compete`)} />
+        <DropdownMenu>
+          <div className="flex items-center">
+            <DropdownMenuTrigger className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]  ">
+              <LayoutList size={20} className="text-white" />
+            </DropdownMenuTrigger>
+          </div>
 
-            <div className="flex items-center">
-                <DropdownMenuTrigger className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]  ">
-                    <LayoutList size={20} className="text-white" />
-                </DropdownMenuTrigger>
-            </div>
+          <DropdownMenuContent className="border-thanodi-peach bg-thanodi-peach text-white">
+            {["Grid", "Speaker-Left", "Speaker-Right"].map((item, index) => (
+              <div key={index}>
+                <DropdownMenuItem
+                  onClick={() =>
+                    setLayout(item.toLowerCase() as CallLayoutType)
+                  }
+                >
+                  {item}
+                </DropdownMenuItem>
+              </div>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <CallStatsButton />
 
-            <DropdownMenuContent className="border-thanodi-peach bg-thanodi-peach text-white">
-                {['Grid', 'Speaker-Left', 'Speaker-Right'].map((item, index) => (
-                <div key={index}>
-                    <DropdownMenuItem
-                        onClick={() =>
-                            setLayout(item.toLowerCase() as CallLayoutType)
-                        }
-                        >
-                        {item}
-                    </DropdownMenuItem>
-                </div>
-                ))}
-            </DropdownMenuContent>
-
-            </DropdownMenu>
-            <CallStatsButton />
-
-            <button onClick={() => setShowParticipants((prev) => !prev)}>
-            <div className=" cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] ">
-                <Users size={20} className="text-white" />
-            </div>
-            </button>
-
-        </div>
-
+        <button onClick={() => setShowParticipants((prev) => !prev)}>
+          <div className=" cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] ">
+            <Users size={20} className="text-white" />
+          </div>
+        </button>
+      </div>
     </section>
   );
 };
