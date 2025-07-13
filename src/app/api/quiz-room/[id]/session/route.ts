@@ -3,10 +3,11 @@ import { createQuizSession } from "@/lib/db-utils";
 
 export async function POST(
   _req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const sessionId = await createQuizSession(params.id);
+    const { id } = await params;
+    const sessionId = await createQuizSession(id);
     return NextResponse.json({ sessionId });
   } catch (error) {
     console.error("Error creating quiz session:", error);

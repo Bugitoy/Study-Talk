@@ -3,12 +3,13 @@ import { getQuizResults } from "@/lib/db-utils";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const sessionId =
       request.nextUrl.searchParams.get("sessionId") || undefined;
-    const results = await getQuizResults(params.id, sessionId ?? undefined);
+    const { id } = await params;
+    const results = await getQuizResults(id, sessionId ?? undefined);
     return NextResponse.json(results);
   } catch (error) {
     console.error("Error fetching quiz results:", error);
