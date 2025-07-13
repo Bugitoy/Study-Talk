@@ -10,7 +10,7 @@ import {
   useCallStateHooks,
   useCall,
 } from '@stream-io/video-react-sdk';
-import { useRouter, useSearchParams, useParams } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { Users, LayoutList } from 'lucide-react';
 
 import {
@@ -20,7 +20,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import Loader from '@/components/Loader';
-import EndCallButton from '@/components/EndCallButton';
 import { cn } from '@/lib/utils';
 
 import { useQuizRoom } from '@/hooks/useQuizRoom';
@@ -31,8 +30,6 @@ type CallLayoutType = 'grid' | 'speaker-left' | 'speaker-right';
 
 
 const CallRoom = () => {
-  const searchParams = useSearchParams();
-  const isPersonalRoom = !!searchParams.get('personal');
   const router = useRouter();
   const [layout, setLayout] = useState<CallLayoutType>('speaker-left');
   const [showParticipants, setShowParticipants] = useState(false);
@@ -80,11 +77,6 @@ const CallRoom = () => {
     createSession();
   }, [quizRoom, callingState, sessionId]);
 
-  useEffect(() => {
-    if (!roomSettings || !call || callingState !== CallingState.JOINED) return;
-    if (roomSettings.mic === "off") call.microphone.disable();
-    if (roomSettings.camera === "off") call.camera.disable();
-  }, [roomSettings, call, callingState]);
 
   useEffect(() => {
     if (quizRoom && callingState === CallingState.JOINED) {
@@ -166,19 +158,20 @@ const CallRoom = () => {
   return (
     <section className="relative h-screen w-full pt-4 text-white">
   
-      <div className="absolute top-0 left-0 w-full flex flex-col items-center z-20 p-6 pointer-events-none">
-        <div className="backdrop-blur-sm rounded-xl p-6 shadow-md mb-2 pointer-events-auto rounded-[8px]">
-          <h1 className="text-4xl font-semibold text-[#19232d] text-center">
-            Room Name: {quizRoom?.name}
-          </h1>
-        </div>
+    <div className="absolute top-0 left-0 w-full flex flex-col items-center z-20 p-6 pointer-events-none">
+      <div className="backdrop-blur-sm rounded-xl p-6 shadow-md mb-2 pointer-events-auto rounded-[8px]">
+        <h1 className="text-4xl font-semibold text-[#19232d] text-center">
+          Room Name: {quizRoom?.name}
+        </h1>
       </div>
+    </div>
         
-      {/* video layout */}
-      <div className="relative flex size-full items-center justify-center">
-        <div className=" flex flex-row items-center gap-5">
-          {!quizEnded && (
-            <>
+    {/* video layout */}
+    <div className="relative flex size-full items-center justify-center">
+      <div className=" flex flex-row items-center gap-5">
+        {!quizEnded && (
+          <>
+            
             {/* Question sheet */}
             <div className="relative w-[35rem] h-[40rem] mx-auto mr-[28rem]">
               {/* Bottom Card */}
@@ -266,53 +259,53 @@ const CallRoom = () => {
               </button>
               
             </div>
-            </>
-            )}
-            {quizEnded && (
+          </>
+          )}
+          {quizEnded && (
             <div className="w-[70rem] h-[35rem] mx-auto mr-10 p-10 bg-white/50 rounded-[30px] shadow-md text-gray-700 flex flex-col">
                <h2 className="text-3xl font-bold mb-4 text-center">Results</h2>
                {results ? (
-                 <div className="space-y-4 overflow-y-auto flex-1">
-                 <div>
-                   <h3 className="text-xl font-semibold mb-5">
-                     Questions Asked
-                   </h3>
-                   <ol className="list-decimal list-inside space-y-2 text-gray-600 mb-6">
-                     {results.questions.map((q) => (
-                       <li key={q.id}>{q.question}</li>
-                     ))}
-                   </ol>
-                 </div>
-                 <div className="space-y-10">
-                   {results.users
-                     .sort((a, b) => b.score - a.score)
-                     .map((u) => (
-                       <div
-                         key={u.userId}
-                         className="border-t border-gray-300 py-5"
-                       >
-                         <p className="font-semibold text-gray-700 mb-5">
-                           {u.username} - Score: {u.score}
-                         </p>
-                         <div className="ml-4">
-                           <p className="font-medium text-green-700">
-                             Correct
-                           </p>
-                           <ul className="list-disc list-inside text-green-700">
-                             {u.correct.map((q) => (
-                               <li key={q}>{q}</li>
-                             ))}
-                           </ul>
-                           <p className="font-medium text-red-700 mt-2">
-                             Wrong
-                           </p>
-                           <ul className="list-disc list-inside text-red-700">
-                             {u.wrong.map((q) => (
-                               <li key={q}>{q}</li>
-                             ))}
-                           </ul>
-                         </div>
-                       </div>
+                <div className="space-y-4 overflow-y-auto flex-1">
+                  <div>
+                    <h3 className="text-xl font-semibold mb-5">
+                      Questions Asked
+                    </h3>
+                    <ol className="list-decimal list-inside space-y-2 text-gray-600 mb-6">
+                      {results.questions.map((q) => (
+                        <li key={q.id}>{q.question}</li>
+                      ))}
+                    </ol>
+                  </div>
+                <div className="space-y-10">
+                  {results.users
+                    .sort((a, b) => b.score - a.score)
+                    .map((u) => (
+                      <div
+                        key={u.userId}
+                        className="border-t border-gray-300 py-5"
+                      >
+                        <p className="font-semibold text-gray-700 mb-5">
+                          {u.username} - Score: {u.score}
+                        </p>
+                        <div className="ml-4">
+                          <p className="font-medium text-green-700">
+                            Correct
+                          </p>
+                          <ul className="list-disc list-inside text-green-700">
+                            {u.correct.map((q) => (
+                              <li key={q}>{q}</li>
+                            ))}
+                          </ul>
+                          <p className="font-medium text-red-700 mt-2">
+                            Wrong
+                          </p>
+                          <ul className="list-disc list-inside text-red-700">
+                            {u.wrong.map((q) => (
+                              <li key={q}>{q}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
                      ))}
                  </div>
                </div>
@@ -368,7 +361,6 @@ const CallRoom = () => {
                 <Users size={20} className="text-white" />
             </div>
             </button>
-            {!isPersonalRoom && <EndCallButton />}
 
         </div>
 
