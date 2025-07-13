@@ -1,12 +1,19 @@
 "use client";
 import { useEffect, useState } from "react";
 
+export interface QuizResultsAnswer {
+    questionId: string;
+    question: string;
+    answer: string;
+    correctAnswer: string;
+    isCorrect: boolean;
+  }
+
 export interface QuizResultsUser {
   userId: string;
   username: string | null;
   score: number;
-  correct: string[];
-  wrong: string[];
+  answers: QuizResultsAnswer[];
 }
 
 export interface QuizResultsData {

@@ -373,8 +373,13 @@ export async function getQuizResults(roomId: string, sessionId?: string) {
         userId: string;
         username: string | null;
         score: number;
-        correct: string[];
-        wrong: string[];
+        answers: {
+          questionId: string;
+          question: string;
+          answer: string;
+          correctAnswer: string;
+          isCorrect: boolean;
+        }[];
       }
     > = {};
     answers.forEach((a) => {
@@ -385,17 +390,29 @@ export async function getQuizResults(roomId: string, sessionId?: string) {
           userId: a.userId,
           username: userMap.get(a.userId) || a.userId,
           score: 0,
-          correct: [],
-          wrong: [],
+          answers: [],
         };
       }
       const userRes = results[a.userId];
-      if (q.correct === a.answer) {
+      const isCorrect = q.correct === a.answer;
+      if (isCorrect) {
         userRes.score += 1;
-        userRes.correct.push(q.question);
-      } else {
-        userRes.wrong.push(q.question);
       }
+      userRes.answers.push({
+        questionId: q.id,
+        question: q.question,
+        answer: a.answer,
+        correctAnswer: q.correct,
+        isCorrect,
+      });
+    });
+    // sort answers according to the order questions were asked
+    const questionOrder = questions.map((q) => q.id);
+    Object.values(results).forEach((u) => {
+      u.answers.sort(
+        (a, b) =>
+          questionOrder.indexOf(a.questionId) - questionOrder.indexOf(b.questionId)
+      );
     });
     return {
       questions: questions.map((q) => ({ id: q.id, question: q.question })),

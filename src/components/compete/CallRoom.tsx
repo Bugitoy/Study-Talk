@@ -49,6 +49,7 @@ const CallRoom = () => {
   // initial timePerQuestion value is loaded from the quiz room settings.
   const [timeLeft, setTimeLeft] = useState(Infinity);
   const [quizEnded, setQuizEnded] = useState(false);
+  const [quizStarted, setQuizStarted] = useState(false);
   const { data: results } = useQuizResults(
     quizEnded ? (id as string) : "",
     quizEnded ? (sessionId ?? undefined) : undefined,
@@ -64,7 +65,7 @@ const CallRoom = () => {
 
   useEffect(() => {
     const createSession = async () => {
-      if (!quizRoom || sessionId || callingState !== CallingState.JOINED)
+      if (!quizStarted || !quizRoom || sessionId || callingState !== CallingState.JOINED)
         return;
       const res = await fetch(`/api/quiz-room/${quizRoom.id}/session`, {
         method: "POST",
@@ -75,18 +76,18 @@ const CallRoom = () => {
       }
     };
     createSession();
-  }, [quizRoom, callingState, sessionId]);
+  }, [quizRoom, callingState, sessionId, quizStarted]);
 
 
   useEffect(() => {
-    if (quizRoom && callingState === CallingState.JOINED) {
+    if (quizStarted && quizRoom && callingState === CallingState.JOINED) {
       const t = roomSettings?.timePerQuestion ?? quizRoom.timePerQuestion;
       setTimeLeft(t === null ? Infinity : t);
     }
-  }, [quizRoom, callingState, roomSettings]);
+  }, [quizRoom, callingState, roomSettings, quizStarted]);
 
   useEffect(() => {
-    if (!quizRoom || quizEnded || callingState !== CallingState.JOINED) return;
+    if (!quizStarted || !quizRoom || quizEnded || callingState !== CallingState.JOINED) return;
     const questions = roomSettings?.numQuestions
       ? quizRoom.questions.slice(0, roomSettings.numQuestions)
       : quizRoom.questions;
@@ -103,7 +104,7 @@ const CallRoom = () => {
       const t = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
       return () => clearTimeout(t);
     }
-  }, [currentIdx, quizRoom, timeLeft, quizEnded, callingState, roomSettings]);
+  }, [currentIdx, quizRoom, timeLeft, quizEnded, callingState, roomSettings, quizStarted]);
 
   const questions = roomSettings?.numQuestions
     ? quizRoom?.questions?.slice(0, roomSettings.numQuestions) || []
@@ -176,112 +177,113 @@ const CallRoom = () => {
       <div className=" flex flex-row items-center gap-5">
         {!quizEnded && (
           <>
-            
-            {/* Question sheet */}
-            <div className="relative w-[35rem] h-[40rem] mx-auto mr-[2rem]">
-              {/* Bottom Card */}
-              <div className="absolute w-[32rem] h-[40rem] inset-0 translate-y-[-35px] ml-[10px]
-                              translate-x-[28px] bg-rose-200 border border-white rounded-[30px] shadow-md 
+              {!quizStarted ? (
+              <div className="relative w-[35rem] h-[40rem] mx-auto mr-[2rem] flex items-center justify-center">
+                <button
+                  onClick={() => setQuizStarted(true)}
+                  className="bg-thanodi-lightPeach border border-gray-300 rounded-[8px] shadow-md px-8 py-4 text-xl font-bold text-gray-600"
+                >
+                  Start Quiz
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Question sheet */}
+                <div className="relative w-[35rem] h-[40rem] mx-auto mr-[2rem]">
+                  {/* Bottom Card */}
+                  <div className="absolute w-[32rem] h-[40rem] inset-0 translate-y-[-35px] ml-[10px]
+                              translate-x-[28px] bg-rose-200 border border-white rounded-[30px] shadow-md
                               flex items-center justify-center text-xl font-bold text-gray-600">
-              </div>
-
-              {/* Middle Card */}
-              <div className="absolute w-[35rem] h-[40rem] inset-0 translate-y-[-18px] translate-x-[14px] 
-                              bg-red-200 border border-white rounded-[30px] shadow-md flex items-center justify-center 
-                              text-xl font-bold text-gray-600">
-              </div>
-
-              {/* Top Card */}
-              <div className="bg-red-100 absolute w-[37rem] h-[40rem] inset-0 border border-white rounded-[30px] 
-                              shadow-md flex items-center justify-center text-xl font-bold text-gray-600">
-                  <div className="flex flex-col items-center justify-center"> 
-                      <h1 className="text-3xl font-bold text-gray-600 mb-7">Question:</h1>
-                      <p className="text-gray-600 font-light text-center w-[30rem]">
-                          {currentQuestion?.question}
-                        </p>
-                        {timeLeft === Infinity ? (
-                          <p className="mt-4 text-gray-500">Time: unlimited</p>
-                        ) : (
-                          <p className="mt-4 text-gray-500">Time left: {timeLeft}s</p>
-                        )}
                   </div>
-              </div>
-            </div>
 
-            {/* Answer sheet */}
-            <div className=" flex flex-col items-center justify-center w-[35rem] h-[40rem] mx-auto gap-5">
-        
-              <button
-                onClick={() => sendAnswer('A')}
-                className={cn(
-                  'bg-thanodi-lightPeach border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xl font-bold text-gray-600 p-5',
-                  selectedAnswer === 'A' && 'bg-gray-400')
-                }
-              >
-                <h1 className="text-3xl font-bold text-gray-600 mr-5">A</h1>
-                <p className="text-gray-600 font-light text-center w-[30rem]">
-                  {currentQuestion?.optionA}
-                </p>
-              </button>
+                  {/* Middle Card */}
+                  <div className="absolute w-[35rem] h-[40rem] inset-0 translate-y-[-18px] translate-x-[14px]
+                              bg-red-200 border border-white rounded-[30px] shadow-md flex items-center justify-center
+                              text-xl font-bold text-gray-600">
+                  </div>
 
-              <button
-                onClick={() => sendAnswer('B')}
-                className={cn(
-                  'bg-thanodi-blue border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xl font-bold text-gray-600 p-5',
-                  selectedAnswer === 'B' && 'bg-gray-400')
-                }
-              >
-                <h1 className="text-3xl font-bold text-gray-600 mr-5">B</h1>
-                <p className="text-gray-600 font-light text-center w-[30rem]">
-                  {currentQuestion?.optionB}
-                </p>
-              </button>
-        
-              <button
-                onClick={() => sendAnswer('C')}
-                className={cn(
-                  'bg-thanodi-lightBlue border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xl font-bold text-gray-600 p-5',
-                  selectedAnswer === 'C' && 'bg-gray-400')
-                }
-              >
-                <h1 className="text-3xl font-bold text-gray-600 mr-5">C</h1>
-                <p className="text-gray-600 font-light text-center w-[30rem]">
-                  {currentQuestion?.optionC}
-                </p>
-              </button>
+                  {/* Top Card */}
+                  <div className="bg-red-100 absolute w-[37rem] h-[40rem] inset-0 border border-white rounded-[30px]
+                              shadow-md flex items-center justify-center text-xl font-bold text-gray-600">
+                      <div className="flex flex-col items-center justify-center">
+                          <h1 className="text-3xl font-bold text-gray-600 mb-7">Question:</h1>
+                          <p className="text-gray-600 font-light text-center w-[30rem]">
+                              {currentQuestion?.question}
+                            </p>
+                            {timeLeft === Infinity ? (
+                              <p className="mt-4 text-gray-500">Time: unlimited</p>
+                            ) : (
+                              <p className="mt-4 text-gray-500">Time left: {timeLeft}s</p>
+                            )}
+                      </div>
+                  </div>
+                </div>
 
-              <button
-                onClick={() => sendAnswer('D')}
-                className={cn(
-                  'bg-thanodi-cream border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xl font-bold text-gray-600 p-5',
-                  selectedAnswer === 'D' && 'bg-gray-400')
-                }
-              >
-                <h1 className="text-3xl font-bold text-gray-600 mr-5">D</h1>
-                <p className="text-gray-600 font-light text-center w-[30rem]">
-                  {currentQuestion?.optionD}
-                </p>
-              </button>
-              
-            </div>
+                {/* Answer sheet */}
+                <div className=" flex flex-col items-center justify-center w-[35rem] h-[40rem] mx-auto gap-5">
+
+                  <button
+                    onClick={() => sendAnswer('A')}
+                    className={cn(
+                      'bg-thanodi-lightPeach border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xl font-bold text-gray-600 p-5',
+                      selectedAnswer === 'A' && 'bg-gray-400')
+                    }
+                  >
+                    <h1 className="text-3xl font-bold text-gray-600 mr-5">A</h1>
+                    <p className="text-gray-600 font-light text-center w-[30rem]">
+                      {currentQuestion?.optionA}
+                    </p>
+                  </button>
+
+                  <button
+                    onClick={() => sendAnswer('B')}
+                    className={cn(
+                      'bg-thanodi-blue border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xl font-bold text-gray-600 p-5',
+                      selectedAnswer === 'B' && 'bg-gray-400')
+                    }
+                  >
+                    <h1 className="text-3xl font-bold text-gray-600 mr-5">B</h1>
+                    <p className="text-gray-600 font-light text-center w-[30rem]">
+                      {currentQuestion?.optionB}
+                    </p>
+                  </button>
+
+                  <button
+                    onClick={() => sendAnswer('C')}
+                    className={cn(
+                      'bg-thanodi-lightBlue border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xl font-bold text-gray-600 p-5',
+                      selectedAnswer === 'C' && 'bg-gray-400')
+                    }
+                  >
+                    <h1 className="text-3xl font-bold text-gray-600 mr-5">C</h1>
+                    <p className="text-gray-600 font-light text-center w-[30rem]">
+                      {currentQuestion?.optionC}
+                    </p>
+                  </button>
+
+                  <button
+                    onClick={() => sendAnswer('D')}
+                    className={cn(
+                      'bg-thanodi-cream border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xl font-bold text-gray-600 p-5',
+                      selectedAnswer === 'D' && 'bg-gray-400')
+                    }
+                  >
+                    <h1 className="text-3xl font-bold text-gray-600 mr-5">D</h1>
+                    <p className="text-gray-600 font-light text-center w-[30rem]">
+                      {currentQuestion?.optionD}
+                    </p>
+                  </button>
+
+                </div>
+              </>
+            )}
           </>
           )}
           {quizEnded && (
             <div className="w-[70rem] h-[35rem] mx-auto mr-10 p-10 bg-white/50 rounded-[30px] shadow-md text-gray-700 flex flex-col">
                <h2 className="text-3xl font-bold mb-4 text-center">Results</h2>
                {results ? (
-                <div className="space-y-4 overflow-y-auto flex-1">
-                  <div>
-                    <h3 className="text-xl font-semibold mb-5">
-                      Questions Asked
-                    </h3>
-                    <ol className="list-decimal list-inside space-y-2 text-gray-600 mb-6">
-                      {results.questions.map((q) => (
-                        <li key={q.id}>{q.question}</li>
-                      ))}
-                    </ol>
-                  </div>
-                <div className="space-y-10">
+                <div className="space-y-10 overflow-y-auto flex-1">
                   {results.users
                     .sort((a, b) => b.score - a.score)
                     .map((u) => (
@@ -289,34 +291,34 @@ const CallRoom = () => {
                         key={u.userId}
                         className="border-t border-gray-300 py-5"
                       >
-                        <p className="font-semibold text-gray-700 mb-5">
+                        <p className="font-semibold text-gray-700 mb-2">
                           {u.username} - Score: {u.score}
                         </p>
-                        <div className="ml-4">
+                        <div className="flex gap-4 ml-4 mb-4">
                           <p className="font-medium text-green-700">
-                            Correct
+                            Correct: {u.answers.filter((a) => a.isCorrect).length}
                           </p>
-                          <ul className="list-disc list-inside text-green-700">
-                            {u.correct.map((q) => (
-                              <li key={q}>{q}</li>
-                            ))}
-                          </ul>
-                          <p className="font-medium text-red-700 mt-2">
-                            Wrong
+                          <p className="font-medium text-red-700">
+                            Wrong: {u.answers.filter((a) => !a.isCorrect).length}
                           </p>
-                          <ul className="list-disc list-inside text-red-700">
-                            {u.wrong.map((q) => (
-                              <li key={q}>{q}</li>
-                            ))}
-                          </ul>
                         </div>
+                        <ol className="list-decimal list-inside space-y-2 ml-4 text-gray-700">
+                          {u.answers.map((a) => (
+                            <li key={a.questionId}>
+                                <span className="font-medium">{a.question}</span>
+                              <div className={cn(a.isCorrect ? 'text-green-700 ml-5' : 'text-red-700 ml-5')}>{a.answer}</div>
+                              {!a.isCorrect && (
+                                <div className="text-green-700 ml-5">Correct answer: {a.correctAnswer}</div>
+                              )}
+                            </li>
+                          ))}
+                        </ol>
                       </div>
-                     ))}
-                 </div>
-               </div>
-             ) : (
-               <p className="text-center">Loading...</p>
-             )}
+                      ))}
+                      </div>
+                     ) : (
+                       <p className="text-center">Loading...</p>
+                     )}
             </div>
             )}
             {/* Call video */}

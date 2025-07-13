@@ -201,7 +201,7 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
                 title={topic.title}
                 description={topic.description}
                 backgroundImage={topic.backgroundImage}
-                className={`${pastelColors[idx % pastelColors.length]} ${selectedTopic?.title === topic.title ? 'opacity-50' : ''}`}
+                className={`${pastelColors[idx % pastelColors.length]}`}
                 handleClick={() => handleTopicClick(topic)}
               />
             ))}
