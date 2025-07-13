@@ -162,10 +162,10 @@ const CallRoom = () => {
   }
 
   return (
-    <section className="relative h-screen w-full pt-4 text-white">
+    <section className="relative h-screen w-full pt-2 text-white">
   
     <div className="absolute top-0 left-0 w-full flex flex-col items-center z-20 p-6 pointer-events-none">
-      <div className="backdrop-blur-sm rounded-xl p-6 shadow-md mb-2 pointer-events-auto rounded-[8px]">
+      <div className="backdrop-blur-sm rounded-xl p-6 shadow-md pointer-events-auto rounded-[8px]">
         <h1 className="text-4xl font-semibold text-[#19232d] text-center">
           Room Name: {quizRoom?.name}
         </h1>
@@ -281,50 +281,58 @@ const CallRoom = () => {
           )}
           {quizEnded && (
             <div className="w-[70rem] h-[35rem] mx-auto mr-10 p-10 bg-white/50 rounded-[30px] shadow-md text-gray-700 flex flex-col">
-               <h2 className="text-3xl font-bold mb-4 text-center">Results</h2>
-               {results ? (
-                <div className="space-y-10 overflow-y-auto flex-1">
-                  {results.users
-                    .sort((a, b) => b.score - a.score)
-                    .map((u) => (
-                      <div
-                        key={u.userId}
-                        className="border-t border-gray-300 py-5"
-                      >
-                        <p className="font-semibold text-gray-700 mb-2">
-                          {u.username} - Score: {u.score}
+              <h2 className="text-3xl font-bold mb-4 text-center">Results</h2>
+              {results ? (
+              <div className="space-y-10 overflow-y-auto flex-1">
+                {results.users
+                  .sort((a, b) => b.score - a.score)
+                  .map((u) => (
+                    <div
+                      key={u.userId}
+                      className="border-t border-gray-300 py-5"
+                    >
+                      <p className="font-semibold text-gray-700 mb-2">
+                        {u.username} - Score: {u.score}
+                      </p>
+                      <div className="flex gap-4 ml-4 mb-4">
+                        <p className="font-medium text-green-700">
+                          Correct: {u.answers.filter((a) => a.isCorrect).length}
                         </p>
-                        <div className="flex gap-4 ml-4 mb-4">
-                          <p className="font-medium text-green-700">
-                            Correct: {u.answers.filter((a) => a.isCorrect).length}
-                          </p>
-                          <p className="font-medium text-red-700">
-                            Wrong: {u.answers.filter((a) => !a.isCorrect).length}
-                          </p>
-                        </div>
-                        <ol className="list-decimal list-inside space-y-2 ml-4 text-gray-700">
-                          {u.answers.map((a) => (
-                            <li key={a.questionId}>
-                                <span className="font-medium">{a.question}</span>
-                              <div className={cn(a.isCorrect ? 'text-green-700 ml-5' : 'text-red-700 ml-5')}>{a.answer}</div>
-                              {!a.isCorrect && (
-                                <div className="text-green-700 ml-5">Correct answer: {a.correctAnswer}</div>
-                              )}
-                            </li>
-                          ))}
-                        </ol>
+                        <p className="font-medium text-red-700">
+                          Wrong: {u.answers.filter((a) => !a.isCorrect).length}
+                        </p>
                       </div>
-                      ))}
+                      <ol className="list-decimal list-inside space-y-2 ml-4 text-gray-700">
+                        {u.answers.map((a) => (
+                          <li key={a.questionId}>
+                            <span className="font-medium">{a.question}</span>
+                            <div className={cn(a.isCorrect ? 'text-green-700 ml-5' : 'text-red-700 ml-5')}>{a.answer}</div>
+                            {!a.isCorrect && (
+                              <div className="text-green-700 ml-5">Correct answer: {a.correctAnswer}</div>
+                            )}
+                          </li>
+                        ))}
+                      </ol>
+                      <div className="flex gap-[15rem] items-center justify-center mt-10">
+                        <button className="bg-thanodi-lightPeach border border-gray-300 rounded-[12px] shadow-md flex items-center justify-center text-lg font-bold text-gray-600 p-3">
+                          Restart Quiz
+                        </button>
+                        <button className="bg-thanodi-lightPeach border border-gray-300 rounded-[12px] shadow-md flex items-center justify-center text-lg font-bold text-gray-600 p-3">
+                          Choose a different topic
+                        </button>
                       </div>
-                     ) : (
-                       <p className="text-center">Loading...</p>
-                     )}
+                    </div>
+                  ))}
+              </div>
+              ) : (
+                <p className="text-center">Loading...</p>
+              )}
             </div>
-            )}
-            {/* Call video */}
-            <div className="relative w-full max-w-2xl mx-auto mb-8">
-                <LayoutComponent {...layoutProps} />
-            </div> 
+          )}
+          {/* Call video */}
+          <div className="relative w-full max-w-2xl mx-auto mb-8">
+              <LayoutComponent {...layoutProps} />
+          </div> 
         </div>
         <div
           className={cn('h-[calc(100vh-86px)] hidden ml-2', {

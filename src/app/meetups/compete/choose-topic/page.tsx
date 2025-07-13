@@ -170,7 +170,7 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
 
   
   const handleNext = () => {
-    router.push("/room-lobby");
+    router.push("/");
   };
 
   type Topic = {
