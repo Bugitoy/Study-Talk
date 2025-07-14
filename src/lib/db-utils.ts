@@ -441,3 +441,30 @@ export async function getTopics() {
     return [];
   }
 }
+
+export async function updateQuizRoomQuestions(
+  roomId: string,
+  questions: {
+    question: string;
+    optionA: string;
+    optionB: string;
+    optionC: string;
+    optionD: string;
+    correct: string;
+  }[],
+) {
+  try {
+    await prisma.quizRoom.update({
+      where: { id: roomId },
+      data: {
+        questions: {
+          deleteMany: {},
+          create: questions,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error updating quiz room questions:", error);
+    throw error;
+  }
+}

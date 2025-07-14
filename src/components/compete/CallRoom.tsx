@@ -22,10 +22,11 @@ import {
 import Loader from "@/components/Loader";
 import { cn } from "@/lib/utils";
 
-import { useQuizRoom } from "@/hooks/useQuizRoom";
+import { useQuizRoom, QuizRoom } from "@/hooks/useQuizRoom";
 import { useQuizResults } from "@/hooks/useQuizResults";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
-import TopicCard from "./TopicCard";
+import TopicItem from "./TopicItem";
+import { Input } from "../ui/input";
 import {
   Dialog,
   DialogContent,
@@ -45,6 +46,7 @@ const CallRoom = () => {
   const { id } = useParams();
 
   const { data: quizRoom } = useQuizRoom(id as string);
+  const [currentRoom, setCurrentRoom] = useState<QuizRoom | null>(null);
 
   const [roomSettings, setRoomSettings] = useState<any>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -70,20 +72,14 @@ const CallRoom = () => {
   );
   const { user } = useKindeBrowserClient();
   const [showTopicModal, setShowTopicModal] = useState(false);
-  const [topics, setTopics] = useState<Array<{
+  const [topics, setTopics] = useState<
+  Array<{
     title: string;
     description: string;
     backgroundImage: string;
-  }>>([]);
-
-  const pastelColors = [
-    'bg-thanodi-cream',
-    'bg-thanodi-blue',
-    'bg-thanodi-peach',
-    'bg-thanodi-yellow',
-    'bg-thanodi-lightPeach',
-    'bg-thanodi-lightBlue',
-  ];
+  }>
+>([]);
+const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (quizStarted && callingState !== CallingState.JOINED && !isHost) {
@@ -92,15 +88,19 @@ const CallRoom = () => {
   }, [quizStarted, callingState, isHost, router]);
 
   useEffect(() => {
+    if (quizRoom) setCurrentRoom(quizRoom);
+  }, [quizRoom]);
+
+  useEffect(() => {
     const fetchTopics = async () => {
       try {
-        const res = await fetch('/api/topics');
+        const res = await fetch("/api/topics");
         if (res.ok) {
           const data = await res.json();
           setTopics(data);
         }
       } catch (err) {
-        console.error('Failed to fetch topics', err);
+        console.error("Failed to fetch topics", err);
       }
     };
     fetchTopics();
@@ -114,8 +114,8 @@ const CallRoom = () => {
   }, []);
 
   const handleStartQuiz = async () => {
-    if (!isHost || !quizRoom) return;
-    const res = await fetch(`/api/quiz-room/${quizRoom.id}/session`, {
+    if (!isHost || !currentRoom) return;
+    const res = await fetch(`/api/quiz-room/${currentRoom.id}/session`, {
       method: "POST",
     });
     if (res.ok) {
@@ -135,8 +135,8 @@ const CallRoom = () => {
   };
 
   const handleRestartQuiz = async () => {
-    if (!isHost || !quizRoom) return;
-    const res = await fetch(`/api/quiz-room/${quizRoom.id}/session`, {
+    if (!isHost || !currentRoom) return;
+    const res = await fetch(`/api/quiz-room/${currentRoom.id}/session`, {
       method: "POST",
     });
     if (res.ok) {
@@ -147,7 +147,7 @@ const CallRoom = () => {
       setQuizStarted(true);
       setCurrentIdx(0);
       setSelectedAnswer(null);
-      const t = roomSettings?.timePerQuestion ?? quizRoom.timePerQuestion;
+      const t = roomSettings?.timePerQuestion ?? currentRoom.timePerQuestion;
       setTimeLeft(t === null ? Infinity : t);
       await call.update({
         custom: {
@@ -161,6 +161,35 @@ const CallRoom = () => {
     }
   };
 
+  const handleSelectTopic = async (topic: string) => {
+    if (!currentRoom) return;
+    try {
+      const qRes = await fetch(
+        `/api/questions?topic=${encodeURIComponent(topic)}`,
+      );
+      if (qRes.ok) {
+        const questions = await qRes.json();
+        await fetch(`/api/quiz-room/${currentRoom.id}/questions`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ questions }),
+        });
+        setCurrentRoom({ ...currentRoom, questions });
+        setQuizStarted(false);
+        setQuizEnded(false);
+        setCurrentIdx(0);
+        setSelectedAnswer(null);
+        setSessionId(null);
+        await call?.update({
+          custom: { quizStarted: false, currentIdx: 0, quizEnded: false },
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load topic", error);
+    }
+    setShowTopicModal(false);
+  };
+
   useEffect(() => {
     if (!call) return;
     const sub = call.state.custom$.subscribe((custom: any) => {
@@ -170,7 +199,7 @@ const CallRoom = () => {
         setCurrentIdx(custom.currentIdx);
       if (typeof custom.startTime === "number") {
         setStartTimestamp(custom.startTime);
-        const t = roomSettings?.timePerQuestion ?? quizRoom?.timePerQuestion;
+        const t = roomSettings?.timePerQuestion ?? currentRoom?.timePerQuestion;
         if (t !== null && t !== undefined) {
           const elapsed = Math.floor((Date.now() - custom.startTime) / 1000);
           setTimeLeft(t === null ? Infinity : Math.max(0, t - elapsed));
@@ -179,21 +208,21 @@ const CallRoom = () => {
       if (custom.quizEnded) setQuizEnded(true);
     });
     return () => sub.unsubscribe();
-  }, [call, roomSettings, quizRoom]);
+  }, [call, roomSettings, currentRoom]);
 
   useEffect(() => {
-    if (quizStarted && quizRoom && callingState === CallingState.JOINED) {
-      const t = roomSettings?.timePerQuestion ?? quizRoom.timePerQuestion;
+    if (quizStarted && currentRoom && callingState === CallingState.JOINED) {
+      const t = roomSettings?.timePerQuestion ?? currentRoom.timePerQuestion;
       setTimeLeft(t === null ? Infinity : t);
       setStartTimestamp(Date.now());
     }
-  }, [quizRoom, callingState, roomSettings, quizStarted]);
+  }, [currentRoom, callingState, roomSettings, quizStarted]);
 
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
 
   const submitAnswer = async (answerText: string) => {
-    if (!quizRoom || !currentQuestion || !user || !sessionId) return;
-    await fetch(`/api/quiz-room/${quizRoom.id}/answer`, {
+    if (!currentRoom || !currentQuestion || !user || !sessionId) return;
+    await fetch(`/api/quiz-room/${currentRoom.id}/answer`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -208,14 +237,14 @@ const CallRoom = () => {
   useEffect(() => {
     if (
       !quizStarted ||
-      !quizRoom ||
+      !currentRoom ||
       quizEnded ||
       callingState !== CallingState.JOINED
     )
       return;
     const questions = roomSettings?.numQuestions
-      ? quizRoom.questions.slice(0, roomSettings.numQuestions)
-      : quizRoom.questions;
+    ? currentRoom.questions.slice(0, roomSettings.numQuestions)
+    : currentRoom.questions;
       if (timeLeft <= 0 && timeLeft !== Infinity) {
       if (!selectedAnswer) {
         submitAnswer("blank");
@@ -230,7 +259,7 @@ const CallRoom = () => {
             startTime: now,
           },
         });
-        const t = roomSettings?.timePerQuestion ?? quizRoom.timePerQuestion;
+        const t = roomSettings?.timePerQuestion ?? currentRoom.timePerQuestion;
         setTimeLeft(t === null ? Infinity : t);
         setStartTimestamp(now);
       } else if (isHost) {
@@ -240,7 +269,7 @@ const CallRoom = () => {
     if (timeLeft !== Infinity) {
       const t = setTimeout(() => {
         if (startTimestamp) {
-          const q = roomSettings?.timePerQuestion ?? quizRoom.timePerQuestion;
+          const q = roomSettings?.timePerQuestion ?? currentRoom.timePerQuestion;
           const left =
             q === null
               ? Infinity
@@ -252,7 +281,7 @@ const CallRoom = () => {
     }
   }, [
     currentIdx,
-    quizRoom,
+    currentRoom,
     timeLeft,
     quizEnded,
     callingState,
@@ -264,13 +293,13 @@ const CallRoom = () => {
   ]);
 
   const questions = roomSettings?.numQuestions
-    ? quizRoom?.questions?.slice(0, roomSettings.numQuestions) || []
-    : quizRoom?.questions || [];
+  ? currentRoom?.questions?.slice(0, roomSettings.numQuestions) || []
+  : currentRoom?.questions || [];
 
   const currentQuestion = questions[currentIdx];
 
   const sendAnswer = async (answerKey: "A" | "B" | "C" | "D") => {
-    if (!quizRoom || !currentQuestion || !user || !sessionId) return;
+    if (!currentRoom || !currentQuestion || !user || !sessionId) return;
     setSelectedAnswer(answerKey);
 
     const answerText =
@@ -287,7 +316,7 @@ const CallRoom = () => {
 
   useEffect(() => {
     setSelectedAnswer(null);
-  }, [currentIdx, quizRoom]);
+  }, [currentIdx, currentRoom]);
 
   if (callingState !== CallingState.JOINED) return <Loader />;
 
@@ -312,7 +341,7 @@ const CallRoom = () => {
       <div className="absolute top-0 left-0 w-full flex flex-col items-center z-20 p-6 pointer-events-none">
         <div className="backdrop-blur-sm rounded-xl p-6 shadow-md pointer-events-auto rounded-[8px]">
           <h1 className="text-4xl font-semibold text-[#19232d] text-center">
-            Room Name: {quizRoom?.name}
+            Room Name: {currentRoom?.name}
           </h1>
         </div>
       </div>
@@ -547,8 +576,10 @@ const CallRoom = () => {
             Restart Quiz
           </button>
         )}
-        <button className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-sm text-white"
-         onClick={() => setShowTopicModal(true) }>
+         <button
+          className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-sm text-white"
+          onClick={() => setShowTopicModal(true)}
+        >
           Choose a topic
         </button>
 
@@ -567,15 +598,23 @@ const CallRoom = () => {
             <DialogHeader>
               <DialogTitle>Choose a Topic</DialogTitle>
             </DialogHeader>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {topics.map((topic, idx) => (
-                <TopicCard
-                  key={idx}
+            <Input
+              placeholder="Search topics..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="my-4"
+            />
+            <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+              {topics
+                .filter((t) =>
+                  t.title.toLowerCase().includes(searchQuery.toLowerCase()),
+                )
+                .map((topic) => (
+                <TopicItem
+                  key={topic.title}
                   title={topic.title}
                   description={topic.description}
-                  backgroundImage={topic.backgroundImage}
-                  className={`${pastelColors[idx % pastelColors.length]}`}
-                  handleClick={() => setShowTopicModal(false)}
+                  handleClick={() => handleSelectTopic(topic.title)}
                 />
               ))}
             </div>
