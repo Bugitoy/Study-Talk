@@ -258,18 +258,11 @@ const CallRoom = () => {
             <>
               {!quizStarted ? (
                 <div className="relative w-[35rem] h-[40rem] mx-auto mr-[2rem] flex items-center justify-center">
-                  {isHost ? (
-                    <button
-                      onClick={handleStartQuiz}
-                      className="bg-thanodi-lightPeach border border-gray-300 rounded-[8px] shadow-md px-8 py-4 text-xl font-bold text-gray-600"
-                    >
-                      Start Quiz
-                    </button>
-                  ) : (
-                    <p className="text-gray-700 font-semibold">
-                      Waiting for host to start...
-                    </p>
-                  )}
+                  <p className="text-gray-700 font-semibold">
+                    {isHost
+                      ? "Start the quiz using the controls below."
+                      : "Waiting for host to start..."}
+                  </p>
                 </div>
               ) : (
                 <>
@@ -471,13 +464,21 @@ const CallRoom = () => {
           </DropdownMenuContent>
         </DropdownMenu>
         <CallStatsButton />
-        
-          <button className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-sm text-white p-3">
-            Restart Quiz
+        {isHost && !quizStarted && (
+          <button
+            onClick={handleStartQuiz}
+            className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-sm text-white"
+          >
+            Start Quiz
           </button>
-          <button className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-sm text-white p-3">
-            Choose a topic
-          </button>
+        )}
+
+        <button className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-sm text-white">
+          Restart Quiz
+        </button>
+        <button className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-sm text-white">
+          Choose a topic
+        </button>
 
         <button onClick={() => setShowParticipants((prev) => !prev)}>
           <div className=" cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] ">
