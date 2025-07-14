@@ -25,8 +25,15 @@ import { cn } from "@/lib/utils";
 import { useQuizRoom } from "@/hooks/useQuizRoom";
 import { useQuizResults } from "@/hooks/useQuizResults";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
-import { Dialog, DialogContent, DialogTitle } from "@radix-ui/react-dialog";
-import { DialogHeader } from "../ui/dialog";
+import TopicCard from "./TopicCard";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogPortal,
+  DialogOverlay,
+} from "../ui/dialog";
 
 type CallLayoutType = "grid" | "speaker-left" | "speaker-right";
 
@@ -63,13 +70,41 @@ const CallRoom = () => {
   );
   const { user } = useKindeBrowserClient();
   const [showTopicModal, setShowTopicModal] = useState(false);
+  const [topics, setTopics] = useState<Array<{
+    title: string;
+    description: string;
+    backgroundImage: string;
+  }>>([]);
 
+  const pastelColors = [
+    'bg-thanodi-cream',
+    'bg-thanodi-blue',
+    'bg-thanodi-peach',
+    'bg-thanodi-yellow',
+    'bg-thanodi-lightPeach',
+    'bg-thanodi-lightBlue',
+  ];
 
   useEffect(() => {
     if (quizStarted && callingState !== CallingState.JOINED && !isHost) {
       router.push("/meetups/compete");
     }
   }, [quizStarted, callingState, isHost, router]);
+
+  useEffect(() => {
+    const fetchTopics = async () => {
+      try {
+        const res = await fetch('/api/topics');
+        if (res.ok) {
+          const data = await res.json();
+          setTopics(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch topics', err);
+      }
+    };
+    fetchTopics();
+  }, []);
 
   useEffect(() => {
     const stored = localStorage.getItem("roomSettings");
@@ -87,6 +122,33 @@ const CallRoom = () => {
       const json = await res.json();
       setSessionId(json.sessionId);
       setStartTimestamp(Date.now());
+      await call.update({
+        custom: {
+          quizStarted: true,
+          sessionId: json.sessionId,
+          currentIdx: 0,
+          startTime: Date.now(),
+          quizEnded: false,
+        },
+      });
+    }
+  };
+
+  const handleRestartQuiz = async () => {
+    if (!isHost || !quizRoom) return;
+    const res = await fetch(`/api/quiz-room/${quizRoom.id}/session`, {
+      method: "POST",
+    });
+    if (res.ok) {
+      const json = await res.json();
+      setSessionId(json.sessionId);
+      setStartTimestamp(Date.now());
+      setQuizEnded(false);
+      setQuizStarted(true);
+      setCurrentIdx(0);
+      setSelectedAnswer(null);
+      const t = roomSettings?.timePerQuestion ?? quizRoom.timePerQuestion;
+      setTimeLeft(t === null ? Infinity : t);
       await call.update({
         custom: {
           quizStarted: true,
@@ -477,9 +539,14 @@ const CallRoom = () => {
           </button>
         )}
 
-        <button className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-sm text-white">
-          Restart Quiz
-        </button>
+        {isHost && (
+          <button
+            onClick={handleRestartQuiz}
+            className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-sm text-white"
+          >
+            Restart Quiz
+          </button>
+        )}
         <button className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-sm text-white"
          onClick={() => setShowTopicModal(true) }>
           Choose a topic
@@ -492,6 +559,29 @@ const CallRoom = () => {
         </button>
 
       </div>
+
+      <Dialog open={showTopicModal} onOpenChange={setShowTopicModal}>
+        <DialogPortal>
+          <DialogOverlay className="bg-black/50 backdrop-blur-md" />
+          <DialogContent className="bg-white max-w-6xl">
+            <DialogHeader>
+              <DialogTitle>Choose a Topic</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {topics.map((topic, idx) => (
+                <TopicCard
+                  key={idx}
+                  title={topic.title}
+                  description={topic.description}
+                  backgroundImage={topic.backgroundImage}
+                  className={`${pastelColors[idx % pastelColors.length]}`}
+                  handleClick={() => setShowTopicModal(false)}
+                />
+              ))}
+            </div>
+          </DialogContent>
+        </DialogPortal>
+      </Dialog>
     </section>
   );
 };
