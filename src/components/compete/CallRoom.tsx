@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Loader from "@/components/Loader";
+import Alert from "@/components/Alert";
 import { cn } from "@/lib/utils";
 
 import { useQuizRoom, QuizRoom } from "@/hooks/useQuizRoom";
@@ -44,7 +45,7 @@ const CallRoom = () => {
   const router = useRouter();
   const [layout, setLayout] = useState<CallLayoutType>("speaker-left");
   const [showParticipants, setShowParticipants] = useState(false);
-  const { useCallCallingState, useLocalParticipant } = useCallStateHooks();
+  const { useCallCallingState, useLocalParticipant, useCallEndedAt } = useCallStateHooks();
   const { id } = useParams();
 
   const { data: quizRoom } = useQuizRoom(id as string);
@@ -56,6 +57,7 @@ const CallRoom = () => {
   const call = useCall();
   // for more detail about types of CallingState see: https://getstream.io/video/docs/react/ui-cookbook/ringing-call/#incoming-call-panel
   const callingState = useCallCallingState();
+  const callEndedAt = useCallEndedAt();
   const localParticipant = useLocalParticipant();
   const isHost =
     localParticipant &&
@@ -68,6 +70,7 @@ const CallRoom = () => {
   const [timeLeft, setTimeLeft] = useState(Infinity);
   const [quizEnded, setQuizEnded] = useState(false);
   const [quizStarted, setQuizStarted] = useState(false);
+  const callHasEnded = !!callEndedAt;
   const { data: results } = useQuizResults(
     quizEnded ? (id as string) : "",
     quizEnded ? (sessionId ?? undefined) : undefined,
@@ -342,6 +345,8 @@ useEffect(() => {
   useEffect(() => {
     setSelectedAnswer(null);
   }, [currentIdx, currentRoom]);
+
+  if (callHasEnded) return <Alert title="The call has been ended by the host" />;
 
   if (callingState !== CallingState.JOINED) return <Loader />;
 

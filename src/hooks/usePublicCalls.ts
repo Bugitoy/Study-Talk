@@ -17,6 +17,7 @@ export const usePublicCalls = () => {
         const { calls } = await client.queryCalls({
             filter_conditions: {
                 'custom.availability': 'public',
+                'custom.quizStarted': true,
               },
               sort: [{ field: 'created_at', direction: -1 }],
               limit: 30,
