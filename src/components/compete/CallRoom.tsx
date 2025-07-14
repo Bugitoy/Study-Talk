@@ -563,7 +563,7 @@ const CallRoom = () => {
       <Dialog open={showTopicModal} onOpenChange={setShowTopicModal}>
         <DialogPortal>
           <DialogOverlay className="bg-black/50 backdrop-blur-md" />
-          <DialogContent className="bg-white max-w-6xl">
+          <DialogContent className="bg-white max-w-6xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Choose a Topic</DialogTitle>
             </DialogHeader>
