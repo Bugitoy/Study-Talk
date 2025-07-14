@@ -14,11 +14,24 @@ export const usePublicCalls = () => {
     const fetchCalls = async () => {
       try {
         const { calls } = await client.queryCalls({
-          filter_conditions: {
-            'custom.availability': 'public',
-            'custom.hostJoined': true,
-          },
+            // Only use equality checks for custom fields; operators like $ne are not supported by Stream
+            filter_conditions: {
+                "custom.availability": "public",
+                "custom.hostJoined": true,
+                "custom.quizStarted": false,
+              },
+              sort: [{ field: "created_at", direction: -1 }],
+              limit: 30,
         });
+        await Promise.all(
+            calls.map(async (c) => {
+              try {
+                await c.queryMembers({});
+              } catch (e) {
+                console.error("Failed to query members", e);
+              }
+            }),
+          );
         if (!cancelled) setCalls(calls);
       } catch (error) {
         console.error(error);
