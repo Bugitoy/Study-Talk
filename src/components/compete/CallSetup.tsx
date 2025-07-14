@@ -25,7 +25,9 @@ const CallSetup = ({
   const call = useCall();
   const [roomSettings, setRoomSettings] = useState<any>(null);
   const [roomFull, setRoomFull] = useState(false);
-  const quizAlreadyStarted = call?.state.custom?.quizStarted;
+  const [quizAlreadyStarted, setQuizAlreadyStarted] = useState(
+    call?.state.custom?.quizStarted,
+  );
 
   if (!call) {
     throw new Error(
@@ -35,6 +37,13 @@ const CallSetup = ({
 
   // https://getstream.io/video/docs/react/ui-cookbook/replacing-call-controls/
   const [isMicCamToggled, setIsMicCamToggled] = useState(false);
+
+  useEffect(() => {
+    const sub = call.state.custom$.subscribe((custom: any) => {
+      if (custom.quizStarted) setQuizAlreadyStarted(true);
+    });
+    return () => sub.unsubscribe();
+  }, [call]);
 
   useEffect(() => {
     const stored = localStorage.getItem("roomSettings");

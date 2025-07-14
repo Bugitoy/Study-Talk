@@ -150,11 +150,11 @@ const CallRoom = () => {
     const questions = roomSettings?.numQuestions
       ? quizRoom.questions.slice(0, roomSettings.numQuestions)
       : quizRoom.questions;
-    if (timeLeft <= 0 && timeLeft !== Infinity && isHost) {
+      if (timeLeft <= 0 && timeLeft !== Infinity) {
       if (!selectedAnswer) {
         submitAnswer("blank");
       }
-      if (currentIdx < questions.length - 1) {
+      if (isHost && currentIdx < questions.length - 1) {
         const now = Date.now();
         setCurrentIdx((i) => i + 1);
         call.update({
@@ -167,7 +167,7 @@ const CallRoom = () => {
         const t = roomSettings?.timePerQuestion ?? quizRoom.timePerQuestion;
         setTimeLeft(t === null ? Infinity : t);
         setStartTimestamp(now);
-      } else {
+      } else if (isHost) {
         call.update({ custom: { ...call.state.custom, quizEnded: true } });
       }
     }
@@ -379,10 +379,10 @@ const CallRoom = () => {
             </>
           )}
           {quizEnded && (
-            <div className="w-[70rem] h-[35rem] mx-auto mr-10 p-10 bg-white/50 rounded-[30px] shadow-md text-gray-700 flex flex-col">
+            <div className="w-[70rem] h-[40rem] mx-auto mr-10 p-10 bg-white/50 rounded-[30px] shadow-md text-gray-700 flex flex-col">
               <h2 className="text-3xl font-bold mb-4 text-center">Results</h2>
               {results ? (
-                <div className="space-y-10 overflow-y-auto flex-1">
+                <div className="space-y-2 overflow-y-auto flex-1">
                   {results.users
                     .sort((a, b) => b.score - a.score)
                     .map((u) => (
@@ -424,14 +424,6 @@ const CallRoom = () => {
                             </li>
                           ))}
                         </ol>
-                        <div className="flex gap-[10rem] items-center justify-center mt-10">
-                          <button className="bg-thanodi-lightPeach border border-gray-300 rounded-[12px] shadow-md flex items-center justify-center text-lg font-bold text-gray-600 p-3">
-                            Restart Quiz
-                          </button>
-                          <button className="bg-thanodi-lightPeach border border-gray-300 rounded-[12px] shadow-md flex items-center justify-center text-lg font-bold text-gray-600 p-3">
-                            Choose a different topic
-                          </button>
-                        </div>
                       </div>
                     ))}
                 </div>
@@ -459,7 +451,7 @@ const CallRoom = () => {
         <CallControls onLeave={() => router.push(`/meetups/compete`)} />
         <DropdownMenu>
           <div className="flex items-center">
-            <DropdownMenuTrigger className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]  ">
+            <DropdownMenuTrigger className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]">
               <LayoutList size={20} className="text-white" />
             </DropdownMenuTrigger>
           </div>
@@ -479,6 +471,13 @@ const CallRoom = () => {
           </DropdownMenuContent>
         </DropdownMenu>
         <CallStatsButton />
+        
+          <button className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-sm text-white p-3">
+            Restart Quiz
+          </button>
+          <button className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-sm text-white p-3">
+            Choose a topic
+          </button>
 
         <button onClick={() => setShowParticipants((prev) => !prev)}>
           <div className=" cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] ">
