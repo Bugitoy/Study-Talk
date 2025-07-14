@@ -27,6 +27,7 @@ import { useQuizResults } from "@/hooks/useQuizResults";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import TopicItem from "./TopicItem";
 import { Input } from "../ui/input";
+import { useRoomSettingByCallId } from "@/hooks/useRoomSettings";
 import {
   Dialog,
   DialogContent,
@@ -48,7 +49,7 @@ const CallRoom = () => {
   const { data: quizRoom } = useQuizRoom(id as string);
   const [currentRoom, setCurrentRoom] = useState<QuizRoom | null>(null);
 
-  const [roomSettings, setRoomSettings] = useState<any>(null);
+  const roomSettings = useRoomSettingByCallId(id as string);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [startTimestamp, setStartTimestamp] = useState<number | null>(null);
   const call = useCall();
@@ -106,12 +107,6 @@ const [searchQuery, setSearchQuery] = useState("");
     fetchTopics();
   }, []);
 
-  useEffect(() => {
-    const stored = localStorage.getItem("roomSettings");
-    if (stored) {
-      setRoomSettings(JSON.parse(stored));
-    }
-  }, []);
 
   const handleStartQuiz = async () => {
     if (!isHost || !currentRoom) return;

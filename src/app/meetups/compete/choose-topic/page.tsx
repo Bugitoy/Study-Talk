@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import TopicCard from "@/components/compete/TopicCard";
 import { Call, useStreamVideoClient } from "@stream-io/video-react-sdk";
 import { useToast } from "@/components/ui/use-toast";
@@ -16,6 +16,7 @@ type QuizQuestion = {
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import NextLayout from "@/components/NextLayout";
 import { ObjectId } from 'bson';
+import { useRoomSetting } from '@/hooks/useRoomSettings';
 
 const initialValues = {
     dateTime: new Date(),
@@ -42,23 +43,17 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
   const [selectedTopic, setSelectedTopic] = useState<
         { title: string, description: string; backgroundImage: string } | null>(null);
   const { toast } = useToast();
-  const [roomSettings, setRoomSettings] = useState<{ topicName?: string }>({});
+  const searchParams = useSearchParams();
+  const settingsId = searchParams.get('settings') || undefined;
+  const roomSettings = useRoomSetting(settingsId);
 
-  useEffect(() => {
-    const storedSettings = localStorage.getItem('roomSettings');
-    if (storedSettings) {
-      const settings = JSON.parse(storedSettings);
-      setRoomSettings(settings);
-    }
-  }, []);
-
-  const saveTopicToLocalStorage = (topicName: string) => {
-    const storedSettings = localStorage.getItem('roomSettings');
-    if (storedSettings) {
-      const settings = JSON.parse(storedSettings);
-      settings.topicName = topicName;
-      localStorage.setItem('roomSettings', JSON.stringify(settings));
-    }
+  const saveTopicName = async (topicName: string) => {
+    if (!settingsId) return;
+    await fetch(`/api/room-settings/${settingsId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topicName }),
+    });
   };
 
   const createMeeting = async () => {
@@ -70,14 +65,8 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
       const startsAt =
         values.dateTime.toISOString() || new Date(Date.now()).toISOString();
       const description = values.description || 'Instant Meeting';
-      let availability = 'public';
-      let roomName = 'Unnamed Room';
-      const storedSettings = localStorage.getItem('roomSettings');
-      if (storedSettings) {
-        const settings = JSON.parse(storedSettings);
-        availability = settings.availability || 'public';
-        roomName = settings.roomName || 'Unnamed Room';
-      }
+      const availability = roomSettings?.availability || 'public';
+      const roomName = roomSettings?.roomName || 'Unnamed Room';
       await call.getOrCreate({
         data: {
           starts_at: startsAt,
@@ -104,11 +93,9 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
           }));
         }
       }
-      if (storedSettings) {
-        const settings = JSON.parse(storedSettings);
-        const roomName = settings.roomName || 'Unnamed Room';
-        const timePerQuestion = settings.timePerQuestion || null;
-        const numQuestions = settings.numQuestions || sampleQuestions.length;
+      if (roomSettings) {
+        const timePerQuestion = roomSettings.timePerQuestion ?? null;
+        const numQuestions = roomSettings.numQuestions || sampleQuestions.length;
         sampleQuestions = sampleQuestions.slice(0, numQuestions);
 
         await fetch('/api/quiz-room', {
@@ -116,11 +103,19 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             id: call.id,
-            name: roomName,
+            name: roomSettings.roomName || 'Quiz',
             timePerQuestion,
             questions: sampleQuestions,
           }),
         });
+      
+        if (settingsId) {
+          await fetch(`/api/room-settings/${settingsId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ callId: call.id }),
+          });
+        }
       }
       if (!values.description) {
         router.push(`/meetups/compete/room/${call.id}`);
@@ -163,7 +158,7 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
 
   const handleTopicClick = (topic: Topic) => {
     setSelectedTopic(topic);
-    saveTopicToLocalStorage(topic.title);
+    saveTopicName(topic.title);
   };
 
   return (

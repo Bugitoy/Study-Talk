@@ -22,10 +22,21 @@ export default function CreateRoom() {
     setRoomSettings((prev) => ({ ...prev, [key]: value }));
   };
 
-  const saveRoomSettingsToLocalStorage = () => {
-    localStorage.setItem('roomSettings', JSON.stringify(roomSettings));
+  const saveToDatabase = async () => {
+    try {
+      const res = await fetch('/api/room-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(roomSettings),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        router.push(`/meetups/compete/choose-topic?settings=${data.id}`);
+      }
+    } catch (err) {
+      console.error('Failed to save settings', err);
+    }
   };
-
   return (
     <NextLayout>
     <div className="p-6 max-w-xl mx-auto">
@@ -160,10 +171,7 @@ export default function CreateRoom() {
 
       <button
         className="w-full bg-orange-300 text-white py-3 rounded-[8px] text-lg font-semibold hover:bg-orange-200 transition-colors"
-        onClick={() => {
-          saveRoomSettingsToLocalStorage();
-          router.push('/meetups/compete/choose-topic');
-        }}
+        onClick={saveToDatabase}
       >
         NEXT
       </button>

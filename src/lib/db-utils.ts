@@ -471,3 +471,51 @@ export async function updateQuizRoomQuestions(
     throw error;
   }
 }
+
+export async function createRoomSetting(data: {
+  roomName: string;
+  numQuestions: number;
+  timePerQuestion: number | null;
+  mic: string;
+  camera: string;
+  participants: number;
+  availability: string;
+  allowReview: boolean;
+}) {
+  try {
+    return await prisma.roomSetting.create({ data });
+  } catch (error) {
+    console.error("Error creating room setting:", error);
+    throw error;
+  }
+}
+
+export async function updateRoomSetting(id: string, data: {
+  callId?: string;
+  topicName?: string;
+}) {
+  try {
+    return await prisma.roomSetting.update({ where: { id }, data });
+  } catch (error) {
+    console.error("Error updating room setting:", error);
+    throw error;
+  }
+}
+
+export async function getRoomSetting(id: string) {
+  try {
+    return await prisma.roomSetting.findUnique({ where: { id } });
+  } catch (error) {
+    console.error("Error fetching room setting:", error);
+    return null;
+  }
+}
+
+export async function getRoomSettingByCallId(callId: string) {
+  try {
+    return await prisma.roomSetting.findFirst({ where: { callId } });
+  } catch (error) {
+    console.error("Error fetching room setting by callId:", error);
+    return null;
+  }
+}

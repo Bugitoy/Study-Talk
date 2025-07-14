@@ -8,6 +8,7 @@ import {
 } from "@stream-io/video-react-sdk";
 import Alert from "@/components/Alert";
 import { Button } from "@/components/ui/button";
+import { useRoomSettingByCallId } from "@/hooks/useRoomSettings";
 
 const CallSetup = ({
   setIsSetupComplete,
@@ -23,7 +24,7 @@ const CallSetup = ({
   const callHasEnded = !!callEndedAt;
 
   const call = useCall();
-  const [roomSettings, setRoomSettings] = useState<any>(null);
+  const roomSettings = useRoomSettingByCallId(call?.id);
   const [roomFull, setRoomFull] = useState(false);
   const [quizAlreadyStarted, setQuizAlreadyStarted] = useState(
     call?.state.custom?.quizStarted,
@@ -39,22 +40,17 @@ const CallSetup = ({
   const [isMicCamToggled, setIsMicCamToggled] = useState(false);
 
   useEffect(() => {
+    if (roomSettings && roomSettings.mic === 'off' && roomSettings.camera === 'off') {
+      setIsMicCamToggled(true);
+    }
+  }, [roomSettings]);
+
+  useEffect(() => {
     const sub = call.state.custom$.subscribe((custom: any) => {
       if (custom.quizStarted) setQuizAlreadyStarted(true);
     });
     return () => sub.unsubscribe();
   }, [call]);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("roomSettings");
-    if (stored) {
-      const settings = JSON.parse(stored);
-      setRoomSettings(settings);
-      if (settings.mic === "off" && settings.camera === "off") {
-        setIsMicCamToggled(true);
-      }
-    }
-  }, []);
 
   useEffect(() => {
     if (isMicCamToggled) {
@@ -117,14 +113,12 @@ const CallSetup = ({
         onClick={async () => {
           await call.join();
           try {
-            const stored = localStorage.getItem('roomSettings');
-            const settings = stored ? JSON.parse(stored) : {};
             await call.update({
               custom: {
                 ...call.state.custom,
                 hostJoined: true,
-                availability: settings.availability || call.state.custom?.availability,
-                roomName: settings.roomName || call.state.custom?.roomName,
+                availability: roomSettings?.availability || call.state.custom?.availability,
+                roomName: roomSettings?.roomName || call.state.custom?.roomName,
               },
             });
           } catch (e) {

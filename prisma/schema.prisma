@@ -162,3 +162,18 @@ model Topic {
   backgroundImage String
   createdAt      DateTime @default(now())
 }
+
+model RoomSetting {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  roomName       String
+  numQuestions   Int
+  timePerQuestion Int?
+  mic            String
+  camera         String
+  participants   Int
+  availability   String
+  allowReview    Boolean
+  topicName      String?
+  callId         String?  @unique
+  createdAt      DateTime @default(now())
+}
