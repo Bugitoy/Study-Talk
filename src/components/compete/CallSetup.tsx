@@ -114,8 +114,22 @@ const CallSetup = ({
       </div>
       <Button
         className="rounded-md bg-blue-300 hover:bg-blue-400 px-12 py-7 text-xl"
-        onClick={() => {
-          call.join();
+        onClick={async () => {
+          await call.join();
+          try {
+            const stored = localStorage.getItem('roomSettings');
+            const settings = stored ? JSON.parse(stored) : {};
+            await call.update({
+              custom: {
+                ...call.state.custom,
+                hostJoined: true,
+                availability: settings.availability || call.state.custom?.availability,
+                roomName: settings.roomName || call.state.custom?.roomName,
+              },
+            });
+          } catch (e) {
+            console.error('Failed to update call', e);
+          }
           setIsSetupComplete(true);
         }}
       >

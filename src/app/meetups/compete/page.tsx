@@ -7,14 +7,7 @@ import NextLayout from '@/components/NextLayout';
 import GroupCard from '@/components/group';
 import MeetingModal from '@/components/MeetingModal';
 
-const profilePics = [
-  '/Images/temp-profiles/profile1.png',
-  '/Images/temp-profiles/profile1.png',
-  '/Images/temp-profiles/profile1.png',
-  '/Images/temp-profiles/profile1.png',
-  '/Images/temp-profiles/profile1.png',
-  '/Images/temp-profiles/profile1.png',
-];
+import { usePublicCalls } from '@/hooks/usePublicCalls';
 
 const pastelColors = [
   'bg-thanodi-lightPeach',
@@ -37,6 +30,7 @@ const Compete = ({setIsSetupComplete}: {setIsSetupComplete: (isSetupComplete: bo
   const router = useRouter();
   const [meetingState, setMeetingState] = useState< 'isJoiningMeeting' | undefined >(undefined);
   const [values, setValues] = useState(initialValues);
+  const { calls } = usePublicCalls();
 
   return (
     <NextLayout>
@@ -106,16 +100,23 @@ const Compete = ({setIsSetupComplete}: {setIsSetupComplete: (isSetupComplete: bo
         </div>
         
         <div className="max-w-5xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-          {[...Array(6)].map((_, i) => (
-            <GroupCard
-              key={i}
-              title={`Group Name`}
-              peopleCount={40}
-              profilePics={profilePics}
-              onJoin={() => alert(`Joining group ${i + 1}`)}
-              color={pastelColors[i % pastelColors.length]}
-            />
-          ))}
+        {calls.length === 0 && (
+            <p className="text-center text-gray-500 col-span-full">No public rooms available</p>
+          )}
+          {calls.map((call, i) => {
+            const pics = call.state.members.map((m) => m.user?.image || '/Images/temp-profiles/profile1.png');
+            const name = (call.state.custom as any)?.roomName || 'Unnamed Room';
+            return (
+              <GroupCard
+                key={call.id}
+                title={name}
+                peopleCount={call.state.members.length}
+                profilePics={pics}
+                onJoin={() => router.push(`/meetups/compete/room/${call.id}`)}
+                color={pastelColors[i % pastelColors.length]}
+              />
+            );
+          })}
         </div>
 
       <MeetingModal

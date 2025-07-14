@@ -70,11 +70,21 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
       const startsAt =
         values.dateTime.toISOString() || new Date(Date.now()).toISOString();
       const description = values.description || 'Instant Meeting';
+      let availability = 'public';
+      let roomName = 'Unnamed Room';
+      const storedSettings = localStorage.getItem('roomSettings');
+      if (storedSettings) {
+        const settings = JSON.parse(storedSettings);
+        availability = settings.availability || 'public';
+        roomName = settings.roomName || 'Unnamed Room';
+      }
       await call.getOrCreate({
         data: {
           starts_at: startsAt,
           custom: {
             description,
+            availability,
+            roomName,
           },
         },
       });
@@ -94,7 +104,6 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
           }));
         }
       }
-      const storedSettings = localStorage.getItem('roomSettings');
       if (storedSettings) {
         const settings = JSON.parse(storedSettings);
         const roomName = settings.roomName || 'Unnamed Room';
