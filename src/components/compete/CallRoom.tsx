@@ -25,6 +25,8 @@ import { cn } from "@/lib/utils";
 import { useQuizRoom } from "@/hooks/useQuizRoom";
 import { useQuizResults } from "@/hooks/useQuizResults";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
+import { Dialog, DialogContent, DialogTitle } from "@radix-ui/react-dialog";
+import { DialogHeader } from "../ui/dialog";
 
 type CallLayoutType = "grid" | "speaker-left" | "speaker-right";
 
@@ -60,6 +62,8 @@ const CallRoom = () => {
     quizEnded ? (sessionId ?? undefined) : undefined,
   );
   const { user } = useKindeBrowserClient();
+  const [showTopicModal, setShowTopicModal] = useState(false);
+
 
   useEffect(() => {
     if (quizStarted && callingState !== CallingState.JOINED && !isHost) {
@@ -476,7 +480,8 @@ const CallRoom = () => {
         <button className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-sm text-white">
           Restart Quiz
         </button>
-        <button className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-sm text-white">
+        <button className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-sm text-white"
+         onClick={() => setShowTopicModal(true) }>
           Choose a topic
         </button>
 
@@ -485,6 +490,7 @@ const CallRoom = () => {
             <Users size={20} className="text-white" />
           </div>
         </button>
+
       </div>
     </section>
   );
