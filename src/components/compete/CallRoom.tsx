@@ -169,12 +169,20 @@ const [searchQuery, setSearchQuery] = useState("");
       );
       if (qRes.ok) {
         const questions = await qRes.json();
-        await fetch(`/api/quiz-room/${currentRoom.id}/questions`, {
+        const updateRes = await fetch(`/api/quiz-room/${currentRoom.id}/questions`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ questions }),
         });
-        setCurrentRoom({ ...currentRoom, questions });
+        if (updateRes.ok) {
+          const roomRes = await fetch(`/api/quiz-room/${currentRoom.id}`);
+          if (roomRes.ok) {
+            const updatedRoom = await roomRes.json();
+            setCurrentRoom(updatedRoom);
+          } else {
+            setCurrentRoom({ ...currentRoom, questions });
+          }
+        }
         setQuizStarted(false);
         setQuizEnded(false);
         setCurrentIdx(0);

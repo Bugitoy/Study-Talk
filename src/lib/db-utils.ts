@@ -454,6 +454,9 @@ export async function updateQuizRoomQuestions(
   }[],
 ) {
   try {
+    // 1. Delete all answers for this room first
+    await prisma.quizAnswer.deleteMany({ where: { roomId } });
+    // 2. Delete and recreate questions
     await prisma.quizRoom.update({
       where: { id: roomId },
       data: {
