@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   CallControls,
   CallParticipantsList,
@@ -8,6 +8,7 @@ import {
   PaginatedGridLayout,
   SpeakerLayout,
   useCallStateHooks,
+  useCall,
 } from '@stream-io/video-react-sdk';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Users, LayoutList, CheckCircle, Circle, SquarePlus, Handshake, MessageSquareText, Hourglass } from 'lucide-react';
@@ -61,6 +62,7 @@ const MeetingRoom = () => {
   const isPersonalRoom = !!searchParams.get('personal');
   const groupName = searchParams.get('name') || 'Unnamed Group';
   const router = useRouter();
+  const call = useCall();
   const [layout, setLayout] = useState<CallLayoutType>('speaker-left');
   const [showParticipants, setShowParticipants] = useState(false);
   const { useCallCallingState } = useCallStateHooks();
@@ -71,6 +73,27 @@ const MeetingRoom = () => {
   // Mock completed goals for now
   const [completedGoals, setCompletedGoals] = useState<string[]>(['join']);
 
+  useEffect(() => {
+    if (!call) return;
+    const hostId = call.state.createdBy?.id;
+    if (!hostId) return;
+    const handler = async (e: any) => {
+      const leftId = e.participant?.userId || e.participant?.user?.id;
+      if (leftId === hostId) {
+        try {
+          await call.endCall();
+          await call.delete();
+        } catch (err) {
+          console.error('Failed to end call when host left', err);
+        }
+      }
+    };
+    const unsub = call.on('participantLeft', handler);
+    return () => {
+      unsub?.();
+    };
+  }, [call]);
+  
   if (callingState !== CallingState.JOINED) return <Loader />;
 
   const CallLayout = () => {

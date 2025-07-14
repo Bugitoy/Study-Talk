@@ -6,7 +6,8 @@ async function clearQuizData() {
     await prisma.quizQuestion.deleteMany();
     await prisma.quizSession.deleteMany();
     await prisma.quizRoom.deleteMany();
-    console.log('Cleared QuizAnswer, QuizQuestion, QuizRoom, and QuizSession collections.');
+    await prisma.roomSetting.deleteMany();
+    console.log('Cleared QuizAnswer, QuizQuestion, QuizRoom, QuizSession, and RoomSetting collections.');
   } catch (error) {
     console.error('Error clearing quiz data:', error);
   } finally {

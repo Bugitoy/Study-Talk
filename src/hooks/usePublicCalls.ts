@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Call, useStreamVideoClient } from '@stream-io/video-react-sdk';
 
 export const usePublicCalls = () => {
   const client = useStreamVideoClient();
   const [calls, setCalls] = useState<Call[]>([]);
   const [loading, setLoading] = useState(true);
+  const loadedMembers = useRef(new Set<string>());
 
   useEffect(() => {
     if (!client) return;
@@ -15,29 +16,28 @@ export const usePublicCalls = () => {
       try {
         const { calls } = await client.queryCalls({
             filter_conditions: {
-                "custom.availability": "public",
-                "custom.hostJoined": true,
-                "custom.quizStarted": false,
+                'custom.availability': 'public',
               },
-              sort: [{ field: "created_at", direction: -1 }],
+              sort: [{ field: 'created_at', direction: -1 }],
               limit: 30,
-        });
-        await Promise.all(
-            calls.map(async (c) => {
-              try {
-                await c.queryMembers({});
-              } catch (e) {
-                console.error("Failed to query members", e);
+            });
+            for (const c of calls) {
+              if (!loadedMembers.current.has(c.id)) {
+                try {
+                  await c.queryMembers({});
+                } catch (e) {
+                  console.error('Failed to query members', e);
+                }
+                loadedMembers.current.add(c.id);
               }
-            }),
-          );
+            }
         if (!cancelled) setCalls(calls);
       } catch (error) {
         console.error(error);
       } finally {
         if (!cancelled) {
           setLoading(false);
-          timeout = setTimeout(fetchCalls, 5000);
+          timeout = setTimeout(fetchCalls, 15000);
         }
       }
     };

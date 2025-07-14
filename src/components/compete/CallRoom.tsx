@@ -28,6 +28,7 @@ import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import TopicItem from "./TopicItem";
 import { Input } from "../ui/input";
 import { useRoomSettingByCallId } from "@/hooks/useRoomSettings";
+import EndCallButton from "../EndCallButton";
 import {
   Dialog,
   DialogContent,
@@ -81,6 +82,27 @@ const CallRoom = () => {
   }>
 >([]);
 const [searchQuery, setSearchQuery] = useState("");
+
+useEffect(() => {
+  if (!call) return;
+  const hostId = call.state.createdBy?.id;
+  if (!hostId) return;
+  const handler = async (e: any) => {
+    const leftId = e.participant?.userId || e.participant?.user?.id;
+    if (leftId === hostId) {
+      try {
+        await call.endCall();
+        await call.delete();
+      } catch (err) {
+        console.error('Failed to end call when host left', err);
+      }
+    }
+  };
+  const unsub = call.on('participantLeft', handler);
+  return () => {
+    unsub?.();
+  };
+}, [call]);
 
   useEffect(() => {
     if (quizStarted && callingState !== CallingState.JOINED && !isHost) {
@@ -540,6 +562,7 @@ const [searchQuery, setSearchQuery] = useState("");
       {/* call controls */}
       <div className="fixed bottom-0 left-0 right-0 rounded-t-xl flex w-full items-center justify-center gap-5 flex-wrap p-4 bg-black/20 backdrop-blur-sm">
         <CallControls onLeave={() => router.push(`/meetups/compete`)} />
+        <EndCallButton />
         <DropdownMenu>
           <div className="flex items-center">
             <DropdownMenuTrigger className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]">
