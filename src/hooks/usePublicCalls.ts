@@ -14,7 +14,6 @@ export const usePublicCalls = () => {
     const fetchCalls = async () => {
       try {
         const { calls } = await client.queryCalls({
-            // Only use equality checks for custom fields; operators like $ne are not supported by Stream
             filter_conditions: {
                 "custom.availability": "public",
                 "custom.hostJoined": true,
