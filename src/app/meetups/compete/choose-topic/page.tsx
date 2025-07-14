@@ -74,6 +74,7 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
             description,
             availability,
             roomName,
+            quizStarted: false,
           },
         },
       });

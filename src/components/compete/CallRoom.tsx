@@ -97,11 +97,11 @@ useEffect(() => {
         await call.endCall();
         await call.delete();
       } catch (err) {
-        console.error('Failed to end call when host left', err);
+        console.error("Failed to end call when host left", err);
       }
     }
   };
-  const unsub = call.on('participantLeft', handler);
+  const unsub = call.on("participantLeft", handler);
   return () => {
     unsub?.();
   };
@@ -189,11 +189,14 @@ useEffect(() => {
       );
       if (qRes.ok) {
         const questions = await qRes.json();
-        const updateRes = await fetch(`/api/quiz-room/${currentRoom.id}/questions`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ questions }),
-        });
+        const updateRes = await fetch(
+          `/api/quiz-room/${currentRoom.id}/questions`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ questions }),
+          },
+        );
         if (updateRes.ok) {
           const roomRes = await fetch(`/api/quiz-room/${currentRoom.id}`);
           if (roomRes.ok) {
@@ -272,8 +275,8 @@ useEffect(() => {
       return;
     const questions = roomSettings?.numQuestions
     ? currentRoom.questions.slice(0, roomSettings.numQuestions)
-    : currentRoom.questions;
-      if (timeLeft <= 0 && timeLeft !== Infinity) {
+      : currentRoom.questions;
+    if (timeLeft <= 0 && timeLeft !== Infinity) {
       if (!selectedAnswer) {
         submitAnswer("blank");
       }
@@ -567,7 +570,7 @@ useEffect(() => {
       {/* call controls */}
       <div className="fixed bottom-0 left-0 right-0 rounded-t-xl flex w-full items-center justify-center gap-5 flex-wrap p-4 bg-black/20 backdrop-blur-sm">
         <CallControls onLeave={() => router.push(`/meetups/compete`)} />
-        <EndCallButton />
+        {isHost && <EndCallButton />}
         <DropdownMenu>
           <div className="flex items-center">
             <DropdownMenuTrigger className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]">
@@ -607,12 +610,14 @@ useEffect(() => {
             Restart Quiz
           </button>
         )}
-         <button
-          className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-sm text-white"
-          onClick={() => setShowTopicModal(true)}
-        >
-          Choose a topic
-        </button>
+          {isHost && (
+          <button
+            className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-sm text-white"
+            onClick={() => setShowTopicModal(true)}
+          >
+            Choose a topic
+          </button>
+        )}
 
         <button onClick={() => setShowParticipants((prev) => !prev)}>
           <div className=" cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] ">
@@ -641,13 +646,13 @@ useEffect(() => {
                   t.title.toLowerCase().includes(searchQuery.toLowerCase()),
                 )
                 .map((topic) => (
-                <TopicItem
-                  key={topic.title}
-                  title={topic.title}
-                  description={topic.description}
-                  handleClick={() => handleSelectTopic(topic.title)}
-                />
-              ))}
+                  <TopicItem
+                    key={topic.title}
+                    title={topic.title}
+                    description={topic.description}
+                    handleClick={() => handleSelectTopic(topic.title)}
+                  />
+                ))}
             </div>
           </DialogContent>
         </DialogPortal>

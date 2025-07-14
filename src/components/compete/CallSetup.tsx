@@ -83,7 +83,7 @@ const CallSetup = ({
       />
     );
 
-  if (quizAlreadyStarted) return <Alert title="The quiz has already started" />;
+  if (quizAlreadyStarted) return <Alert title="Host has started quiz" />;
 
   if (callHasEnded)
     return <Alert title="The call has been ended by the host" />;
