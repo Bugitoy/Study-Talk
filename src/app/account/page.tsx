@@ -327,16 +327,6 @@ export default function AccountPage() {
                   </div>
                     )}
 
-                  <h3 className="font-semibold text-gray-900 mb-2">
-                    Profile Picture
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Upload a photo to personalize your account
-                  </p>
-
-                  <Button variant="outline" className="rounded-full">
-                    Upload Photo
-                  </Button>
                 </div>
               </CardContent>
             </Card>
