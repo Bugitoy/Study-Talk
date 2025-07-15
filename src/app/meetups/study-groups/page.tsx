@@ -1,12 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useStreamVideoClient } from '@stream-io/video-react-sdk';
-import { useToast } from '@/hooks/use-toast';
-import { Call } from '@stream-io/video-react-sdk';
 import { Input } from '@/components/ui/input';
-import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs';
-
 import NextLayout from '@/components/NextLayout';
 import GroupCard from '@/components/group';
 import MeetingModal from '@/components/MeetingModal';
@@ -28,61 +23,17 @@ const percent = Math.min((hoursStudied / hoursGoal) * 100, 100);
 const initialValues = {
     dateTime: new Date(),
     description: '',
-    link: '/meetups/study-groups/meeting/',
+    link: '',
   };
 
 const StudyGroups = () => {
   const [search, setSearch] = useState('');
-
-   // Create meeting and join meeting functionality
-
   const router = useRouter();
-  const [meetingState, setMeetingState] = useState< 'isJoiningMeeting' | 'isInstantMeeting' | undefined >(undefined);
+  const [meetingState, setMeetingState] = useState< 'isJoiningMeeting' | undefined >(undefined);
   const [values, setValues] = useState(initialValues);
-  const [callDetail, setCallDetail] = useState<Call>();
-  const client = useStreamVideoClient();
-  const { user } = useKindeBrowserClient();
-  const { toast } = useToast();
+  
   const groups = useStudyGroups();
   const filteredGroups = groups.filter(g => g.roomName.toLowerCase().includes(search.toLowerCase()));
-
-  const createMeeting = async () => {
-    if (!client || !user) return;
-    try {
-      const id = crypto.randomUUID();
-      const call = client.call('default', id);
-      if (!call) throw new Error('Failed to create meeting');
-      const startsAt =
-        values.dateTime.toISOString() || new Date(Date.now()).toISOString();
-      const description = values.description || 'Instant Meeting';
-      await call.getOrCreate({
-        data: {
-          starts_at: startsAt,
-          custom: {
-            description,
-            availability: 'public',
-            roomName: description,
-          },
-        },
-      });
-      await fetch('/api/study-groups', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ callId: call.id, roomName: description, hostId: user.id }),
-      });
-      setCallDetail(call);
-      if (!values.description) {
-        router.push(`/meetups/study-groups/meeting/${call.id}`);
-      }
-      toast({
-        title: 'Meeting Created',
-      });
-    } catch (error) {
-      console.error(error);
-      toast({ title: 'Failed to create Meeting' });
-    }
-  };
-
 
   return (
     <NextLayout>
@@ -142,7 +93,7 @@ const StudyGroups = () => {
                 border-b-[1px] border-yellow-400 shadow"
               tabIndex={0}
               role="button"
-              onClick={() => setMeetingState('isInstantMeeting')}
+              onClick={() => router.push('/meetups/study-groups/create-room')}
             >
               <span className="flex flex-col justify-center items-center h-full text-gray-800 font-bold text-lg">
                 Create a room
@@ -191,15 +142,6 @@ const StudyGroups = () => {
           className="border-none text-gray-800 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-[8px] text-center"
         />
       </MeetingModal>
-
-      <MeetingModal
-        isOpen={meetingState === 'isInstantMeeting'}
-        onClose={() => setMeetingState(undefined)}
-        title="Create a study room"
-        className="text-center"
-        buttonText="Start Room"
-        handleClick={createMeeting}
-      />
       </div>
     </NextLayout>
   );
