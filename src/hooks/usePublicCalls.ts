@@ -24,10 +24,7 @@ export const usePublicCalls = () => {
             });
            const activeCalls = calls.filter(
               (c) =>
-                !c.state.endedAt &&
-                c.state.members.some(
-                  (m) => m.user?.id === c.state.createdBy?.id,
-                ),
+                !c.state.endedAt
             );
             for (const c of activeCalls) {
               if (!loadedMembers.current.has(c.id)) {
