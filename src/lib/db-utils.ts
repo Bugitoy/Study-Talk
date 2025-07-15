@@ -495,6 +495,20 @@ export async function updateRoomSetting(id: string, data: {
   topicName?: string;
 }) {
   try {
+    // If setting a callId, check for uniqueness at application level
+    if (data.callId) {
+      const existingWithCallId = await prisma.roomSetting.findFirst({
+        where: { 
+          callId: data.callId,
+          id: { not: id } // Exclude the current record
+        }
+      });
+      
+      if (existingWithCallId) {
+        throw new Error(`CallId ${data.callId} is already in use by another room setting`);
+      }
+    }
+    
     return await prisma.roomSetting.update({ where: { id }, data });
   } catch (error) {
     console.error("Error updating room setting:", error);

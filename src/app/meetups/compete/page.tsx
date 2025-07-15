@@ -126,16 +126,27 @@ const Compete = ({
                 </p>
               )}
                {filteredCalls.map((call, i) => {
-                  const pics = call.state.members.map(
-                    (m) => m.user?.image || "/Images/temp-profiles/profile1.png",
-                  );
+                  // the members property may not always be an array
+                  const members = Array.isArray(call.state.members)
+                    ? call.state.members
+                    : Object.values(call.state.members ?? {});
+                    const count =
+                    members.length || (call.state as any).participantCount || 0;
+                  const pics =
+                    members.length > 0
+                      ? members.map(
+                          (m: any) =>
+                            (m.user as any)?.image ||
+                            "/Images/temp-profiles/profile1.png",
+                        )
+                      : ["/Images/temp-profiles/profile1.png"];
                   const name =
                     (call.state.custom as any)?.roomName || "Unnamed Room";
                   return (
                     <GroupCard
                       key={call.id}
                       title={name}
-                      peopleCount={call.state.members.length}
+                      peopleCount={count}
                       profilePics={pics}
                       onJoin={() => router.push(`/meetups/compete/room/${call.id}`)}
                       color={pastelColors[i % pastelColors.length]}
