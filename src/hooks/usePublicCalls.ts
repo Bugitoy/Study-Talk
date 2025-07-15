@@ -22,7 +22,14 @@ export const usePublicCalls = () => {
               sort: [{ field: 'created_at', direction: -1 }],
               limit: 30,
             });
-            for (const c of calls) {
+           const activeCalls = calls.filter(
+              (c) =>
+                !c.state.endedAt &&
+                c.state.members.some(
+                  (m) => m.user?.id === c.state.createdBy?.id,
+                ),
+            );
+            for (const c of activeCalls) {
               if (!loadedMembers.current.has(c.id)) {
                 try {
                   await c.queryMembers({});
@@ -32,7 +39,7 @@ export const usePublicCalls = () => {
                 loadedMembers.current.add(c.id);
               }
             }
-        if (!cancelled) setCalls(calls);
+            if (!cancelled) setCalls(activeCalls);
       } catch (error) {
         console.error(error);
       } finally {

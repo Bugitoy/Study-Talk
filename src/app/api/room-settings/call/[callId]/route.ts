@@ -3,9 +3,9 @@ import { getRoomSettingByCallId } from '@/lib/db-utils';
 
 export async function GET(
     req: NextRequest,
-    context: { params: { callId: string } },
+    context: { params: Promise<{ callId: string }> },
   ) {
-    const { callId } = (await context).params;
+    const { callId } = await context.params;
     try {
       const setting = await getRoomSettingByCallId(callId);
     if (!setting) return NextResponse.json({ error: 'Not found' }, { status: 404 });

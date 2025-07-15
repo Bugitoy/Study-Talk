@@ -3,9 +3,9 @@ import { getRoomSetting, updateRoomSetting } from '@/lib/db-utils';
 
 export async function GET(
     req: NextRequest,
-    context: { params: { id: string } },
+    context: { params: Promise<{ id: string }> },
   ) {
-    const { id } = context.params;
+    const { id } = await context.params;
     try {
       const setting = await getRoomSetting(id);
     if (!setting) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -18,9 +18,9 @@ export async function GET(
 
 export async function PUT(
     req: NextRequest,
-    context: { params: { id: string } },
+    context: { params: Promise<{ id: string }> },
   ) {
-    const { id } = context.params;
+    const { id } = await context.params;
     try {
       const data = await req.json();
       const setting = await updateRoomSetting(id, data);
