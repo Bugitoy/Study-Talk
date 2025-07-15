@@ -10,15 +10,7 @@ import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs';
 import NextLayout from '@/components/NextLayout';
 import GroupCard from '@/components/group';
 import MeetingModal from '@/components/MeetingModal';
-
-const profilePics = [
-  '/Images/temp-profiles/profile1.png',
-  '/Images/temp-profiles/profile1.png',
-  '/Images/temp-profiles/profile1.png',
-  '/Images/temp-profiles/profile1.png',
-  '/Images/temp-profiles/profile1.png',
-  '/Images/temp-profiles/profile1.png',
-];
+import { useStudyGroups } from '@/hooks/useStudyGroups';
 
 const pastelColors = [
   'bg-thanodi-lightPeach',
@@ -51,6 +43,8 @@ const StudyGroups = () => {
   const client = useStreamVideoClient();
   const { user } = useKindeBrowserClient();
   const { toast } = useToast();
+  const groups = useStudyGroups();
+  const filteredGroups = groups.filter(g => g.roomName.toLowerCase().includes(search.toLowerCase()));
 
   const createMeeting = async () => {
     if (!client || !user) return;
@@ -66,8 +60,15 @@ const StudyGroups = () => {
           starts_at: startsAt,
           custom: {
             description,
+            availability: 'public',
+            roomName: description,
           },
         },
+      });
+      await fetch('/api/study-groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callId: call.id, roomName: description, hostId: user.id }),
       });
       setCallDetail(call);
       if (!values.description) {
@@ -161,13 +162,16 @@ const StudyGroups = () => {
           </div>
         </div>
         <div className="max-w-5xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-          {[...Array(6)].map((_, i) => (
+        {filteredGroups.length === 0 && (
+            <p className="text-center text-gray-500 col-span-full">No rooms available</p>
+          )}
+          {filteredGroups.map((group, i) => (
             <GroupCard
-              key={i}
-              title={`Group Name`}
-              peopleCount={40}
-              profilePics={profilePics}
-              onJoin={() => alert(`Joining group ${i + 1}`)}
+              key={group.callId}
+              title={group.roomName}
+              peopleCount={group.members.length}
+              profilePics={group.members}
+              onJoin={() => router.push(`/meetups/study-groups/meeting/${group.callId}`)}
               color={pastelColors[i % pastelColors.length]}
             />
           ))}
@@ -184,7 +188,7 @@ const StudyGroups = () => {
         <Input
           placeholder="Meeting code"
           onChange={(e) => setValues({ ...values, link: e.target.value })}
-          className="border-none bg-dark-3 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-[8px] text-center"
+          className="border-none text-gray-800 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-[8px] text-center"
         />
       </MeetingModal>
 

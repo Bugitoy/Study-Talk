@@ -27,8 +27,12 @@ const EndCallButton = () => {
 
   const endCall = async () => {
     await call.endCall();
-    await call.delete();
-    router.push('/meetups/compete');
+    try {
+        await fetch(`/api/study-groups/${call.id}`, { method: 'PUT' });
+      } catch (err) {
+        console.error('Failed to mark study group ended', err);
+      }
+    router.push('/meetups/study-groups');
   };
 
   return (

@@ -533,3 +533,28 @@ export async function getRoomSettingByCallId(callId: string) {
     return null;
   }
 }
+export async function createStudyGroupRoom(data: { callId: string; roomName: string; hostId: string }) {
+  try {
+    return await prisma.studyGroupRoom.create({ data });
+  } catch (error) {
+    console.error('Error creating study group room:', error);
+    throw error;
+  }
+}
+
+export async function listActiveStudyGroupRooms() {
+  try {
+    return await prisma.studyGroupRoom.findMany({ where: { ended: false } });
+  } catch (error) {
+    console.error('Error fetching study group rooms:', error);
+    return [];
+  }
+}
+
+export async function endStudyGroupRoom(callId: string) {
+  try {
+    await prisma.studyGroupRoom.updateMany({ where: { callId }, data: { ended: true } });
+  } catch (error) {
+    console.error('Error ending study group room:', error);
+  }
+}

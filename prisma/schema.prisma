@@ -177,3 +177,11 @@ model RoomSetting {
   callId         String?
   createdAt      DateTime @default(now())
 }
+model StudyGroupRoom {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  callId    String   @unique
+  roomName  String
+  hostId    String
+  ended     Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

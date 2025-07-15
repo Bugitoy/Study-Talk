@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import Loader from './Loader';
-import EndCallButton from './EndCallButton';
+import EndCallButton from './StudyEndCallButton';
 import { cn } from '@/lib/utils';
 
 type CallLayoutType = 'grid' | 'speaker-left' | 'speaker-right';
@@ -83,6 +83,11 @@ const MeetingRoom = () => {
         try {
           await call.endCall();
           await call.delete();
+          try {
+            await fetch(`/api/study-groups/${call.id}`, { method: 'PUT' });
+          } catch (err) {
+            console.error('Failed to mark study group ended', err);
+          }
         } catch (err) {
           console.error('Failed to end call when host left', err);
         }
