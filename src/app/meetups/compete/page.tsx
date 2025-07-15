@@ -126,19 +126,28 @@ const Compete = ({
                 </p>
               )}
                {filteredCalls.map((call, i) => {
-                  // the members property may not always be an array
-                  const members = Array.isArray(call.state.members)
-                    ? call.state.members
-                    : Object.values(call.state.members ?? {});
+                  // `call.state.members` can be an array, a Map, or an object –
+                  // normalise it to a simple array so we can reliably read member data
+                  const rawMembers: any = (call.state as any).members;
+                  const members = Array.isArray(rawMembers)
+                    ? rawMembers
+                    : rawMembers instanceof Map
+                      ? Array.from(rawMembers.values())
+                      : Object.values(rawMembers ?? {});
                     const count =
                     members.length || (call.state as any).participantCount || 0;
                   const pics =
                     members.length > 0
-                      ? members.map(
-                          (m: any) =>
-                            (m.user as any)?.image ||
-                            "/Images/temp-profiles/profile1.png",
-                        )
+                      ? members.map((m: any) => {
+                          const u = (m.user ?? {}) as any;
+                          return (
+                            u.image ||
+                            m.image ||
+                            u.avatar ||
+                            u.photo ||
+                            "/Images/temp-profiles/profile1.png"
+                          );
+                        })
                       : ["/Images/temp-profiles/profile1.png"];
                   const name =
                     (call.state.custom as any)?.roomName || "Unnamed Room";

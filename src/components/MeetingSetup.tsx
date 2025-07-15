@@ -9,6 +9,7 @@ import {
 import Alert from './Alert';
 import { Button } from './ui/button';
 import { PhoneOff } from 'lucide-react';
+import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs';
 
 const MeetingSetup = ({
   setIsSetupComplete,
@@ -24,6 +25,7 @@ const MeetingSetup = ({
   const callHasEnded = !!callEndedAt;
 
   const call = useCall();
+  const { user: authUser } = useKindeBrowserClient();
 
   if (!call) {
     throw new Error(
@@ -75,8 +77,22 @@ const MeetingSetup = ({
       </div>
       <Button
         className="rounded-md bg-blue-300 hover:bg-blue-400 px-12 py-7 text-xl"
-        onClick={() => {
-          call.join();
+        onClick={async () => {
+          await call.join();
+          // Add as member so avatar is queryable later
+          try {
+            if (authUser) {
+              await call.updateCallMembers({
+                update_members: [
+                  {
+                    user_id: authUser.id,
+                  },
+                ],
+              } as any);
+            }
+          } catch (err) {
+            console.error('Failed to add user as call member', err);
+          }
 
           setIsSetupComplete(true);
         }}

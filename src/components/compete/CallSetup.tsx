@@ -8,6 +8,7 @@ import {
 } from "@stream-io/video-react-sdk";
 import Alert from "@/components/Alert";
 import { Button } from "@/components/ui/button";
+import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { useRoomSettingByCallId } from "@/hooks/useRoomSettings";
 
 const CallSetup = ({
@@ -35,6 +36,8 @@ const CallSetup = ({
       "useStreamCall must be used within a StreamCall component.",
     );
   }
+
+  const { user: authUser } = useKindeBrowserClient();
 
   // https://getstream.io/video/docs/react/ui-cookbook/replacing-call-controls/
   const [isMicOff, setIsMicOff] = useState(false);
@@ -148,6 +151,20 @@ const CallSetup = ({
         className="rounded-md bg-blue-300 hover:bg-blue-400 px-12 py-7 text-xl"
         onClick={async () => {
           await call.join();
+          // Ensure the current user becomes a call member so their avatar is queryable
+          try {
+            if (authUser) {
+              await call.updateCallMembers({
+                update_members: [
+                  {
+                    user_id: authUser.id,
+                  },
+                ],
+              } as any);
+            }
+          } catch (err) {
+            console.error("Failed to add user as call member", err);
+          }
           try {
             await call.update({
               custom: {

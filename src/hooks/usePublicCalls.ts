@@ -4,8 +4,8 @@ import { Call, useStreamVideoClient } from '@stream-io/video-react-sdk';
 export const usePublicCalls = () => {
   const client = useStreamVideoClient();
   const [calls, setCalls] = useState<Call[]>([]);
+  
   const [loading, setLoading] = useState(true);
-  const loadedMembers = useRef(new Set<string>());
 
   useEffect(() => {
     if (!client) return;
@@ -26,16 +26,16 @@ export const usePublicCalls = () => {
               (c) =>
                 !c.state.endedAt
             );
-            for (const c of activeCalls) {
-              if (!loadedMembers.current.has(c.id)) {
+            // Always refresh members so avatars stay current
+            await Promise.all(
+              activeCalls.map(async (c) => {
                 try {
                   await c.queryMembers({});
                 } catch (e) {
                   console.error('Failed to query members', e);
                 }
-                loadedMembers.current.add(c.id);
-              }
-            }
+              }),
+            );
             if (!cancelled) setCalls(activeCalls);
       } catch (error) {
         console.error(error);

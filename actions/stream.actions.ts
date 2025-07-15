@@ -16,6 +16,18 @@ export const tokenProvider = async () => {
 
   const client = new StreamClient(apiKey, apiSecret);
 
+  // Ensure the Stream backend knows the latest user data (name & avatar)
+  await client.upsertUsers([
+    {
+      id: user.id,
+      name:
+        user.given_name && user.family_name
+          ? `${user.given_name} ${user.family_name}`
+          : user.id,
+      image: user.picture || undefined,
+    },
+  ]);
+
   const exp = Math.floor(Date.now() / 1000) + 3600;
   const issued = Math.floor(Date.now() / 1000) - 60;
 

@@ -27,6 +27,10 @@ const StreamVideoProvider = ({ children }: { children: ReactNode }) => {
         },
          tokenProvider,
        })
+        // Expose for debugging in browser console
+        if (typeof window !== 'undefined') {
+          (window as any).streamVideoClient = client;
+        }
         setVideoClient(client);
     }, [user, isAuthenticated, isLoading]);
 
