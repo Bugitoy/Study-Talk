@@ -37,11 +37,25 @@ const CallSetup = ({
   }
 
   // https://getstream.io/video/docs/react/ui-cookbook/replacing-call-controls/
-  const [isMicCamToggled, setIsMicCamToggled] = useState(false);
+  const [isMicOff, setIsMicOff] = useState(false);
+  const [isCameraOff, setIsCameraOff] = useState(false);
+
+  // Check if controls should be shown based on room settings
+  const showMicButton = roomSettings?.mic === 'flexible';
+  const showCameraButton = roomSettings?.camera === 'flexible';
 
   useEffect(() => {
-    if (roomSettings && roomSettings.mic === 'off' && roomSettings.camera === 'off') {
-      setIsMicCamToggled(true);
+    if (roomSettings) {
+      if (roomSettings.mic === 'off') {
+        setIsMicOff(true);
+      } else if (roomSettings.mic === 'on') {
+        setIsMicOff(false);
+      }
+      if (roomSettings.camera === 'off') {
+        setIsCameraOff(true);
+      } else if (roomSettings.camera === 'on') {
+        setIsCameraOff(false);
+      }
     }
   }, [roomSettings]);
 
@@ -53,14 +67,20 @@ const CallSetup = ({
   }, [call]);
 
   useEffect(() => {
-    if (isMicCamToggled) {
-      call.camera.disable();
+    if (roomSettings?.mic === 'off' || isMicOff) {
       call.microphone.disable();
     } else {
-      call.camera.enable();
       call.microphone.enable();
     }
-  }, [isMicCamToggled, call.camera, call.microphone]);
+  }, [isMicOff, call.microphone, roomSettings]);
+
+  useEffect(() => {
+    if (roomSettings?.camera === 'off' || isCameraOff) {
+      call.camera.disable();
+    } else {
+      call.camera.enable();
+    }
+  }, [isCameraOff, call.camera, roomSettings]);
 
   useEffect(() => {
     if (!roomSettings) return;
@@ -98,14 +118,30 @@ const CallSetup = ({
       </h1>
       <VideoPreview />
       <div className="flex h-16 items-center justify-center gap-3">
-        <label className="flex items-center justify-center gap-2 text-xl text-blue-400">
-          <input
-            type="checkbox"
-            checked={isMicCamToggled}
-            onChange={(e) => setIsMicCamToggled(e.target.checked)}
-          />
-          Join with mic and camera off
-        </label>
+        {showMicButton && (
+          <Button
+            className={`px-4 py-2 rounded-md ${
+              isMicOff 
+                ? 'bg-[#19232d] hover:bg-[#4c535b] text-white' 
+                : 'bg-blue-400 hover:bg-blue-500 text-white'
+            }`}
+            onClick={() => setIsMicOff(!isMicOff)}
+          >
+            {isMicOff ? 'Mic Off' : 'Mic On'}
+          </Button>
+        )}
+        {showCameraButton && (
+          <Button
+            className={`px-4 py-2 rounded-md ${
+              isCameraOff 
+                ? 'bg-[#19232d] hover:bg-[#4c535b] text-white' 
+                : 'bg-blue-400 hover:bg-blue-500 text-white'
+            }`}
+            onClick={() => setIsCameraOff(!isCameraOff)}
+          >
+            {isCameraOff ? 'Camera Off' : 'Camera On'}
+          </Button>
+        )}
         <DeviceSettings />
       </div>
       <Button

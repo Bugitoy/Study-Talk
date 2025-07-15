@@ -11,7 +11,7 @@ import {
   useCall,
 } from "@stream-io/video-react-sdk";
 import { useRouter, useParams } from "next/navigation";
-import { Users, LayoutList } from "lucide-react";
+import { Users, LayoutList, Mic, MicOff, Video, VideoOff, PhoneOff } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -569,7 +569,51 @@ useEffect(() => {
 
       {/* call controls */}
       <div className="fixed bottom-0 left-0 right-0 rounded-t-xl flex w-full items-center justify-center gap-5 flex-wrap p-4 bg-black/20 backdrop-blur-sm">
-        <CallControls onLeave={() => router.push(`/meetups/compete`)} />
+        <div className="flex items-center gap-3">
+          {/* Custom call controls based on room settings */}
+          {roomSettings?.mic === 'flexible' && call && (
+            <button
+              onClick={() => {
+                if (call.microphone.state.status === 'enabled') {
+                  call.microphone.disable();
+                } else {
+                  call.microphone.enable();
+                }
+              }}
+              className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] flex items-center justify-center"
+            >
+              {call.microphone.state.status === 'enabled' ? (
+                <Mic size={20} className="text-white" />
+              ) : (
+                <MicOff size={20} className="text-white" />
+              )}
+            </button>
+          )}
+          {roomSettings?.camera === 'flexible' && call && (
+            <button
+              onClick={() => {
+                if (call.camera.state.status === 'enabled') {
+                  call.camera.disable();
+                } else {
+                  call.camera.enable();
+                }
+              }}
+              className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b] flex items-center justify-center"
+            >
+              {call.camera.state.status === 'enabled' ? (
+                <Video size={20} className="text-white" />
+              ) : (
+                <VideoOff size={20} className="text-white" />
+              )}
+            </button>
+          )}
+          <button
+            onClick={() => router.push(`/meetups/compete`)}
+            className="cursor-pointer rounded-2xl bg-red-500 px-4 py-2 hover:bg-red-600 flex items-center justify-center"
+          >
+            <PhoneOff size={20} className="text-white" />
+          </button>
+        </div>
         {isHost && <EndCallButton />}
         <DropdownMenu>
           <div className="flex items-center">
