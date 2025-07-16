@@ -153,6 +153,14 @@ export function useInfiniteConfessions(options: UseInfiniteConfessionsOptions = 
     }
   }, [limit, universityId, sortBy, search, userId, confessions]);
 
+  const updateCommentCount = useCallback((confessionId: string, newCount: number) => {
+    setConfessions(prev =>
+      prev.map(c =>
+        c.id === confessionId ? { ...c, commentCount: newCount } : c
+      )
+    );
+  }, []);
+
   // Load more function for infinite scroll
   const loadMore = useCallback(() => {
     if (!hasMore || loadingMore || !nextCursor) return;
@@ -395,5 +403,6 @@ export function useInfiniteConfessions(options: UseInfiniteConfessionsOptions = 
     createConfession,
     voteOnConfession,
     incrementView,
+    updateCommentCount,
   };
 } 

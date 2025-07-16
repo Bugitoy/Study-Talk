@@ -15,7 +15,6 @@ import { useSavedConfessions } from "@/hooks/useSavedConfessions";
 import { useUniversities } from "@/hooks/useUniversities";
 import { useRouter } from "next/navigation";
 import { InfiniteScrollContainer } from "@/components/InfiniteScrollContainer";
-import { NewPostsBanner } from "@/components/NewPostsBanner";
 import { ConfessionListSkeleton } from "@/components/ConfessionSkeleton";
 import { CommentSection } from "@/components/CommentSection";
 
@@ -53,7 +52,8 @@ export default function ConfessionsPage() {
     createConfession,
     voteOnConfession,
     incrementView,
-    refresh: refreshConfessions
+    refresh: refreshConfessions,
+    updateCommentCount,
   } = useInfiniteConfessions({ 
     sortBy, 
     search: searchQuery,
@@ -260,11 +260,14 @@ export default function ConfessionsPage() {
               </div>
             </div>
             
-            {/* Comment Section */}
-            <CommentSection
-              confessionId={post.id}
-              isVisible={openCommentSections.has(post.id)}
-            />
+            {openCommentSections.has(post.id) && (
+              <CommentSection 
+                confessionId={post.id}
+                isVisible={openCommentSections.has(post.id)}
+                onClose={() => toggleCommentSection(post.id)}
+                updateCommentCount={updateCommentCount}
+              />
+            )}
           </div>
         ))}
     </div>
@@ -367,13 +370,13 @@ export default function ConfessionsPage() {
           <h1 className="text-8xl font-extrabold text-gray-800 mb-6 text-center">
             Confessions
           </h1>
-          {/* New posts banner */}
-          {shouldShowNewPostsBanner && (
+          {/* New posts banner - DISABLED */}
+          {/* {shouldShowNewPostsBanner && (
             <NewPostsBanner 
               newPostsCount={newPostsCount}
               onLoadNewPosts={loadNewPosts}
             />
-          )}
+          )} */}
         </div>
         {/* Tab Bar */}
         <div className="flex gap-[4rem] border-b border-gray-300 mb-4 overflow-x-auto justify-center items-center">

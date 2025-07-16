@@ -25,9 +25,10 @@ interface CommentSectionProps {
   confessionId: string;
   isVisible: boolean;
   onClose?: () => void;
+  updateCommentCount: (confessionId: string, newCount: number) => void;
 }
 
-export function CommentSection({ confessionId, isVisible, onClose }: CommentSectionProps) {
+export function CommentSection({ confessionId, isVisible, onClose, updateCommentCount }: CommentSectionProps) {
   const { user } = useKindeBrowserClient();
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -64,7 +65,7 @@ export function CommentSection({ confessionId, isVisible, onClose }: CommentSect
         body: JSON.stringify({
           content: newComment.trim(),
           authorId: user.id,
-          isAnonymous: true,
+          isAnonymous: false,
         }),
       });
 
@@ -72,6 +73,7 @@ export function CommentSection({ confessionId, isVisible, onClose }: CommentSect
         const newCommentData = await response.json();
         setComments(prev => [newCommentData, ...prev]);
         setNewComment('');
+        updateCommentCount(confessionId, comments.length + 1);
       }
     } catch (error) {
       console.error('Error submitting comment:', error);
@@ -91,7 +93,7 @@ export function CommentSection({ confessionId, isVisible, onClose }: CommentSect
         body: JSON.stringify({
           content: replyContent.trim(),
           authorId: user.id,
-          isAnonymous: true,
+          isAnonymous: false,
           parentId,
         }),
       });
@@ -107,6 +109,9 @@ export function CommentSection({ confessionId, isVisible, onClose }: CommentSect
         );
         setReplyContent('');
         setReplyingTo(null);
+        // Note: A reply also increases the total comment count
+        const totalComments = comments.reduce((acc, c) => acc + 1 + (c.replies?.length || 0), 0) + 1;
+        updateCommentCount(confessionId, totalComments);
       }
     } catch (error) {
       console.error('Error submitting reply:', error);
@@ -162,7 +167,7 @@ export function CommentSection({ confessionId, isVisible, onClose }: CommentSect
                   disabled={submitting}
                 />
                 <div className="flex justify-between items-center mt-3">
-                  <span className="text-xs text-gray-500">Commenting anonymously</span>
+                  <span className="text-xs text-gray-500">Commenting as {user.given_name || 'You'}</span>
                   <Button
                     onClick={handleSubmitComment}
                     disabled={!newComment.trim() || submitting}

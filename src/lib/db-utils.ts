@@ -1060,28 +1060,47 @@ export async function removeVoteOnConfession(data: {
 
 export async function getConfessionComments(confessionId: string) {
   try {
-    const comments = await prisma.confessionComment.findMany({
+    // Get all comments for this confession
+    const allComments = await prisma.confessionComment.findMany({
       where: {
         confessionId,
-        parentId: null, // Only get top-level comments, not replies
       },
       include: {
         author: {
           select: { id: true, name: true, image: true },
         },
-        replies: {
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Filter for top-level comments (parentId is null/undefined)
+    const topLevelComments = allComments.filter(comment => 
+      !comment.parentId || comment.parentId === null || comment.parentId === undefined
+    );
+
+    // For each top-level comment, get its replies
+    const commentsWithReplies = await Promise.all(
+      topLevelComments.map(async (comment) => {
+        const replies = await prisma.confessionComment.findMany({
+          where: {
+            parentId: comment.id,
+          },
           include: {
             author: {
               select: { id: true, name: true, image: true },
             },
           },
           orderBy: { createdAt: 'asc' },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        });
 
-    return comments;
+        return {
+          ...comment,
+          replies,
+        };
+      })
+    );
+
+    return commentsWithReplies;
   } catch (error) {
     console.error('Error fetching confession comments:', error);
     throw error;

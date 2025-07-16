@@ -9,7 +9,6 @@ import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { useInfiniteConfessions, Confession } from "@/hooks/useInfiniteConfessions";
 import { useSavedConfessions } from "@/hooks/useSavedConfessions";
 import { InfiniteScrollContainer } from "@/components/InfiniteScrollContainer";
-import { NewPostsBanner } from "@/components/NewPostsBanner";
 import { ConfessionListSkeleton } from "@/components/ConfessionSkeleton";
 import { CommentSection } from "@/components/CommentSection";
 
@@ -37,6 +36,7 @@ export default function UniversityConfessionsPage() {
     loadNewPosts,
     voteOnConfession,
     incrementView,
+    updateCommentCount,
   } = useInfiniteConfessions({ 
     universityId,
     sortBy, 
@@ -215,11 +215,14 @@ export default function UniversityConfessionsPage() {
             </div>
           </div>
           
-          {/* Comment Section */}
-          <CommentSection
-            confessionId={post.id}
-            isVisible={openCommentSections.has(post.id)}
-          />
+          {openCommentSections.has(post.id) && (
+            <CommentSection
+              confessionId={post.id}
+              isVisible={openCommentSections.has(post.id)}
+              onClose={() => toggleCommentSection(post.id)}
+              updateCommentCount={updateCommentCount}
+            />
+          )}
         </div>
       ))}
     </div>
@@ -240,13 +243,13 @@ export default function UniversityConfessionsPage() {
           <h1 className="text-6xl font-extrabold text-gray-800">
             {universityName} Confessions
           </h1>
-          {/* New posts banner */}
-          {shouldShowNewPostsBanner && (
+          {/* New posts banner - DISABLED */}
+          {/* {shouldShowNewPostsBanner && (
             <NewPostsBanner 
               newPostsCount={newPostsCount}
               onLoadNewPosts={loadNewPosts}
             />
-          )}
+          )} */}
         </div>
 
         {/* Controls */}
