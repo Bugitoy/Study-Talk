@@ -62,7 +62,8 @@ const MeetingGoalsBar = ({ completedGoals = [] }: { completedGoals: string[] }) 
 
 const MeetingRoom = () => {
   const searchParams = useSearchParams();
-  const isPersonalRoom = !!searchParams.get('personal');
+  // Remove personal room logic
+  // const isPersonalRoom = !!searchParams.get('personal');
   const groupName = searchParams.get('name') || 'Study Group';
   const router = useRouter();
   const call = useCall();
@@ -74,6 +75,12 @@ const MeetingRoom = () => {
 
   // for more detail about types of CallingState see: https://getstream.io/video/docs/react/ui-cookbook/ringing-call/#incoming-call-panel
   const callingState = useCallCallingState();
+
+  // Get current user and host id
+  const hostId = call?.state.createdBy?.id;
+  const localParticipant = call?.state.localParticipant;
+  const currentUserId = localParticipant?.userId;
+  const isHost = currentUserId && hostId && currentUserId === hostId;
 
   // Mock completed goals for now
   const [completedGoals, setCompletedGoals] = useState<string[]>(['join']);
@@ -96,8 +103,6 @@ const MeetingRoom = () => {
 
   useEffect(() => {
     if (!call) return;
-    const hostId = call.state.createdBy?.id;
-    if (!hostId) return;
     const handler = async (e: any) => {
       const leftId = e.participant?.userId || e.participant?.user?.id;
       if (leftId === hostId) {
@@ -120,7 +125,7 @@ const MeetingRoom = () => {
     return () => {
       unsub?.();
     };
-  }, [call]);
+  }, [call, hostId]);
   
   if (callingState !== CallingState.JOINED) return <Loader />;
 
@@ -205,7 +210,8 @@ const MeetingRoom = () => {
             <Users size={20} className="text-white" />
           </div>
         </button>
-        {!isPersonalRoom && <EndCallButton />}
+       
+        {isHost && <EndCallButton />}
       </div>
     </section>
   );
