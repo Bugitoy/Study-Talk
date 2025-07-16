@@ -21,12 +21,15 @@ export async function GET(req: NextRequest) {
       await incrementConfessionView(viewConfessionId);
     }
 
+    const userId = searchParams.get('userId') || undefined;
+    
     const confessions = await getConfessions({
       page,
       limit,
       universityId,
       sortBy,
       search,
+      userId,
     });
 
     return NextResponse.json(confessions);

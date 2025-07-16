@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { InfiniteScrollContainer } from "@/components/InfiniteScrollContainer";
 import { NewPostsBanner } from "@/components/NewPostsBanner";
 import { ConfessionListSkeleton } from "@/components/ConfessionSkeleton";
+import { CommentSection } from "@/components/CommentSection";
 
 const tabs = [
   { key: "posts", label: "Posts" },
@@ -35,6 +36,7 @@ export default function ConfessionsPage() {
   const [newTitle, setNewTitle] = useState("");
   const [newBody, setNewBody] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(true);
+  const [openCommentSections, setOpenCommentSections] = useState<Set<string>>(new Set());
 
   // Hook configurations based on active tab
   const sortBy = activeTab === "hottest" ? "hot" : "recent";
@@ -55,7 +57,8 @@ export default function ConfessionsPage() {
   } = useInfiniteConfessions({ 
     sortBy, 
     search: searchQuery,
-    autoRefresh: true 
+    autoRefresh: true,
+    userId: user?.id
   });
   
   const { 
@@ -96,7 +99,7 @@ export default function ConfessionsPage() {
     if (!user?.id) return;
     
     try {
-      await voteOnConfession(confessionId, voteType, user.id);
+      await voteOnConfession(confessionId, voteType);
     } catch (error) {
       console.error("Failed to vote:", error);
     }
@@ -110,6 +113,18 @@ export default function ConfessionsPage() {
     } catch (error) {
       console.error("Failed to toggle save:", error);
     }
+  };
+
+  const toggleCommentSection = (confessionId: string) => {
+    setOpenCommentSections(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(confessionId)) {
+        newSet.delete(confessionId);
+      } else {
+        newSet.add(confessionId);
+      }
+      return newSet;
+    });
   };
   
   const formatTimeAgo = (dateString: string) => {
@@ -183,9 +198,14 @@ export default function ConfessionsPage() {
                     e.stopPropagation();
                     handleVote(post.id, 'BELIEVE');
                   }}
-                  className="flex items-center gap-1 hover:text-green-600 transition-colors"
+                  className={`flex items-center gap-1 transition-colors ${
+                    post.userVote === 'BELIEVE' 
+                      ? 'text-green-600 font-semibold' 
+                      : 'text-gray-600 hover:text-green-600'
+                  }`}
                 >
-                  <ThumbsUp className="w-4 h-4" /> {post.believeCount} Believers
+                  <ThumbsUp className={`w-4 h-4 ${post.userVote === 'BELIEVE' ? 'fill-current' : ''}`} />
+                  {post.believeCount} Believers
                 </button>
               </div>
               <div className="flex items-center gap-1">
@@ -194,16 +214,30 @@ export default function ConfessionsPage() {
                     e.stopPropagation();
                     handleVote(post.id, 'DOUBT');
                   }}
-                  className="flex items-center gap-1 hover:text-red-600 transition-colors"
+                  className={`flex items-center gap-1 transition-colors ${
+                    post.userVote === 'DOUBT' 
+                      ? 'text-red-600 font-semibold' 
+                      : 'text-gray-600 hover:text-red-600'
+                  }`}
                 >
-                  <ThumbsDown className="w-4 h-4" /> {post.doubtCount} Non Believers
+                  <ThumbsDown className={`w-4 h-4 ${post.userVote === 'DOUBT' ? 'fill-current' : ''}`} />
+                  {post.doubtCount} Non Believers
                 </button>
               </div>
               <div className="flex items-center gap-1">
-                <MessageCircle className="w-4 h-4" /> {post.commentCount} Comments
-              </div>
-              <div className="flex items-center gap-1">
-                👁️ {formatNumber(post.viewCount)} Views
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleCommentSection(post.id);
+                  }}
+                  className={`flex items-center gap-1 transition-colors ${
+                    openCommentSections.has(post.id)
+                      ? 'text-blue-600 font-semibold'
+                      : 'text-gray-600 hover:text-blue-600'
+                  }`}
+                >
+                  <MessageCircle className="w-4 h-4" /> {post.commentCount} Comments
+                </button>
               </div>
               <div className="flex items-center gap-1 cursor-pointer hover:text-gray-800">
                 <Share2 className="w-4 h-4" /> Share
@@ -225,6 +259,12 @@ export default function ConfessionsPage() {
                 {formatTimeAgo(post.createdAt)}
               </div>
             </div>
+            
+            {/* Comment Section */}
+            <CommentSection
+              confessionId={post.id}
+              isVisible={openCommentSections.has(post.id)}
+            />
           </div>
         ))}
     </div>

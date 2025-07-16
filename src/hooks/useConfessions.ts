@@ -14,6 +14,7 @@ export interface Confession {
   doubtCount: number;
   commentCount: number;
   savedCount: number;
+  userVote?: 'BELIEVE' | 'DOUBT' | null;
   author: {
     id: string;
     name?: string;
@@ -35,6 +36,7 @@ export interface UseConfessionsOptions {
   sortBy?: 'recent' | 'hot';
   search?: string;
   autoRefresh?: boolean;
+  userId?: string;
 }
 
 export function useConfessions(options: UseConfessionsOptions = {}) {
@@ -45,6 +47,7 @@ export function useConfessions(options: UseConfessionsOptions = {}) {
     sortBy = 'recent',
     search,
     autoRefresh = false,
+    userId,
   } = options;
 
   const [confessions, setConfessions] = useState<Confession[]>([]);
@@ -70,6 +73,7 @@ export function useConfessions(options: UseConfessionsOptions = {}) {
 
       if (universityId) params.append('universityId', universityId);
       if (search) params.append('search', search);
+      if (userId) params.append('userId', userId);
 
       const response = await fetch(`/api/confessions?${params}`);
       if (!response.ok) {
@@ -100,7 +104,7 @@ export function useConfessions(options: UseConfessionsOptions = {}) {
         setIsBackgroundRefreshing(false);
       }
     }
-  }, [page, limit, universityId, sortBy, search]);
+  }, [page, limit, universityId, sortBy, search, userId]);
 
   // Smart merge function that preserves UI state while updating data
   const smoothMergeConfessions = (existing: Confession[], fresh: Confession[]): Confession[] => {
@@ -180,24 +184,68 @@ export function useConfessions(options: UseConfessionsOptions = {}) {
     }
   };
 
-  const voteOnConfession = async (confessionId: string, voteType: 'BELIEVE' | 'DOUBT', userId: string) => {
+  const voteOnConfession = async (confessionId: string, voteType: 'BELIEVE' | 'DOUBT') => {
+    if (!userId) return;
+
     try {
-      // Optimistic update first for instant feedback
+      // Get current state to determine action
+      const currentConfession = confessions.find(c => c.id === confessionId);
+      if (!currentConfession) return;
+
+      const currentUserVote = currentConfession.userVote;
+      let action: 'vote' | 'unvote';
+      let newUserVote: 'BELIEVE' | 'DOUBT' | null;
+      let believeChange = 0;
+      let doubtChange = 0;
+
+      if (currentUserVote === voteType) {
+        // User clicked the same button - unvote
+        action = 'unvote';
+        newUserVote = null;
+        if (voteType === 'BELIEVE') believeChange = -1;
+        if (voteType === 'DOUBT') doubtChange = -1;
+      } else {
+        // User clicked different button or no previous vote
+        action = 'vote';
+        newUserVote = voteType;
+        
+        if (currentUserVote === 'BELIEVE') {
+          // Had BELIEVE, switching to DOUBT
+          believeChange = -1;
+          doubtChange = 1;
+        } else if (currentUserVote === 'DOUBT') {
+          // Had DOUBT, switching to BELIEVE
+          believeChange = 1;
+          doubtChange = -1;
+        } else {
+          // No previous vote
+          if (voteType === 'BELIEVE') believeChange = 1;
+          if (voteType === 'DOUBT') doubtChange = 1;
+        }
+      }
+
+      // Optimistic update
       setConfessions(prev => prev.map(confession => {
         if (confession.id === confessionId) {
           return {
             ...confession,
-            believeCount: voteType === 'BELIEVE' ? confession.believeCount + 1 : confession.believeCount,
-            doubtCount: voteType === 'DOUBT' ? confession.doubtCount + 1 : confession.doubtCount,
+            believeCount: Math.max(0, confession.believeCount + believeChange),
+            doubtCount: Math.max(0, confession.doubtCount + doubtChange),
+            userVote: newUserVote,
           };
         }
         return confession;
       }));
 
+      // API call
+      const requestBody = action === 'unvote' 
+        ? { userId, confessionId, action: 'unvote' }
+        : { userId, confessionId, voteType, action: 'vote' };
+
       const response = await fetch('/api/confessions/vote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, confessionId, voteType }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -206,8 +254,9 @@ export function useConfessions(options: UseConfessionsOptions = {}) {
           if (confession.id === confessionId) {
             return {
               ...confession,
-              believeCount: voteType === 'BELIEVE' ? confession.believeCount - 1 : confession.believeCount,
-              doubtCount: voteType === 'DOUBT' ? confession.doubtCount - 1 : confession.doubtCount,
+              believeCount: Math.max(0, confession.believeCount - believeChange),
+              doubtCount: Math.max(0, confession.doubtCount - doubtChange),
+              userVote: currentUserVote,
             };
           }
           return confession;
@@ -235,6 +284,7 @@ export function useConfessions(options: UseConfessionsOptions = {}) {
       }));
 
       const params = new URLSearchParams({ viewConfessionId: confessionId });
+      if (userId) params.append('userId', userId);
       await fetch(`/api/confessions?${params}`);
     } catch (error) {
       console.error('Failed to increment view:', error);

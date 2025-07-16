@@ -3,13 +3,23 @@ import { voteOnConfession } from '@/lib/db-utils';
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, confessionId, voteType } = await req.json();
+    const { userId, confessionId, voteType, action = 'vote' } = await req.json();
 
-    if (!userId || !confessionId || !voteType) {
+    if (!userId || !confessionId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    if (!['BELIEVE', 'DOUBT'].includes(voteType)) {
+    if (action === 'unvote') {
+      // Remove vote - we'll create a separate function for this
+      const { removeVoteOnConfession } = await import('@/lib/db-utils');
+      const result = await removeVoteOnConfession({
+        userId,
+        confessionId,
+      });
+      return NextResponse.json(result);
+    }
+
+    if (!voteType || !['BELIEVE', 'DOUBT'].includes(voteType)) {
       return NextResponse.json({ error: 'Invalid vote type' }, { status: 400 });
     }
 

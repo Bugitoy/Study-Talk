@@ -761,9 +761,10 @@ export async function getConfessions(options: {
   universityId?: string;
   sortBy?: 'recent' | 'hot';
   search?: string;
+  userId?: string;
 }) {
   try {
-    const { page = 1, limit = 20, universityId, sortBy = 'recent', search } = options;
+    const { page = 1, limit = 20, universityId, sortBy = 'recent', search, userId } = options;
     const skip = (page - 1) * limit;
 
     const where: any = {
@@ -814,12 +815,16 @@ export async function getConfessions(options: {
       const believeCount = confession.votes.filter(v => v.voteType === 'BELIEVE').length;
       const doubtCount = confession.votes.filter(v => v.voteType === 'DOUBT').length;
       
+      // Find user's vote if userId is provided
+      const userVote = userId ? confession.votes.find(v => (v as any).userId === userId) : null;
+      
       return {
         ...confession,
         believeCount,
         doubtCount,
         commentCount: confession._count.comments,
         savedCount: confession._count.savedBy,
+        userVote: userVote ? userVote.voteType : null,
         votes: undefined, // Remove raw votes from response
         _count: undefined,
       };
@@ -839,9 +844,10 @@ export async function getConfessionsInfinite(options: {
   universityId?: string;
   sortBy?: 'recent' | 'hot';
   search?: string;
+  userId?: string;
 }) {
   try {
-    const { cursor, limit = 20, universityId, sortBy = 'recent', search } = options;
+    const { cursor, limit = 20, universityId, sortBy = 'recent', search, userId } = options;
 
     const where: any = {
       isHidden: false,
@@ -973,12 +979,16 @@ export async function getConfessionsInfinite(options: {
       const believeCount = confession.votes.filter(v => v.voteType === 'BELIEVE').length;
       const doubtCount = confession.votes.filter(v => v.voteType === 'DOUBT').length;
       
+      // Find user's vote if userId is provided
+      const userVote = userId ? confession.votes.find(v => (v as any).userId === userId) : null;
+      
       return {
         ...confession,
         believeCount,
         doubtCount,
         commentCount: confession._count.comments,
         savedCount: confession._count.savedBy,
+        userVote: userVote ? userVote.voteType : null,
         votes: undefined, // Remove raw votes from response
         _count: undefined,
       };
@@ -1021,6 +1031,91 @@ export async function voteOnConfession(data: {
     return vote;
   } catch (error) {
     console.error('Error voting on confession:', error);
+    throw error;
+  }
+}
+
+export async function removeVoteOnConfession(data: {
+  userId: string;
+  confessionId: string;
+}) {
+  try {
+    // Delete the vote if it exists
+    const deletedVote = await prisma.confessionVote.deleteMany({
+      where: {
+        userId: data.userId,
+        confessionId: data.confessionId,
+      },
+    });
+
+    // Update confession hot score
+    await updateConfessionHotScore(data.confessionId);
+
+    return { success: true, deletedCount: deletedVote.count };
+  } catch (error) {
+    console.error('Error removing vote on confession:', error);
+    throw error;
+  }
+}
+
+export async function getConfessionComments(confessionId: string) {
+  try {
+    const comments = await prisma.confessionComment.findMany({
+      where: {
+        confessionId,
+        parentId: null, // Only get top-level comments, not replies
+      },
+      include: {
+        author: {
+          select: { id: true, name: true, image: true },
+        },
+        replies: {
+          include: {
+            author: {
+              select: { id: true, name: true, image: true },
+            },
+          },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return comments;
+  } catch (error) {
+    console.error('Error fetching confession comments:', error);
+    throw error;
+  }
+}
+
+export async function createConfessionComment(data: {
+  content: string;
+  authorId: string;
+  confessionId: string;
+  isAnonymous?: boolean;
+  parentId?: string;
+}) {
+  try {
+    const comment = await prisma.confessionComment.create({
+      data,
+      include: {
+        author: {
+          select: { id: true, name: true, image: true },
+        },
+        replies: {
+          include: {
+            author: {
+              select: { id: true, name: true, image: true },
+            },
+          },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+
+    return comment;
+  } catch (error) {
+    console.error('Error creating confession comment:', error);
     throw error;
   }
 }
