@@ -7,24 +7,13 @@ interface LeaderboardEntry {
   userId: string;
   name: string;
   image?: string;
-  minutes: number; // Changed from hours to minutes
+  hours: number;
 }
 
 export default function LeaderboardPage() {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [period, setPeriod] = useState<'daily' | 'weekly'>('weekly');
   const [loading, setLoading] = useState(true);
-
-  const formatTime = (minutes: number) => {
-    if (minutes < 1) {
-      return `${Math.round(minutes * 60)}s`;
-    } else if (minutes < 60) {
-      return `${minutes.toFixed(1)}m`;
-    } else {
-      const hours = minutes / 60;
-      return `${hours.toFixed(1)}h`;
-    }
-  };
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -50,7 +39,7 @@ export default function LeaderboardPage() {
       <div className="min-h-screen py-10 px-2">
         <div className="max-w-3xl mx-auto rounded-xl shadow-md p-6">
           <h1 className="text-3xl font-bold text-center mb-2 text-gray-800">Leaderboard</h1>
-          <p className="text-center text-gray-500 mb-4">Top students by study time</p>
+          <p className="text-center text-gray-500 mb-4">Top students by hours studied</p>
           
           {/* Period Toggle */}
           <div className="flex justify-center mb-6">
@@ -90,7 +79,7 @@ export default function LeaderboardPage() {
                 <tr className="text-gray-600 text-center text-sm">
                   <th className="px-4 py-2">Rank</th>
                   <th className="px-4 py-2">User</th>
-                  <th className="px-4 py-2">Study time {period === 'daily' ? 'today' : 'this week'}</th>
+                  <th className="px-4 py-2">Hours studied {period === 'daily' ? 'today' : 'this week'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -114,7 +103,7 @@ export default function LeaderboardPage() {
                       )}
                       <span>{row.name}</span>
                     </td>
-                    <td className="px-4 py-2 text-center rounded-r-[8px]">{formatTime(row.minutes)}</td>
+                    <td className="px-4 py-2 text-center rounded-r-[8px]">{row.hours.toFixed(1)}h</td>
                   </tr>
                   ))
                 )}

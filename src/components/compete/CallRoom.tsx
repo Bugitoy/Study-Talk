@@ -30,6 +30,7 @@ import TopicItem from "./TopicItem";
 import { Input } from "../ui/input";
 import { useRoomSettingByCallId } from "@/hooks/useRoomSettings";
 import EndCallButton from "../EndCallButton";
+import { useStreamStudyTimeTracker } from "@/hooks/useStreamStudyTimeTracker";
 import {
   Dialog,
   DialogContent,
@@ -76,6 +77,7 @@ const CallRoom = () => {
     quizEnded ? (sessionId ?? undefined) : undefined,
   );
   const { user } = useKindeBrowserClient();
+  const { startTracking, endTracking, isTracking } = useStreamStudyTimeTracker(call?.id);
   const [showTopicModal, setShowTopicModal] = useState(false);
   const [topics, setTopics] = useState<
   Array<{
@@ -86,6 +88,22 @@ const CallRoom = () => {
 >([]);
 const [searchQuery, setSearchQuery] = useState("");
 
+// Start tracking when call is joined
+useEffect(() => {
+  if (callingState === CallingState.JOINED && call?.id) {
+    startTracking();
+  }
+}, [callingState, call?.id]);
+
+// End tracking when component unmounts or call ends
+useEffect(() => {
+  return () => {
+    if (isTracking) {
+      endTracking();
+    }
+  };
+}, []);
+
 useEffect(() => {
   if (!call) return;
   const hostId = call.state.createdBy?.id;
@@ -94,6 +112,8 @@ useEffect(() => {
     const leftId = e.participant?.userId || e.participant?.user?.id;
     if (leftId === hostId) {
       try {
+        // End tracking before call cleanup
+        await endTracking();
         await call.endCall();
         await call.delete();
       } catch (err) {

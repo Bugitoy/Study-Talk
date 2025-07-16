@@ -23,7 +23,7 @@ import EndCallButton from './StudyEndCallButton';
 import { cn } from '@/lib/utils';
 import { useRoomSettingByCallId } from '@/hooks/useRoomSettings';
 import StudyCallControls from './StudyCallControls';
-import { useStudyTimeTracker } from '@/hooks/useStudyTimeTracker';
+import { useStreamStudyTimeTracker } from '@/hooks/useStreamStudyTimeTracker';
 import { StudyTimeProgress } from './StudyTimeProgress';
 
 type CallLayoutType = 'grid' | 'speaker-left' | 'speaker-right';
@@ -66,7 +66,7 @@ const MeetingRoom = () => {
   const groupName = searchParams.get('name') || 'Study Group';
   const router = useRouter();
   const call = useCall();
-  const { startTracking, endTracking, isTracking, dailyMinutes } = useStudyTimeTracker(call?.id);
+  const { startTracking, endTracking, isTracking, dailyHours } = useStreamStudyTimeTracker(call?.id);
   const [layout, setLayout] = useState<CallLayoutType>('speaker-left');
   const [showParticipants, setShowParticipants] = useState(false);
   const { useCallCallingState } = useCallStateHooks();
@@ -80,27 +80,28 @@ const MeetingRoom = () => {
 
   // Start tracking when call is joined
   useEffect(() => {
-    console.log('🏠 MeetingRoom useEffect - callingState:', callingState, 'call?.id:', call?.id);
     if (callingState === CallingState.JOINED && call?.id) {
-      console.log('🏠 Starting tracking in MeetingRoom - calling startTracking()');
       startTracking();
     }
-  }, [callingState, call?.id, startTracking]);
+  }, [callingState, call?.id]);
+
+  // End tracking when component unmounts or call ends
+  useEffect(() => {
+    return () => {
+      if (isTracking) {
+        endTracking();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!call) return;
     const hostId = call.state.createdBy?.id;
     if (!hostId) return;
-    
-    console.log('🏠 Setting up participantLeft handler for host:', hostId);
-    
     const handler = async (e: any) => {
       const leftId = e.participant?.userId || e.participant?.user?.id;
-      console.log('🏠 participantLeft event fired:', { leftId, hostId, isHost: leftId === hostId });
-      
       if (leftId === hostId) {
         try {
-          console.log('🏠 Host left - ending tracking before call cleanup');
           // End tracking before call cleanup
           await endTracking();
           await call.endCall();
@@ -108,19 +109,18 @@ const MeetingRoom = () => {
           try {
             await fetch(`/api/study-groups/${call.id}`, { method: 'PUT' });
           } catch (err) {
-            console.error('🔴 Failed to mark study group ended', err);
+            console.error('Failed to mark study group ended', err);
           }
         } catch (err) {
-          console.error('🔴 Failed to end call when host left', err);
+          console.error('Failed to end call when host left', err);
         }
       }
     };
     const unsub = call.on('participantLeft', handler);
     return () => {
-      console.log('🏠 Cleaning up participantLeft handler');
       unsub?.();
     };
-  }, [call, endTracking]);
+  }, [call]);
   
   if (callingState !== CallingState.JOINED) return <Loader />;
 
@@ -150,7 +150,7 @@ const MeetingRoom = () => {
       {/* Vertical Study Progress Widget - Right Side */}
       <div className="absolute right-0 top-1/2 -translate-y-1/2 z-30 pointer-events-none">
         <StudyTimeProgress 
-          dailyMinutes={dailyMinutes} 
+          dailyHours={dailyHours} 
           isTracking={isTracking}
           className="w-25"
         />
@@ -172,26 +172,12 @@ const MeetingRoom = () => {
       <div className="fixed bottom-0 left-0 right-0 rounded-t-xl flex w-full items-center justify-center gap-5 flex-wrap p-4 bg-black/20 backdrop-blur-sm">
          <StudyCallControls
           onLeave={async () => {
-            console.log('🎮 StudyCallControls onLeave called - about to end tracking');
             await endTracking();
-            console.log('🎮 StudyCallControls onLeave - tracking ended, navigating away');
             router.push(`/meetups/study-groups`);
           }}
           showMic={roomSettings?.mic === 'flexible'}
           showCamera={roomSettings?.camera === 'flexible'}
         />
-
-        {/* Debug button to test endTracking */}
-        <button 
-          onClick={async () => {
-            console.log('🧪 Debug button clicked - manually ending tracking');
-            await endTracking();
-            console.log('🧪 Debug button - tracking ended');
-          }}
-          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg"
-        >
-          Test End Tracking
-        </button>
 
         <DropdownMenu>
           <div className="flex items-center">

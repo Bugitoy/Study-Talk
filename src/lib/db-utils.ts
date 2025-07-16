@@ -565,7 +565,7 @@ export async function endStudyGroupRoom(callId: string) {
 // Study Session functions
 export async function startStudySession(userId: string, callId: string) {
   try {
-    console.log('startStudySession called with userId:', userId, 'callId:', callId);
+    console.log(`startStudySession called with userId: ${userId} callId: ${callId}`);
     
     // Check if user already has an active session for this call
     const existingSession = await prisma.studySession.findFirst({
@@ -573,13 +573,14 @@ export async function startStudySession(userId: string, callId: string) {
     });
     
     if (existingSession) {
-      console.log('Found existing session:', existingSession);
+      console.log('Found existing session:', existingSession.id);
       return existingSession;
     }
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
+    console.log('Creating new study session...');
     const newSession = await prisma.studySession.create({
       data: {
         userId,
@@ -588,7 +589,17 @@ export async function startStudySession(userId: string, callId: string) {
       },
     });
     
-    console.log('Created new study session:', newSession);
+    console.log('Created new study session:', {
+      id: newSession.id,
+      userId: newSession.userId,
+      callId: newSession.callId,
+      joinedAt: newSession.joinedAt,
+      leftAt: newSession.leftAt,
+      duration: newSession.duration,
+      date: newSession.date,
+      createdAt: newSession.createdAt
+    });
+    
     return newSession;
   } catch (error) {
     console.error('Error starting study session:', error);
@@ -598,41 +609,108 @@ export async function startStudySession(userId: string, callId: string) {
 
 export async function endStudySession(userId: string, callId: string) {
   try {
-    console.log('endStudySession called with userId:', userId, 'callId:', callId);
-    
-    // First, let's see all sessions for this user and call
-    const allSessions = await prisma.studySession.findMany({
-      where: { userId, callId },
+    const session = await prisma.studySession.findFirst({
+      where: { userId, callId, leftAt: null },
       orderBy: { joinedAt: 'desc' },
     });
-    console.log('All sessions for this user/call:', allSessions);
     
-    // Find the most recent session that hasn't been ended yet
-    const activeSession = allSessions.find(session => session.leftAt === null);
-    console.log('Active session found:', activeSession);
-    
-    if (!activeSession) {
+    if (!session) {
       console.warn('No active session found for user:', userId, 'call:', callId);
       return null;
     }
     
-    console.log('Found session to end:', activeSession);
-    
     const leftAt = new Date();
-    const duration = Math.floor((leftAt.getTime() - activeSession.joinedAt.getTime()) / (1000 * 60)); // duration in minutes
+    const duration = Math.floor((leftAt.getTime() - session.joinedAt.getTime()) / (1000 * 60)); // duration in minutes
     
-    console.log('Calculated duration:', duration, 'minutes');
-    console.log('Updating session with leftAt:', leftAt, 'duration:', duration);
-    
-    const updatedSession = await prisma.studySession.update({
-      where: { id: activeSession.id },
+    return await prisma.studySession.update({
+      where: { id: session.id },
       data: { leftAt, duration },
     });
-    
-    console.log('Updated session:', updatedSession);
-    return updatedSession;
   } catch (error) {
     console.error('Error ending study session:', error);
+    throw error;
+  }
+}
+
+export async function updateStudySessionWithStreamDurationByCallId(callId: string, streamDurationSeconds: number) {
+  try {
+    console.log(`Looking for session with callId: ${callId}`);
+    
+    // Find any session for this call (not just active ones)
+    const session = await prisma.studySession.findFirst({
+      where: { callId },
+      orderBy: { joinedAt: 'desc' },
+    });
+    
+    if (!session) {
+      console.warn('No session found for call:', callId);
+      return null;
+    }
+    
+    console.log(`Found session: ${session.id}, leftAt: ${session.leftAt}, duration: ${session.duration}`);
+    
+    // If session already has duration, don't overwrite it
+    if (session.duration !== null) {
+      console.log('Session already has duration, skipping update');
+      return session;
+    }
+    
+    const leftAt = session.leftAt || new Date();
+    
+    // If Stream.io duration is 0, use manual calculation
+    let duration: number;
+    if (streamDurationSeconds === 0) {
+      console.log('Stream.io duration is 0, using manual calculation');
+      duration = Math.floor((leftAt.getTime() - session.joinedAt.getTime()) / (1000 * 60));
+    } else {
+      // Convert Stream.io duration from seconds to minutes
+      duration = Math.floor(streamDurationSeconds / 60);
+    }
+    
+    console.log(`Session duration: ${duration} minutes (Stream.io: ${streamDurationSeconds}s, Manual: ${Math.floor((leftAt.getTime() - session.joinedAt.getTime()) / (1000 * 60))}m)`);
+    
+    return await prisma.studySession.update({
+      where: { id: session.id },
+      data: { leftAt, duration },
+    });
+  } catch (error) {
+    console.error('Error updating study session with Stream duration by callId:', error);
+    throw error;
+  }
+}
+
+export async function updateStudySessionWithStreamDuration(userId: string, callId: string, streamDurationSeconds: number) {
+  try {
+    const session = await prisma.studySession.findFirst({
+      where: { userId, callId, leftAt: null },
+      orderBy: { joinedAt: 'desc' },
+    });
+    
+    if (!session) {
+      console.warn('No active session found for user:', userId, 'call:', callId);
+      return null;
+    }
+    
+    const leftAt = new Date();
+    
+    // If Stream.io duration is 0, use manual calculation
+    let duration: number;
+    if (streamDurationSeconds === 0) {
+      console.log('Stream.io duration is 0, using manual calculation');
+      duration = Math.floor((leftAt.getTime() - session.joinedAt.getTime()) / (1000 * 60));
+    } else {
+      // Convert Stream.io duration from seconds to minutes
+      duration = Math.floor(streamDurationSeconds / 60);
+    }
+    
+    console.log(`Session duration: ${duration} minutes (Stream.io: ${streamDurationSeconds}s, Manual: ${Math.floor((leftAt.getTime() - session.joinedAt.getTime()) / (1000 * 60))}m)`);
+    
+    return await prisma.studySession.update({
+      where: { id: session.id },
+      data: { leftAt, duration },
+    });
+  } catch (error) {
+    console.error('Error updating study session with Stream duration:', error);
     throw error;
   }
 }
@@ -645,8 +723,6 @@ export async function getDailyStudyTime(userId: string, date?: Date) {
     const nextDay = new Date(targetDate);
     nextDay.setDate(nextDay.getDate() + 1);
     
-    console.log('getDailyStudyTime called for user:', userId, 'date:', targetDate);
-    
     const sessions = await prisma.studySession.findMany({
       where: {
         userId,
@@ -658,12 +734,8 @@ export async function getDailyStudyTime(userId: string, date?: Date) {
       },
     });
     
-    console.log('Found sessions with duration:', sessions.length, sessions);
-    
     const totalMinutes = sessions.reduce((sum, session) => sum + (session.duration || 0), 0);
-    const result = Math.round(totalMinutes * 100) / 100;
-    console.log('Total minutes calculated:', result);
-    return result; // return minutes with 2 decimal places
+    return Math.round(totalMinutes / 60 * 100) / 100; // return hours with 2 decimal places
   } catch (error) {
     console.error('Error getting daily study time:', error);
     return 0;
@@ -690,7 +762,7 @@ export async function getWeeklyStudyTime(userId: string) {
     });
     
     const totalMinutes = sessions.reduce((sum, session) => sum + (session.duration || 0), 0);
-    return Math.round(totalMinutes * 100) / 100; // return minutes with 2 decimal places
+    return Math.round(totalMinutes / 60 * 100) / 100; // return hours with 2 decimal places
   } catch (error) {
     console.error('Error getting weekly study time:', error);
     return 0;
@@ -739,8 +811,8 @@ export async function getLeaderboard(period: 'daily' | 'weekly' = 'weekly') {
       userId: user.id,
       name: user.name || 'Anonymous',
       image: user.image,
-      minutes: Math.round((userStats.get(user.id) || 0) * 100) / 100, // Return minutes directly
-    })).sort((a, b) => b.minutes - a.minutes);
+      hours: Math.round((userStats.get(user.id) || 0) / 60 * 100) / 100,
+    })).sort((a, b) => b.hours - a.hours);
     
     return leaderboard;
   } catch (error) {

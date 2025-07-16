@@ -6,7 +6,7 @@ import NextLayout from '@/components/NextLayout';
 import GroupCard from '@/components/group';
 import MeetingModal from '@/components/MeetingModal';
 import { useStudyGroups } from '@/hooks/useStudyGroups';
-import { useStudyTimeTracker } from '@/hooks/useStudyTimeTracker';
+import { useStreamStudyTimeTracker } from '@/hooks/useStreamStudyTimeTracker';
 
 const pastelColors = [
   'bg-thanodi-lightPeach',
@@ -24,9 +24,9 @@ const initialValues = {
   };
 
 const StudyGroups = () => {
-  const { dailyMinutes } = useStudyTimeTracker();
-  const minutesGoal = 600; // Daily goal in minutes (10 hours)
-  const percent = Math.min((dailyMinutes / minutesGoal) * 100, 100);
+  const { dailyHours } = useStreamStudyTimeTracker();
+  const hoursGoal = 10; // Daily goal in hours
+  const percent = Math.min((dailyHours / hoursGoal) * 100, 100);
   
   const [search, setSearch] = useState('');
   const router = useRouter();
@@ -108,7 +108,7 @@ const StudyGroups = () => {
                 style={{ width: `${percent}%` }}
               />
               <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-700 font-semibold text-lg select-none pointer-events-none">
-                {dailyMinutes ? dailyMinutes.toFixed(1) : '0'}m / {minutesGoal}m studied today
+                {dailyHours.toFixed(1)}h / {hoursGoal}h studied today
               </span>
             </div>
           </div>

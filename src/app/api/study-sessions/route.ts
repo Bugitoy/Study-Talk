@@ -5,25 +5,17 @@ export async function POST(req: NextRequest) {
   try {
     const { userId, callId, action } = await req.json();
     
-    console.log('Study session API called:', { userId, callId, action });
-    
     if (!userId || !callId || !action) {
-      console.error('Missing required fields:', { userId, callId, action });
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
     
     if (action === 'start') {
-      console.log('Starting study session for user:', userId, 'call:', callId);
       const session = await startStudySession(userId, callId);
-      console.log('Study session started:', session);
       return NextResponse.json(session);
     } else if (action === 'end') {
-      console.log('Ending study session for user:', userId, 'call:', callId);
       const session = await endStudySession(userId, callId);
-      console.log('Study session ended:', session);
       return NextResponse.json(session);
     } else {
-      console.error('Invalid action:', action);
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
   } catch (error) {
@@ -43,9 +35,9 @@ export async function GET(req: NextRequest) {
     }
     
     const targetDate = date ? new Date(date) : undefined;
-    const minutes = await getDailyStudyTime(userId, targetDate);
+    const hours = await getDailyStudyTime(userId, targetDate);
     
-    return NextResponse.json({ minutes });
+    return NextResponse.json({ hours });
   } catch (error) {
     console.error('Error getting study time:', error);
     return NextResponse.json({ error: 'Failed to get study time' }, { status: 500 });

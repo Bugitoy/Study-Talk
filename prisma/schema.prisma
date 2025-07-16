@@ -209,6 +209,25 @@ model StudySession {
   @@index([callId])
 }
 
+model CallSession {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  callId          String    @unique
+  sessionStartedAt DateTime @default(now())
+  sessionEndedAt  DateTime?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+}
+
+model CallParticipant {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  callId    String
+  userId    String
+  joinedAt  DateTime  @default(now())
+  leftAt    DateTime?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+}
+
 model University {
   id          String @id @default(auto()) @map("_id") @db.ObjectId
   name        String @unique

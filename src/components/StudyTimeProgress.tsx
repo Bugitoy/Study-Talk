@@ -4,38 +4,27 @@ import { Progress } from '@/components/ui/progress';
 import { Trophy, Target, Clock } from 'lucide-react';
 
 interface StudyTimeProgressProps {
-  dailyMinutes: number; // Changed from dailyHours to dailyMinutes
+  dailyHours: number;
   dailyGoal?: number;
   isTracking?: boolean;
   className?: string;
 }
 
 export function StudyTimeProgress({ 
-  dailyMinutes, 
-  dailyGoal = 60, // Changed from 10 hours to 60 minutes (1 hour)
+  dailyHours, 
+  dailyGoal = 10, 
   isTracking = false, 
   className = '' 
 }: StudyTimeProgressProps) {
-  const percent = Math.min((dailyMinutes / dailyGoal) * 100, 100);
+  const percent = Math.min((dailyHours / dailyGoal) * 100, 100);
   
   const achievements = [
-    { minutes: 0.5, label: 'Quick Start', icon: Clock, unlocked: dailyMinutes >= 0.5 }, // 30 seconds
-    { minutes: 0.75, label: 'Getting Focused', icon: Target, unlocked: dailyMinutes >= 0.75 }, // 45 seconds
-    { minutes: 1, label: 'First Minute', icon: Trophy, unlocked: dailyMinutes >= 1 }, // 1 minute
-    { minutes: 2, label: 'Study Streak', icon: Trophy, unlocked: dailyMinutes >= 2 }, // 2 minutes
-    { minutes: 5, label: 'Dedication', icon: Trophy, unlocked: dailyMinutes >= 5 }, // 5 minutes
+    { hours: 1, label: 'First Hour', icon: Clock, unlocked: dailyHours >= 1 },
+    { hours: 3, label: 'Getting Started', icon: Target, unlocked: dailyHours >= 3 },
+    { hours: 5, label: 'Study Warrior', icon: Trophy, unlocked: dailyHours >= 5 },
+    { hours: 8, label: 'Dedication', icon: Trophy, unlocked: dailyHours >= 8 },
+    { hours: 10, label: 'Daily Master', icon: Trophy, unlocked: dailyHours >= 10 },
   ];
-
-  const formatTime = (minutes: number) => {
-    if (minutes < 1) {
-      return `${Math.round(minutes * 60)}s`;
-    } else if (minutes < 60) {
-      return `${minutes.toFixed(1)}m`;
-    } else {
-      const hours = minutes / 60;
-      return `${hours.toFixed(1)}h`;
-    }
-  };
 
   return (
     <div className={`backdrop-blur-sm rounded-xl p-4 shadow-md pointer-events-auto rounded-[8px] ${className}`}>
@@ -52,7 +41,7 @@ export function StudyTimeProgress({
       <div className="mb-4">
         <div className="flex justify-between items-center mb-2">
           <span className="text-sm text-[#19232d]">
-            {formatTime(dailyMinutes)} / {formatTime(dailyGoal)}
+            {dailyHours.toFixed(1)}h / {dailyGoal}h
           </span>
           <span className="text-sm font-medium text-[#19232d]">
             {percent.toFixed(0)}%
@@ -68,13 +57,13 @@ export function StudyTimeProgress({
             const Icon = achievement.icon;
             return (
               <div
-                key={achievement.minutes}
+                key={achievement.hours}
                 className={`flex items-center gap-3 p-2 rounded-[8px] transition-all ${
                   achievement.unlocked
                     ? 'bg-white/80 text-yellow-700 border-2 border-yellow-400'
                     : 'bg-white/40 text-gray-400 border-2 border-gray-300'
                 }`}
-                title={`${achievement.label} - ${formatTime(achievement.minutes)}`}
+                title={`${achievement.label} - ${achievement.hours}h`}
               >
                 <div className={`w-8 h-8 flex items-center justify-center rounded-[6px] ${
                   achievement.unlocked ? 'bg-yellow-100' : 'bg-gray-100'
@@ -83,7 +72,7 @@ export function StudyTimeProgress({
                 </div>
                 <div className="flex-1">
                   <div className="text-sm font-medium">{achievement.label}</div>
-                  <div className="text-xs opacity-75">{formatTime(achievement.minutes)} goal</div>
+                  <div className="text-xs opacity-75">{achievement.hours}h goal</div>
                 </div>
               </div>
             );
