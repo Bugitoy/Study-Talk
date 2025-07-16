@@ -6,7 +6,6 @@ import NextLayout from "@/components/NextLayout";
 import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs';
 import { useStreamVideoClient } from '@stream-io/video-react-sdk';
 import { useToast } from '@/hooks/use-toast';
-import { Call } from '@stream-io/video-react-sdk';
 
 const initialValues = {
     dateTime: new Date(),
@@ -16,7 +15,6 @@ const initialValues = {
 
 export default function CreateRoom() {
   const router = useRouter();
-  const [callDetail, setCallDetail] = useState<Call>();
   const client = useStreamVideoClient();
   const { user } = useKindeBrowserClient();
   const { toast } = useToast();
@@ -33,55 +31,72 @@ export default function CreateRoom() {
     setRoomSettings((prev) => ({ ...prev, [key]: value }));
   };
 
-  const saveToDatabase = async () => {
-    try {
-      const res = await fetch('/api/study-room-settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(roomSettings),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        router.push(`/meetups/study-groups/choose-topic?settings=${data.id}`);
-      }
-    } catch (err) {
-      console.error('Failed to save settings', err);
-    }
+  const saveSettings = async () => {
+    const payload = {
+      ...roomSettings,
+      // defaults required by RoomSetting schema
+      numQuestions: 0,
+      timePerQuestion: null,
+      participants: 50,
+      allowReview: false,
+    };
+
+    const res = await fetch('/api/room-settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to save settings');
+    return res.json();
   };
 
   const createMeeting = async () => {
-    if (!client || !user) return;
-    try {
-      const id = crypto.randomUUID();
-      const call = client.call('default', id);
-      if (!call) throw new Error('Failed to create meeting');
-      const startsAt =
-        values.dateTime.toISOString() || new Date(Date.now()).toISOString();
-      const description = values.description || 'Instant Meeting';
-      await call.getOrCreate({
-        data: {
-          starts_at: startsAt,
-          custom: {
-            description,
-            availability: 'public',
-            roomName: description,
-          },
+    if (!client || !user) return null;
+    const id = crypto.randomUUID();
+    const call = client.call('default', id);
+    const startsAt = values.dateTime.toISOString() || new Date().toISOString();
+    await call.getOrCreate({
+      data: {
+        starts_at: startsAt,
+        custom: {
+          roomName: roomSettings.roomName || 'Study Group',
+          availability: roomSettings.availability,
+          mic: roomSettings.mic,
+          camera: roomSettings.camera,
         },
-      });
-      await fetch('/api/study-groups', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ callId: call.id, roomName: description, hostId: user.id }),
-      });
-      setCallDetail(call);
-      if (!values.description) {
-        router.push(`/meetups/study-groups/meeting/${call.id}`);
-      }
-      toast({
-        title: 'Meeting Created',
-      });
-    } catch (error) {
-      console.error(error);
+    },
+});
+await fetch('/api/study-groups', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ callId: call.id, roomName: roomSettings.roomName || 'Study Group', hostId: user.id }),
+});
+toast({ title: 'Meeting Created' });
+return call;
+};
+
+const handleNext = async () => {
+try {
+  const call = await createMeeting();
+  if (!call) return;
+  const setting = await saveSettings();
+  await fetch(`/api/room-settings/${setting.id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ callId: call.id }),
+  });
+  await call.update({
+    custom: {
+      ...call.state.custom,
+      roomName: roomSettings.roomName || call.state.custom.roomName,
+      availability: roomSettings.availability,
+      mic: roomSettings.mic,
+      camera: roomSettings.camera,
+    },
+  });
+  router.push(`/meetups/study-groups/meeting/${call.id}?name=${encodeURIComponent(roomSettings.roomName)}`);
+} catch (err) {
+  console.error('Failed to create room', err);
       toast({ title: 'Failed to create Meeting' });
     }
   };
@@ -147,10 +162,7 @@ export default function CreateRoom() {
 
       <button
         className="w-full bg-orange-300 text-white py-3 rounded-[8px] text-lg font-semibold hover:bg-orange-200 transition-colors"
-        onClick={() => {
-          createMeeting();
-          saveToDatabase();
-        }}
+        onClick={handleNext}
       >
         NEXT
       </button>

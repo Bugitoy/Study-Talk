@@ -6,6 +6,7 @@ import NextLayout from '@/components/NextLayout';
 import GroupCard from '@/components/group';
 import MeetingModal from '@/components/MeetingModal';
 import { useStudyGroups } from '@/hooks/useStudyGroups';
+import { useStudyTimeTracker } from '@/hooks/useStudyTimeTracker';
 
 const pastelColors = [
   'bg-thanodi-lightPeach',
@@ -16,10 +17,6 @@ const pastelColors = [
   'bg-thanodi-blue',
 ];
 
-const hoursStudied = 7; // Example value
-const hoursGoal = 10; // Example goal
-const percent = Math.min((hoursStudied / hoursGoal) * 100, 100);
-
 const initialValues = {
     dateTime: new Date(),
     description: '',
@@ -27,6 +24,10 @@ const initialValues = {
   };
 
 const StudyGroups = () => {
+  const { dailyHours } = useStudyTimeTracker();
+  const hoursGoal = 10; // Daily goal in hours
+  const percent = Math.min((dailyHours / hoursGoal) * 100, 100);
+  
   const [search, setSearch] = useState('');
   const router = useRouter();
   const [meetingState, setMeetingState] = useState< 'isJoiningMeeting' | undefined >(undefined);
@@ -107,7 +108,7 @@ const StudyGroups = () => {
                 style={{ width: `${percent}%` }}
               />
               <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-700 font-semibold text-lg select-none pointer-events-none">
-                Hours studied
+                {dailyHours.toFixed(1)}h / {hoursGoal}h studied today
               </span>
             </div>
           </div>

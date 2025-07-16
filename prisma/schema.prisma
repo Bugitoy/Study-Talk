@@ -35,9 +35,18 @@ model User {
   image      String?
   plan       Plan    @default(free)
   customerId String? @unique // Stripe customer ID, this will be important when we need to delete the subscription
+  university String? // User's university
+  universityVerifiedAt DateTime? // When university was last verified
+  universityChangeCount Int @default(0) // Number of times university has been changed
 
   Subscription Subscription?
   StarredWords StarredWord[]
+  
+  // Confessions relationships
+  confessions Confession[]
+  confessionVotes ConfessionVote[]
+  confessionComments ConfessionComment[]
+  savedConfessions SavedConfession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -184,4 +193,117 @@ model StudyGroupRoom {
   hostId    String
   ended     Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+model StudySession {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String
+  callId    String
+  joinedAt  DateTime  @default(now())
+  leftAt    DateTime?
+  duration  Int?      // duration in minutes
+  date      DateTime  @default(now()) // date for daily tracking
+  createdAt DateTime  @default(now())
+
+  @@index([userId, date])
+  @@index([callId])
+}
+
+model University {
+  id          String @id @default(auto()) @map("_id") @db.ObjectId
+  name        String @unique
+  domain      String? // email domain for verification (e.g., "stanford.edu")
+  isVerified  Boolean @default(false) // admin verified university
+  
+  confessions Confession[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Confession {
+  id          String @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  content     String
+  authorId    String
+  universityId String? @db.ObjectId
+  isAnonymous Boolean @default(true)
+  
+  // Engagement metrics
+  viewCount   Int @default(0)
+  hotScore    Float @default(0) // calculated hotness score
+  
+  // Content moderation
+  isReported  Boolean @default(false)
+  isHidden    Boolean @default(false)
+  moderatedAt DateTime?
+  
+  author      User @relation(fields: [authorId], references: [id])
+  university  University? @relation(fields: [universityId], references: [id])
+  
+  votes       ConfessionVote[]
+  comments    ConfessionComment[]
+  savedBy     SavedConfession[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([authorId])
+  @@index([universityId])
+  @@index([hotScore])
+  @@index([createdAt])
+}
+
+enum VoteType {
+  BELIEVE
+  DOUBT
+}
+
+model ConfessionVote {
+  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String
+  confessionId String @db.ObjectId
+  voteType     VoteType
+  
+  user         User @relation(fields: [userId], references: [id])
+  confession   Confession @relation(fields: [confessionId], references: [id])
+  
+  createdAt    DateTime @default(now())
+  
+  @@unique([userId, confessionId])
+  @@index([confessionId])
+}
+
+model ConfessionComment {
+  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  content      String
+  authorId     String
+  confessionId String @db.ObjectId
+  parentId     String? @db.ObjectId // for reply threading
+  isAnonymous  Boolean @default(true)
+  
+  author       User @relation(fields: [authorId], references: [id])
+  confession   Confession @relation(fields: [confessionId], references: [id])
+  parent       ConfessionComment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies      ConfessionComment[] @relation("CommentReplies")
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@index([confessionId])
+  @@index([authorId])
+}
+
+model SavedConfession {
+  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String
+  confessionId String @db.ObjectId
+  
+  user         User @relation(fields: [userId], references: [id])
+  confession   Confession @relation(fields: [confessionId], references: [id])
+  
+  createdAt    DateTime @default(now())
+  
+  @@unique([userId, confessionId])
+  @@index([userId])
 }

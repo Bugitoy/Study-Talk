@@ -9,6 +9,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
+import { useInfiniteConfessions, Confession } from "@/hooks/useInfiniteConfessions";
+import { useSavedConfessions } from "@/hooks/useSavedConfessions";
+import { useUniversities } from "@/hooks/useUniversities";
+import { useRouter } from "next/navigation";
+import { InfiniteScrollContainer } from "@/components/InfiniteScrollContainer";
+import { NewPostsBanner } from "@/components/NewPostsBanner";
+import { ConfessionListSkeleton } from "@/components/ConfessionSkeleton";
 
 const tabs = [
   { key: "posts", label: "Posts" },
@@ -17,90 +25,129 @@ const tabs = [
   { key: "saved", label: "Saved" },
 ];
 
-interface Post {
-  id: string;
-  author: string;
-  community: string;
-  content: string;
-  believers: number;
-  nonBelievers: number;
-  comments: number;
-  views: string;
-  saved: string;
-  createdAt: string;
-  avatar?: string;
-}
-
-const samplePosts: Post[] = [
-  {
-    id: "1",
-    author: "MickeyMouse",
-    community: "Member of Partygoers",
-    content: "I once snuck into the library at midnight and rearranged the alphabetic sections just to confuse everyone the next day...",
-    believers: 36,
-    nonBelievers: 100,
-    comments: 12,
-    views: "15.1k",
-    saved: "5.3k",
-    createdAt: "15 hours ago",
-  },
-  {
-    id: "2",
-    author: "Anonymous",
-    community: "University of Alabama",
-    content: "Confessed my love to the campus statue because I thought it was my crush in a costume...",
-    believers: 6,
-    nonBelievers: 82,
-    comments: 3,
-    views: "9.4k",
-    saved: "2.1k",
-    createdAt: "15 hours ago",
-  },
-];
-
 export default function ConfessionsPage() {
+  const { user } = useKindeBrowserClient();
+  const router = useRouter();
+  
   const [activeTab, setActiveTab] = useState<string>("posts");
   const [searchQuery, setSearchQuery] = useState("");
-  const [savedPosts, setSavedPosts] = useState<Set<string>>(new Set());
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newBody, setNewBody] = useState("");
+  const [isAnonymous, setIsAnonymous] = useState(true);
 
-  const toggleSave = (id: string) => {
-    setSavedPosts((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) newSet.delete(id);
-      else newSet.add(id);
-      return newSet;
-    });
+  // Hook configurations based on active tab
+  const sortBy = activeTab === "hottest" ? "hot" : "recent";
+  
+  const { 
+    confessions, 
+    loading: confessionsLoading,
+    loadingMore,
+    hasMore,
+    newPostsCount,
+    shouldShowNewPostsBanner,
+    loadMore,
+    loadNewPosts,
+    createConfession,
+    voteOnConfession,
+    incrementView,
+    refresh: refreshConfessions
+  } = useInfiniteConfessions({ 
+    sortBy, 
+    search: searchQuery,
+    autoRefresh: true 
+  });
+  
+  const { 
+    savedConfessions, 
+    loading: savedLoading,
+    toggleSave,
+    isConfessionSaved 
+  } = useSavedConfessions(user?.id);
+  
+  const { universities, loading: universitiesLoading } = useUniversities();
+
+  const handleCreatePost = async () => {
+    if (!user?.id || !newTitle.trim() || !newBody.trim()) return;
+    
+    try {
+      await createConfession({
+        title: newTitle.trim(),
+        content: newBody.trim(),
+        authorId: user.id,
+                 university: (user as any).university || undefined,
+        isAnonymous,
+      });
+      
+      // Reset form and close modal
+      setNewTitle("");
+      setNewBody("");
+      setIsAnonymous(true);
+      setIsPostModalOpen(false);
+      
+      // Refresh confessions
+      refreshConfessions();
+    } catch (error) {
+      console.error("Failed to create confession:", error);
+    }
+  };
+  
+  const handleVote = async (confessionId: string, voteType: 'BELIEVE' | 'DOUBT') => {
+    if (!user?.id) return;
+    
+    try {
+      await voteOnConfession(confessionId, voteType, user.id);
+    } catch (error) {
+      console.error("Failed to vote:", error);
+    }
+  };
+  
+  const handleToggleSave = async (confessionId: string) => {
+    if (!user?.id) return;
+    
+    try {
+      await toggleSave(confessionId);
+    } catch (error) {
+      console.error("Failed to toggle save:", error);
+    }
+  };
+  
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return "Just now";
+    if (diffInHours < 24) return `${diffInHours} hours ago`;
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    return date.toLocaleDateString();
+  };
+  
+  const formatNumber = (num: number) => {
+    if (num >= 1000) {
+      return `${(num / 1000).toFixed(1)}k`;
+    }
+    return num.toString();
   };
 
-  const handleCreatePost = () => {
-    // TODO: integrate with backend; for now just close modal and reset
-    console.log("New post", newTitle, newBody);
-    setIsPostModalOpen(false);
-    setNewTitle("");
-    setNewBody("");
-  };
-
-  const renderPosts = (posts: Post[]) => (
+  const renderPosts = (posts: Confession[]) => (
     <div className="flex flex-col gap-6 mt-6">
-      {posts
-        .filter((post) =>
-          post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          post.author.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-        .map((post) => (
+      {posts.map((post, index) => (
           <div
             key={post.id}
-            className="rounded-[12px] border border-gray-300 bg-white p-4 shadow-sm hover:shadow-md transition-shadow lg:p-6"
+            className="rounded-[12px] border border-gray-300 bg-white p-4 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out transform hover:scale-[1.01] lg:p-6"
+            style={{ 
+              animation: `fadeInUp 0.5s ease-out ${index * 0.1}s both`,
+            }}
+            onClick={() => incrementView(post.id)}
           >
             {/* Header */}
             <div className="flex items-center gap-3 mb-4">
-              {post.avatar ? (
+              {post.author?.image && !post.isAnonymous ? (
                 <Image
-                  src={post.avatar}
-                  alt={post.author}
+                  src={post.author.image}
+                  alt={post.author.name || "User"}
                   width={40}
                   height={40}
                   className="rounded-[8px] object-cover"
@@ -111,40 +158,71 @@ export default function ConfessionsPage() {
                 </span>
               )}
               <div className="text-sm lg:text-base">
-                <p className="font-semibold text-gray-800">Posted by {post.author}</p>
-                <p className="text-gray-500">{post.community}</p>
+                <p className="font-semibold text-gray-800">
+                  Posted by {post.isAnonymous ? "Anonymous" : (post.author?.name || "Unknown")}
+                </p>
+                <p className="text-gray-500">
+                                     {post.university?.name || (post.author as any)?.university || "Unknown University"}
+                </p>
               </div>
             </div>
+            
+            {/* Title */}
+            <h3 className="font-semibold text-lg text-gray-900 mb-2">{post.title}</h3>
+            
             {/* Content */}
             <p className="text-gray-700 whitespace-pre-line mb-4 line-clamp-3 lg:line-clamp-none">
               {post.content}
             </p>
+            
             {/* Combined Stats & Actions */}
             <div className="flex items-center flex-wrap gap-6 text-sm text-gray-600 mt-4">
               <div className="flex items-center gap-1">
-                <ThumbsUp className="w-4 h-4" /> {post.believers} Believers
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleVote(post.id, 'BELIEVE');
+                  }}
+                  className="flex items-center gap-1 hover:text-green-600 transition-colors"
+                >
+                  <ThumbsUp className="w-4 h-4" /> {post.believeCount} Believers
+                </button>
               </div>
               <div className="flex items-center gap-1">
-                <ThumbsDown className="w-4 h-4" /> {post.nonBelievers} Non Believers
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleVote(post.id, 'DOUBT');
+                  }}
+                  className="flex items-center gap-1 hover:text-red-600 transition-colors"
+                >
+                  <ThumbsDown className="w-4 h-4" /> {post.doubtCount} Non Believers
+                </button>
               </div>
               <div className="flex items-center gap-1">
-                <MessageCircle className="w-4 h-4" /> {post.comments} Comments
+                <MessageCircle className="w-4 h-4" /> {post.commentCount} Comments
+              </div>
+              <div className="flex items-center gap-1">
+                👁️ {formatNumber(post.viewCount)} Views
               </div>
               <div className="flex items-center gap-1 cursor-pointer hover:text-gray-800">
                 <Share2 className="w-4 h-4" /> Share
               </div>
               <div
                 className="flex items-center gap-1 cursor-pointer hover:text-gray-800"
-                onClick={() => toggleSave(post.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggleSave(post.id);
+                }}
               >
                 <Bookmark
-                  className={`w-4 h-4 ${savedPosts.has(post.id) ? 'text-yellow-400' : ''}`}
-                  fill={savedPosts.has(post.id) ? '#FACC15' : 'none'}
+                  className={`w-4 h-4 ${isConfessionSaved(post.id) ? 'text-yellow-400' : ''}`}
+                  fill={isConfessionSaved(post.id) ? '#FACC15' : 'none'}
                 />
-                {savedPosts.has(post.id) ? 'Saved' : 'Save'}
+                {isConfessionSaved(post.id) ? 'Saved' : 'Save'}
               </div>
               <div className="ml-auto text-gray-500">
-                {post.createdAt}
+                {formatTimeAgo(post.createdAt)}
               </div>
             </div>
           </div>
@@ -155,74 +233,88 @@ export default function ConfessionsPage() {
   const renderContent = () => {
     switch (activeTab) {
       case "posts":
-        return renderPosts(samplePosts);
-      case "hottest":
-        // For demo, reuse samplePosts sorted by believers
-        return renderPosts([...samplePosts].sort((a, b) => b.believers - a.believers));
-      case "universities":
-        // Aggregate stats per university
-        type UniStats = {
-          confessions: number;
-          students: Set<string>;
-          believers: number;
-          nonBelievers: number;
-        };
-
-        const uniMap = samplePosts.reduce<Record<string, UniStats>>((acc, post) => {
-          if (!acc[post.community]) {
-            acc[post.community] = {
-              confessions: 0,
-              students: new Set<string>(),
-              believers: 0,
-              nonBelievers: 0,
-            };
-          }
-          const entry = acc[post.community];
-          entry.confessions += 1;
-          entry.students.add(post.author);
-          entry.believers += post.believers;
-          entry.nonBelievers += post.nonBelievers;
-          return acc;
-        }, {});
-
-        const filtered = Object.entries(uniMap).filter(([uni]) =>
-          uni.toLowerCase().includes(searchQuery.toLowerCase())
+        return (
+          <InfiniteScrollContainer
+            hasMore={hasMore}
+            loadMore={loadMore}
+            loading={confessionsLoading}
+            loadingMore={loadingMore}
+            className="mt-6"
+          >
+            {confessionsLoading ? (
+              <ConfessionListSkeleton count={5} />
+            ) : (
+              renderPosts(confessions)
+            )}
+          </InfiniteScrollContainer>
         );
+        
+      case "hottest":
+        return (
+          <InfiniteScrollContainer
+            hasMore={hasMore}
+            loadMore={loadMore}
+            loading={confessionsLoading}
+            loadingMore={loadingMore}
+            className="mt-6"
+          >
+            {confessionsLoading ? (
+              <ConfessionListSkeleton count={5} />
+            ) : (
+              renderPosts(confessions)
+            )}
+          </InfiniteScrollContainer>
+        );
+        
+      case "universities":
+        if (universitiesLoading) {
+          return <div className="mt-6 text-center text-gray-600">Loading universities...</div>;
+        }
+        
+        const filteredUniversities = universities.filter(uni =>
+          uni.name.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+        
         return (
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map(([uni, stats]) => (
+            {filteredUniversities.map((uni) => (
               <div
-                key={uni}
+                key={uni.id}
                 className="rounded-[12px] border border-gray-300 bg-white p-8 shadow-sm hover:shadow-md h-72 flex flex-col cursor-pointer"
+                onClick={() => router.push(`/meetups/confessions/university/${uni.id}?name=${encodeURIComponent(uni.name)}`)}
               >
                 <div className="mb-[3rem]">
                   <h3 className="font-semibold text-gray-800 text-lg lg:text-xl">
-                    {uni}
+                    {uni.name}
                   </h3>
                 </div>
                 <div className="space-y-4 text-gray-600 text-sm">
                   <p>
-                    {stats.confessions} confession{stats.confessions !== 1 ? "s" : ""}
+                    {uni.confessionCount} confession{uni.confessionCount !== 1 ? "s" : ""}
                   </p>
                   <p>
-                    {stats.students.size} student{stats.students.size !== 1 ? "s" : ""}
+                    {uni.studentCount} student{uni.studentCount !== 1 ? "s" : ""}
                   </p>
                   <p>
-                    {stats.believers} believer{stats.believers !== 1 ? "s" : ""}
+                    {formatNumber(uni.totalViews)} total views
                   </p>
                   <p>
-                    {stats.nonBelievers} non-believer{stats.nonBelievers !== 1 ? "s" : ""}
+                    {formatNumber(uni.totalVotes)} total votes
                   </p>
                 </div>
               </div>
             ))}
           </div>
         );
+        
       case "saved":
-        const savedList = samplePosts.filter((p) => savedPosts.has(p.id));
-        return savedList.length ? renderPosts(savedList) : (
-          <p className="mt-6 text-center text-gray-600">No saved posts yet.</p>
+        if (savedLoading) {
+          return <div className="mt-6 text-center text-gray-600">Loading saved confessions...</div>;
+        }
+        return savedConfessions.length ? renderPosts(savedConfessions) : (
+          <p className="mt-6 text-center text-gray-600">No saved confessions yet.</p>
         );
+        
       default:
         return null;
     }
@@ -231,9 +323,18 @@ export default function ConfessionsPage() {
   return (
     <NextLayout>
       <div className="max-w-5xl mx-auto w-full py-8 px-4">
-        <h1 className="text-8xl font-extrabold text-gray-800 mb-6 text-center">
-          Confessions
-        </h1>
+        <div className="relative">
+          <h1 className="text-8xl font-extrabold text-gray-800 mb-6 text-center">
+            Confessions
+          </h1>
+          {/* New posts banner */}
+          {shouldShowNewPostsBanner && (
+            <NewPostsBanner 
+              newPostsCount={newPostsCount}
+              onLoadNewPosts={loadNewPosts}
+            />
+          )}
+        </div>
         {/* Tab Bar */}
         <div className="flex gap-[4rem] border-b border-gray-300 mb-4 overflow-x-auto justify-center items-center">
           {tabs.map((tab) => (
@@ -262,13 +363,15 @@ export default function ConfessionsPage() {
             }
             className="flex-1 min-w-[200px] px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none text-lg shadow-sm transition-colors"
           />
-          <button
+          {user && (
+            <button
             className="flex items-center gap-2 bg-yellow-300 rounded-[12px] px-4 py-2 font-semibold text-gray-800 hover:bg-yellow-400 transition-colors"
             onClick={() => setIsPostModalOpen(true)}
           >
             <Plus className="w-4 h-8" />
             Make a post
           </button>
+          )}
         </div>
         {/* Content */}
         {renderContent()}
@@ -293,6 +396,18 @@ export default function ConfessionsPage() {
                 onChange={(e) => setNewBody(e.target.value)}
                 className="rounded-[8px]"
               />
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="anonymous"
+                  checked={isAnonymous}
+                  onChange={(e) => setIsAnonymous(e.target.checked)}
+                  className="rounded"
+                />
+                <label htmlFor="anonymous" className="text-sm text-gray-600">
+                  Post anonymously
+                </label>
+              </div>
             </div>
             <DialogFooter className="mt-6 flex justify-end gap-4">
               <Button
@@ -305,6 +420,7 @@ export default function ConfessionsPage() {
               <Button
                 className="bg-yellow-300 hover:bg-yellow-400 text-gray-800 rounded-[8px]"
                 onClick={handleCreatePost}
+                disabled={!newTitle.trim() || !newBody.trim()}
               >
                 Post
               </Button>

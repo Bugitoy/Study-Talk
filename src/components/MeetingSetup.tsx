@@ -8,8 +8,8 @@ import {
 } from '@stream-io/video-react-sdk';
 import Alert from './Alert';
 import { Button } from './ui/button';
-import { PhoneOff } from 'lucide-react';
 import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs';
+import { useRoomSettingByCallId } from '@/hooks/useRoomSettings';
 
 const MeetingSetup = ({
   setIsSetupComplete,
@@ -26,6 +26,7 @@ const MeetingSetup = ({
 
   const call = useCall();
   const { user: authUser } = useKindeBrowserClient();
+  const roomSettings = useRoomSettingByCallId(call?.id);
 
   if (!call) {
     throw new Error(
@@ -33,18 +34,34 @@ const MeetingSetup = ({
     );
   }
 
-  // https://getstream.io/video/docs/react/ui-cookbook/replacing-call-controls/
-  const [isMicCamToggled, setIsMicCamToggled] = useState(false);
+  // Custom mic/camera states based on room settings
+  const [isMicOff, setIsMicOff] = useState(false);
+  const [isCameraOff, setIsCameraOff] = useState(false);
 
   useEffect(() => {
-    if (isMicCamToggled) {
-      call.camera.disable();
+    if (roomSettings) {
+      if (roomSettings.mic === 'off') setIsMicOff(true);
+      else if (roomSettings.mic === 'on') setIsMicOff(false);
+      if (roomSettings.camera === 'off') setIsCameraOff(true);
+      else if (roomSettings.camera === 'on') setIsCameraOff(false);
+    }
+  }, [roomSettings]);
+
+  useEffect(() => {
+    if (roomSettings?.mic === 'off' || isMicOff) {
       call.microphone.disable();
     } else {
-      call.camera.enable();
       call.microphone.enable();
     }
-  }, [isMicCamToggled, call.camera, call.microphone]);
+  }, [isMicOff, call.microphone, roomSettings]);
+
+  useEffect(() => {
+    if (roomSettings?.camera === 'off' || isCameraOff) {
+      call.camera.disable();
+    } else {
+      call.camera.enable();
+    }
+  }, [isCameraOff, call.camera, roomSettings]);
 
   if (callTimeNotArrived)
     return (
@@ -65,14 +82,26 @@ const MeetingSetup = ({
       <h1 className="text-center text-6xl font-bold mb-10 text-blue-400">Setup</h1>
       <VideoPreview />
       <div className="flex h-16 items-center justify-center gap-3">
-        <label className="flex items-center justify-center gap-2 text-xl text-blue-400">
-          <input
-            type="checkbox"
-            checked={isMicCamToggled}
-            onChange={(e) => setIsMicCamToggled(e.target.checked)}
-          />
-          Join with mic and camera off
-        </label>
+      {roomSettings?.mic === 'flexible' && (
+          <Button
+            className={`px-4 py-2 rounded-md ${
+              isMicOff ? 'bg-[#19232d] hover:bg-[#4c535b] text-white' : 'bg-blue-400 hover:bg-blue-500 text-white'
+            }`}
+            onClick={() => setIsMicOff(!isMicOff)}
+          >
+            {isMicOff ? 'Mic Off' : 'Mic On'}
+          </Button>
+        )}
+        {roomSettings?.camera === 'flexible' && (
+          <Button
+            className={`px-4 py-2 rounded-md ${
+              isCameraOff ? 'bg-[#19232d] hover:bg-[#4c535b] text-white' : 'bg-blue-400 hover:bg-blue-500 text-white'
+            }`}
+            onClick={() => setIsCameraOff(!isCameraOff)}
+          >
+            {isCameraOff ? 'Camera Off' : 'Camera On'}
+          </Button>
+        )}
         <DeviceSettings />
       </div>
       <Button

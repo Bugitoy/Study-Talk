@@ -13,6 +13,7 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
+    "db:seed-universities": "tsx scripts/seed-universities.ts",
     "db:seed": "tsx scripts/seed-database.ts",
     "db:seed-questions": "tsx scripts/seed-questions.ts",
     "db:clear": "npx tsx scripts/clear-data.ts",

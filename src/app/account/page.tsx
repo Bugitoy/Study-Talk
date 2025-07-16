@@ -1,16 +1,20 @@
 "use client";
 
 import { useKindeBrowserClient, LogoutLink } from "@kinde-oss/kinde-auth-nextjs";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import NextLayout from "@/components/NextLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { X, User, Mail, Calendar, CreditCard, Star, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { X, User, Mail, Calendar, CreditCard, Star, Loader2, Edit3, AlertTriangle } from "lucide-react";
 import { Plan } from "@prisma/client";
 import { useToast } from "@/hooks/use-toast";
+import { UniversityAutocomplete } from "@/components/ui/university-autocomplete";
+import { useState } from "react";
 
 interface UserInfo {
   id: string;
@@ -19,6 +23,9 @@ interface UserInfo {
   image: string | null;
   plan: Plan;
   customerId: string | null;
+  university: string | null;
+  universityVerifiedAt: string | null;
+  universityChangeCount: number;
   createdAt: string;
   subscription: {
     id: string;
@@ -32,6 +39,11 @@ interface UserInfo {
 export default function AccountPage() {
   const { user } = useKindeBrowserClient();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // University editing state
+  const [isUniversityDialogOpen, setIsUniversityDialogOpen] = useState(false);
+  const [selectedUniversity, setSelectedUniversity] = useState("");
 
   const { data: userInfo, isLoading, error } = useQuery<UserInfo>({
     queryKey: ["user-info", user?.id],
@@ -73,6 +85,41 @@ export default function AccountPage() {
     },
   });
 
+  const updateUniversityMutation = useMutation({
+    mutationFn: async (university: string) => {
+      if (!user?.id) throw new Error("User not authenticated");
+      const response = await fetch("/api/user/university", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, university }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update university");
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      // Refresh user data
+      queryClient.invalidateQueries({ queryKey: ["user-info", user?.id] });
+      setIsUniversityDialogOpen(false);
+      setSelectedUniversity("");
+      toast({
+        title: "Success",
+        description: "University updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update university",
+        variant: "destructive",
+      });
+    },
+  });
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -89,6 +136,51 @@ export default function AccountPage() {
   const getNextBillingDate = () => {
     if (!userInfo?.subscription) return "N/A";
     return formatDate(userInfo.subscription.endDate);
+  };
+
+  const handleUniversityEdit = () => {
+    setSelectedUniversity(userInfo?.university || "");
+    setIsUniversityDialogOpen(true);
+  };
+
+  const handleUniversityUpdate = () => {
+    if (!selectedUniversity.trim()) {
+      toast({
+        title: "Error",
+        description: "Please select a university",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateUniversityMutation.mutate(selectedUniversity.trim());
+  };
+
+  const canChangeUniversity = () => {
+    if (!userInfo) return false;
+    
+    // If no university set yet, allow setting
+    if (!userInfo.university) return true;
+    
+    // Check if user has reached the change limit
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    
+    if (userInfo.universityChangeCount >= 2 && 
+        userInfo.universityVerifiedAt && 
+        new Date(userInfo.universityVerifiedAt) > oneYearAgo) {
+      return false;
+    }
+    
+    return true;
+  };
+
+  const getUniversityChangeWarning = () => {
+    if (!userInfo?.university) {
+      return "Set your university. Note that you can only change it once for a long time.";
+    }
+    
+    const changesLeft = Math.max(0, 2 - userInfo.universityChangeCount);
+    return `You have ${changesLeft} university change${changesLeft !== 1 ? 's' : ''} remaining this year. Choose carefully.`;
   };
 
   const isAuthenticated = !!user?.id;
@@ -117,6 +209,8 @@ export default function AccountPage() {
       </NextLayout>
     );
   }
+
+
 
   return (
     <NextLayout>
@@ -191,6 +285,38 @@ export default function AccountPage() {
 
                   <div>
                     <Label
+                      htmlFor="university"
+                      className="text-sm font-medium text-gray-700"
+                    >
+                      University:
+                    </Label>
+                    <div className="mt-1 relative">
+                      <Input
+                        id="university"
+                        value={isValidUser ? (userInfo.university ?? "Not provided") : "Not available"}
+                        readOnly
+                        className="bg-gray-50 border-gray-200 text-gray-900"
+                        placeholder={!isValidUser ? "Not available" : ""}
+                      />
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
+                        {isValidUser && canChangeUniversity() && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleUniversityEdit}
+                            className="h-8 px-3 text-xs bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-600"
+                          >
+                            <Edit3 className="w-4 h-4 mr-1" />
+                            Edit
+                          </Button>
+                        )}
+                        <User className="w-4 h-4 text-gray-400" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label
                       htmlFor="subscription"
                       className="text-sm font-medium text-gray-700"
                     >
@@ -245,6 +371,8 @@ export default function AccountPage() {
                       <CreditCard className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                     </div>
                   </div>
+
+
                 </div>
 
                 <Separator />
@@ -278,7 +406,7 @@ export default function AccountPage() {
                       <LogoutLink>
                         <Button variant="outline" className="rounded-full px-8">
                           Logout
-                  </Button>
+                        </Button>
                       </LogoutLink>
                     ) : (
                       <div className="text-center py-4">
@@ -300,7 +428,7 @@ export default function AccountPage() {
               <CardContent className="p-6">
                 <div className="text-center">
                     {isValidUser && userInfo.image ? (
-                      <div className="w-32 h-32 mx-auto mb-6 rounded-full overflow-hidden">
+                      <div className="w-32 h-32 mx-auto rounded-full overflow-hidden">
                         <img
                           src={userInfo.image}
                           alt="Profile"
@@ -309,7 +437,7 @@ export default function AccountPage() {
                       </div>
                     ) : (
                   <div
-                    className="w-32 h-32 mx-auto mb-6 rounded-full flex items-center justify-center"
+                    className="w-32 h-32 mx-auto rounded-full flex items-center justify-center"
                     style={{
                       backgroundImage:
                         "linear-gradient(to bottom right, #FFECD2, #FFDECA)",
@@ -334,6 +462,64 @@ export default function AccountPage() {
           )}
         </div>
       </div>
+
+      {/* University Selection Dialog */}
+      <Dialog open={isUniversityDialogOpen} onOpenChange={setIsUniversityDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-orange-500" />
+              {userInfo?.university ? "Change University" : "Set University"}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <Alert className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                {getUniversityChangeWarning()}
+              </AlertDescription>
+            </Alert>
+            
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="university-search" className="text-sm font-medium">
+                  Search for your university
+                </Label>
+                <UniversityAutocomplete
+                  value={selectedUniversity}
+                  onSelect={setSelectedUniversity}
+                  placeholder="Type to search universities..."
+                  disabled={updateUniversityMutation.isPending}
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsUniversityDialogOpen(false)}
+              disabled={updateUniversityMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUniversityUpdate}
+              disabled={!selectedUniversity.trim() || updateUniversityMutation.isPending}
+            >
+              {updateUniversityMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                userInfo?.university ? "Update University" : "Set University"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </NextLayout>
   );
 }

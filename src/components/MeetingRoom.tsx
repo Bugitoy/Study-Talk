@@ -1,7 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import {
-  CallControls,
   CallParticipantsList,
   CallStatsButton,
   CallingState,
@@ -22,6 +21,10 @@ import {
 import Loader from './Loader';
 import EndCallButton from './StudyEndCallButton';
 import { cn } from '@/lib/utils';
+import { useRoomSettingByCallId } from '@/hooks/useRoomSettings';
+import StudyCallControls from './StudyCallControls';
+import { useStudyTimeTracker } from '@/hooks/useStudyTimeTracker';
+import { StudyTimeProgress } from './StudyTimeProgress';
 
 type CallLayoutType = 'grid' | 'speaker-left' | 'speaker-right';
 
@@ -60,18 +63,36 @@ const MeetingGoalsBar = ({ completedGoals = [] }: { completedGoals: string[] }) 
 const MeetingRoom = () => {
   const searchParams = useSearchParams();
   const isPersonalRoom = !!searchParams.get('personal');
-  const groupName = searchParams.get('name') || 'Unnamed Group';
+  const groupName = searchParams.get('name') || 'Study Group';
   const router = useRouter();
   const call = useCall();
+  const { startTracking, endTracking, isTracking, dailyHours } = useStudyTimeTracker(call?.id);
   const [layout, setLayout] = useState<CallLayoutType>('speaker-left');
   const [showParticipants, setShowParticipants] = useState(false);
   const { useCallCallingState } = useCallStateHooks();
+  const roomSettings = useRoomSettingByCallId(call?.id);
 
   // for more detail about types of CallingState see: https://getstream.io/video/docs/react/ui-cookbook/ringing-call/#incoming-call-panel
   const callingState = useCallCallingState();
 
   // Mock completed goals for now
   const [completedGoals, setCompletedGoals] = useState<string[]>(['join']);
+
+  // Start tracking when call is joined
+  useEffect(() => {
+    if (callingState === CallingState.JOINED && call?.id) {
+      startTracking();
+    }
+  }, [callingState, call?.id]);
+
+  // End tracking when component unmounts or call ends
+  useEffect(() => {
+    return () => {
+      if (isTracking) {
+        endTracking();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!call) return;
@@ -81,6 +102,8 @@ const MeetingRoom = () => {
       const leftId = e.participant?.userId || e.participant?.user?.id;
       if (leftId === hostId) {
         try {
+          // End tracking before call cleanup
+          await endTracking();
           await call.endCall();
           await call.delete();
           try {
@@ -116,13 +139,23 @@ const MeetingRoom = () => {
     <section className="relative h-screen w-full overflow-hidden pt-4 text-white">
       {/* Overlay: Group name title and MeetingGoalsBar */}
       <div className="absolute top-0 left-0 w-full flex flex-col items-center z-20 p-6 pointer-events-none">
-        <div className="backdrop-blur-sm rounded-xl p-6 shadow-md mb-2 pointer-events-auto rounded-[8px]">
+        <div className="backdrop-blur-sm rounded-xl p-6 shadow-md pointer-events-auto rounded-[8px]">
           <h1 className="text-4xl font-semibold text-[#19232d] mb-[3rem] text-center">
             Group Name: {groupName}
           </h1>
           <MeetingGoalsBar completedGoals={completedGoals} />
         </div>
       </div>
+      
+      {/* Vertical Study Progress Widget - Right Side */}
+      <div className="absolute right-0 top-1/2 -translate-y-1/2 z-30 pointer-events-none">
+        <StudyTimeProgress 
+          dailyHours={dailyHours} 
+          isTracking={isTracking}
+          className="w-25"
+        />
+      </div>
+      
       <div className="relative flex size-full items-center justify-center">
         <div className=" flex size-full max-w-[1000px] items-center">
           <CallLayout />
@@ -137,7 +170,14 @@ const MeetingRoom = () => {
       </div>
       {/* video layout and call controls */}
       <div className="fixed bottom-0 left-0 right-0 rounded-t-xl flex w-full items-center justify-center gap-5 flex-wrap p-4 bg-black/20 backdrop-blur-sm">
-        <CallControls onLeave={() => router.push(`/meetups/study-groups`)} />
+         <StudyCallControls
+          onLeave={async () => {
+            await endTracking();
+            router.push(`/meetups/study-groups`);
+          }}
+          showMic={roomSettings?.mic === 'flexible'}
+          showCamera={roomSettings?.camera === 'flexible'}
+        />
 
         <DropdownMenu>
           <div className="flex items-center">
