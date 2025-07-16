@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { StreamClient } from '@stream-io/node-sdk';
 import { createStudyGroupRoom, listActiveStudyGroupRooms, endStudyGroupRoom } from '@/lib/db-utils';
+import prisma from '@/db/prisma';
 
 const apiKey = process.env.NEXT_PUBLIC_STREAM_API_KEY;
 const apiSecret = process.env.STREAM_SECRET_KEY;
@@ -23,13 +24,45 @@ export async function GET() {
       const callId = c.call.id as string;
       const room = rooms.find(r => r.callId === callId);
       if (!room) continue;
+      
+      // Double-check if the room is actually ended in the database
+      const dbRoom = await prisma.studyGroupRoom.findFirst({
+        where: { callId }
+      });
+      
+      console.log(`Database check for room ${room.roomName} (${callId}): ended=${dbRoom?.ended}, exists=${!!dbRoom}`);
+      
+      if (dbRoom && dbRoom.ended) {
+        console.log(`Room ${room.roomName} (${callId}) is already ended in database, skipping`);
+        continue;
+      }
+      
       const membersResp = await client.video.queryCallMembers({ id: callId, type: c.call.type });
       const members: any[] = (membersResp as any).members || [];
       const hostPresent = members.some(m => (m.user_id || m.user?.id) === room.hostId);
+      
+      console.log(`Room ${room.roomName} (${callId}): members=${members.length}, hostPresent=${hostPresent}, ended_at=${c.call.ended_at}`);
+      
+      // Check if the call has ended in Stream.io or if there are no members
       if (c.call.ended_at || members.length === 0 || !hostPresent) {
+        console.log(`Ending room ${room.roomName} (${callId}) due to: ended_at=${c.call.ended_at}, members=${members.length}, hostPresent=${hostPresent}`);
+        await endStudyGroupRoom(callId);
+        // Don't include this room in results since it should be ended
+        continue;
+      }
+      
+      // Additional check: if the call has been inactive for more than 5 minutes, end it
+      const lastActivity = c.call.updated_at ? new Date(c.call.updated_at) : new Date();
+      const now = new Date();
+      const minutesSinceActivity = (now.getTime() - lastActivity.getTime()) / (1000 * 60);
+      
+      if (minutesSinceActivity > 5) {
+        console.log(`Ending room ${room.roomName} (${callId}) due to inactivity: ${minutesSinceActivity.toFixed(1)} minutes`);
         await endStudyGroupRoom(callId);
         continue;
       }
+      
+      // Only include rooms that are active and have participants
       results.push({
         callId,
         roomName: room.roomName,
@@ -39,6 +72,7 @@ export async function GET() {
         }),
       });
     }
+    console.log(`Returning ${results.length} active rooms`);
     return NextResponse.json(results);
   } catch (error) {
     console.error('Error listing study group rooms:', error);

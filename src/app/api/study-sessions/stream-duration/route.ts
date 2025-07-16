@@ -39,6 +39,30 @@ export async function POST(req: NextRequest) {
       }
     }
     
+    // Handle call.session_ended event - this contains session duration
+    if (body.type === 'call.session_ended') {
+      const callId = body.call_cid?.split(':')[1] || body.call?.id;
+      const session = body.call?.session;
+      
+      console.log('Call session ended webhook:', { callId, session });
+      
+      if (callId && session) {
+        // Calculate duration from session start and end times
+        const sessionStart = new Date(session.started_at);
+        const sessionEnd = new Date(session.ended_at);
+        const durationSeconds = Math.floor((sessionEnd.getTime() - sessionStart.getTime()) / 1000);
+        
+        console.log('Session duration calculated:', { durationSeconds, sessionStart, sessionEnd });
+        
+        if (durationSeconds > 0) {
+          // Update all study sessions for this call with the session duration
+          const session = await updateStudySessionWithStreamDurationByCallId(callId, durationSeconds);
+          console.log('Study sessions updated with session duration:', session);
+          return NextResponse.json({ success: true, session });
+        }
+      }
+    }
+    
     // Handle other call events (for debugging)
     if (body.type && body.type.startsWith('call.')) {
       console.log('Other call event received:', body.type);

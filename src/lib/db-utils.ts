@@ -556,7 +556,31 @@ export async function listActiveStudyGroupRooms() {
 
 export async function endStudyGroupRoom(callId: string) {
   try {
-    await prisma.studyGroupRoom.updateMany({ where: { callId }, data: { ended: true } });
+    console.log('endStudyGroupRoom called for callId:', callId);
+    
+    // Check if room exists and is not already ended
+    const room = await prisma.studyGroupRoom.findFirst({
+      where: { callId }
+    });
+    
+    if (!room) {
+      console.log('No study group room found for callId:', callId);
+      return;
+    }
+    
+    if (room.ended) {
+      console.log('Room already ended for callId:', callId);
+      return;
+    }
+    
+    console.log('Ending room:', room.roomName, 'for callId:', callId);
+    
+    const result = await prisma.studyGroupRoom.updateMany({ 
+      where: { callId }, 
+      data: { ended: true } 
+    });
+    
+    console.log('Room ended successfully. Updated count:', result.count);
   } catch (error) {
     console.error('Error ending study group room:', error);
   }

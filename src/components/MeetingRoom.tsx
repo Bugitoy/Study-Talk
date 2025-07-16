@@ -109,15 +109,10 @@ const MeetingRoom = () => {
         try {
           // End tracking before call cleanup
           await endTracking();
-          await call.endCall();
-          await call.delete();
-          try {
-            await fetch(`/api/study-groups/${call.id}`, { method: 'PUT' });
-          } catch (err) {
-            console.error('Failed to mark study group ended', err);
-          }
+          // Don't try to delete the call - let the webhook handle room cleanup
+          // The webhook will end the room when all participants leave
         } catch (err) {
-          console.error('Failed to end call when host left', err);
+          console.error('Failed to handle host leaving', err);
         }
       }
     };

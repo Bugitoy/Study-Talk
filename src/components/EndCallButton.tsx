@@ -27,7 +27,8 @@ const EndCallButton = () => {
 
   const endCall = async () => {
     await call.endCall();
-    await call.delete();
+    // Don't call call.delete() - it causes 403 errors for non-host users
+    // The webhook will handle room cleanup when the call ends
     router.push('/meetups/compete');
   };
 

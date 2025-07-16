@@ -226,6 +226,8 @@ model CallParticipant {
   leftAt    DateTime?
   isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
+
+  @@unique([callId, userId])
 }
 
 model University {

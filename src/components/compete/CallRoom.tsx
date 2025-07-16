@@ -115,7 +115,8 @@ useEffect(() => {
         // End tracking before call cleanup
         await endTracking();
         await call.endCall();
-        await call.delete();
+        // Don't call call.delete() - it causes 403 errors for non-host users
+        // The webhook will handle room cleanup when the call ends
       } catch (err) {
         console.error("Failed to end call when host left", err);
       }
