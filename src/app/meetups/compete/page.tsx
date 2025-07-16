@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import NextLayout from "@/components/NextLayout";
 import GroupCard from "@/components/group";
 import MeetingModal from "@/components/MeetingModal";
-import { usePublicCalls } from "@/hooks/usePublicCalls";
+import { useCompeteRooms } from "@/hooks/useCompeteRooms";
 
 const pastelColors = [
   "bg-thanodi-lightPeach",
@@ -33,23 +33,16 @@ const Compete = ({
   const router = useRouter();
   const [meetingState, setMeetingState] = useState<"isJoiningMeeting" | undefined>(undefined);
   const [values, setValues] = useState(initialValues);
-  const { calls } = usePublicCalls();
+  const rooms = useCompeteRooms();
 
-  const filteredCalls = calls
-  .filter((call) => (call.state.custom as any)?.quizStarted !== true)
-  .filter((call) => {
-    const name = (call.state.custom as any)?.roomName || "Unnamed Room";
-    return name.toLowerCase().includes(search.toLowerCase());
+  const filteredRooms = rooms.filter((room) => {
+    return room.roomName.toLowerCase().includes(search.toLowerCase());
   });
 
   const joinRandomRoom = () => {
-    const availableCalls = filteredCalls.length
-      ? filteredCalls
-      : calls.filter((c) => (c.state.custom as any)?.quizStarted !== true);
-    if (availableCalls.length === 0) return;
-    const randomCall =
-      availableCalls[Math.floor(Math.random() * availableCalls.length)];
-    router.push(`/meetups/compete/room/${randomCall.id}`);
+    if (filteredRooms.length === 0) return;
+    const randomRoom = filteredRooms[Math.floor(Math.random() * filteredRooms.length)];
+    router.push(`/meetups/compete/room/${randomRoom.callId}`);
   };
 
   return (
@@ -120,48 +113,21 @@ const Compete = ({
             </div>
     
             <div className="max-w-5xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-              {filteredCalls.length === 0 && (
+              {filteredRooms.length === 0 && (
                 <p className="text-center text-gray-500 col-span-full">
                   No public rooms available
                 </p>
               )}
-               {filteredCalls.map((call, i) => {
-                  // `call.state.members` can be an array, a Map, or an object –
-                  // normalise it to a simple array so we can reliably read member data
-                  const rawMembers: any = (call.state as any).members;
-                  const members = Array.isArray(rawMembers)
-                    ? rawMembers
-                    : rawMembers instanceof Map
-                      ? Array.from(rawMembers.values())
-                      : Object.values(rawMembers ?? {});
-                    const count =
-                    members.length || (call.state as any).participantCount || 0;
-                  const pics =
-                    members.length > 0
-                      ? members.map((m: any) => {
-                          const u = (m.user ?? {}) as any;
-                          return (
-                            u.image ||
-                            m.image ||
-                            u.avatar ||
-                            u.photo ||
-                            "/Images/temp-profiles/profile1.png"
-                          );
-                        })
-                      : ["/Images/temp-profiles/profile1.png"];
-                  const name =
-                    (call.state.custom as any)?.roomName || "Unnamed Room";
-                  return (
-                    <GroupCard
-                      key={call.id}
-                      title={name}
-                      peopleCount={count}
-                      profilePics={pics}
-                      onJoin={() => router.push(`/meetups/compete/room/${call.id}`)}
-                      color={pastelColors[i % pastelColors.length]}
-                    />
-                  );
-                })}
+              {filteredRooms.map((room, i) => (
+                <GroupCard
+                  key={room.callId}
+                  title={room.roomName}
+                  peopleCount={room.members.length}
+                  profilePics={room.members}
+                  onJoin={() => router.push(`/meetups/compete/room/${room.callId}`)}
+                  color={pastelColors[i % pastelColors.length]}
+                />
+              ))}
             </div>
     
             <MeetingModal

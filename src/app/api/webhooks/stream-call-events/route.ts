@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { StreamClient } from '@stream-io/node-sdk';
-import { startStudySession, updateStudySessionWithStreamDuration, endStudyGroupRoom, listActiveStudyGroupRooms } from '@/lib/db-utils';
+import { startStudySession, updateStudySessionWithStreamDuration, endStudyGroupRoom, listActiveStudyGroupRooms, endCompeteRoom } from '@/lib/db-utils';
 import prisma from '@/db/prisma';
 
 const apiKey = process.env.NEXT_PUBLIC_STREAM_API_KEY;
@@ -166,7 +166,7 @@ async function handleParticipantLeft(event: any, client: StreamClient) {
       await updateStudySessionWithStreamDuration(userId, callId, duration * 60); // Convert to seconds
     }
 
-    // Check if this was the host leaving
+    // Check if this was the host leaving (for study group rooms)
     const studyGroupRoom = await prisma.studyGroupRoom.findFirst({
       where: { callId, ended: false }
     });
@@ -210,6 +210,51 @@ async function handleParticipantLeft(event: any, client: StreamClient) {
         await endStudyGroupRoom(callId);
       }
     }
+    
+    // Check if this was the host leaving (for compete rooms)
+    const competeRoom = await prisma.competeRoom.findFirst({
+      where: { callId, ended: false }
+    });
+
+    if (competeRoom && competeRoom.hostId === userId) {
+      console.log('Compete room host left the call:', userId);
+      
+      // Check if there are still other participants in the call
+      const remainingParticipants = await client.video.queryCallMembers({ 
+        id: callId, 
+        type: event.call?.type || 'default'
+      });
+      
+      const activeMembers = (remainingParticipants as any).members?.filter((m: any) => 
+        (m.user_id || m.user?.id) !== userId
+      ) || [];
+      
+      console.log('Remaining participants after compete host left:', activeMembers.length);
+      
+      if (activeMembers.length === 0) {
+        // No one left in the call, end the room
+        console.log('No participants remaining, ending compete room');
+        await endCompeteRoom(callId);
+      } else {
+        console.log('Other participants still in call, compete room remains active');
+      }
+    } else if (competeRoom) {
+      // Regular participant left, check if call is now empty
+      const remainingParticipants = await client.video.queryCallMembers({ 
+        id: callId, 
+        type: event.call?.type || 'default'
+      });
+      
+      const activeMembers = (remainingParticipants as any).members || [];
+      
+      console.log('Remaining participants after regular user left compete room:', activeMembers.length);
+      
+      if (activeMembers.length === 0) {
+        // No one left in the call, end the room
+        console.log('No participants remaining, ending compete room');
+        await endCompeteRoom(callId);
+      }
+    }
   } catch (error) {
     console.error('Error handling participant left event:', error);
   }
@@ -243,6 +288,25 @@ async function handleSessionEnded(event: any, client: StreamClient) {
       }
     } else {
       console.log('No study group room found for callId:', callId);
+    }
+    
+    // Check if this is a compete room (don't filter by ended status)
+    const competeRoom = await prisma.competeRoom.findFirst({
+      where: { callId }
+    });
+    
+    if (competeRoom) {
+      console.log('Found compete room to end:', competeRoom.roomName, 'ended:', competeRoom.ended);
+      
+      // End the room if it's not already ended
+      if (!competeRoom.ended) {
+        console.log('Ending compete room:', callId);
+        await endCompeteRoom(callId);
+      } else {
+        console.log('Compete room already ended, skipping');
+      }
+    } else {
+      console.log('No compete room found for callId:', callId);
     }
     
     // Update session record
@@ -311,6 +375,25 @@ async function handleCallEnded(event: any, client: StreamClient) {
       }
     } else {
       console.log('No study group room found for callId:', callId);
+    }
+    
+    // Check if this is a compete room (don't filter by ended status)
+    const competeRoom = await prisma.competeRoom.findFirst({
+      where: { callId }
+    });
+    
+    if (competeRoom) {
+      console.log('Found compete room to end:', competeRoom.roomName, 'ended:', competeRoom.ended);
+      
+      // End the room if it's not already ended
+      if (!competeRoom.ended) {
+        console.log('Ending compete room:', callId);
+        await endCompeteRoom(callId);
+      } else {
+        console.log('Compete room already ended, skipping');
+      }
+    } else {
+      console.log('No compete room found for callId:', callId);
     }
     
     // End all active study sessions for this call

@@ -195,6 +195,15 @@ model StudyGroupRoom {
   createdAt DateTime @default(now())
 }
 
+model CompeteRoom {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  callId    String   @unique
+  roomName  String
+  hostId    String
+  ended     Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
 model StudySession {
   id        String    @id @default(auto()) @map("_id") @db.ObjectId
   userId    String

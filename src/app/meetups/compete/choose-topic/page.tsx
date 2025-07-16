@@ -117,6 +117,17 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
             body: JSON.stringify({ callId: call.id }),
           });
         }
+        
+        // Create compete room in database
+        await fetch('/api/compete-rooms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            callId: call.id,
+            roomName: roomSettings.roomName || 'Quiz',
+            hostId: user.id,
+          }),
+        });
       }
       if (!values.description) {
         router.push(`/meetups/compete/room/${call.id}`);

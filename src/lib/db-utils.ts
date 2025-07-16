@@ -586,6 +586,64 @@ export async function endStudyGroupRoom(callId: string) {
   }
 }
 
+// Compete Room functions
+export async function createCompeteRoom(data: { callId: string; roomName: string; hostId: string }) {
+  try {
+    return await prisma.competeRoom.create({
+      data: {
+        callId: data.callId,
+        roomName: data.roomName,
+        hostId: data.hostId,
+        ended: false,
+      },
+    });
+  } catch (error) {
+    console.error('Error creating compete room:', error);
+    throw error;
+  }
+}
+
+export async function listActiveCompeteRooms() {
+  try {
+    return await prisma.competeRoom.findMany({ where: { ended: false } });
+  } catch (error) {
+    console.error('Error fetching compete rooms:', error);
+    return [];
+  }
+}
+
+export async function endCompeteRoom(callId: string) {
+  try {
+    console.log('endCompeteRoom called for callId:', callId);
+    
+    // Check if room exists and is not already ended
+    const room = await prisma.competeRoom.findFirst({
+      where: { callId }
+    });
+    
+    if (!room) {
+      console.log('No compete room found for callId:', callId);
+      return;
+    }
+    
+    if (room.ended) {
+      console.log('Room already ended for callId:', callId);
+      return;
+    }
+    
+    console.log('Ending compete room:', room.roomName, 'for callId:', callId);
+    
+    const result = await prisma.competeRoom.updateMany({ 
+      where: { callId }, 
+      data: { ended: true } 
+    });
+    
+    console.log('Compete room ended successfully. Updated count:', result.count);
+  } catch (error) {
+    console.error('Error ending compete room:', error);
+  }
+}
+
 // Study Session functions
 export async function startStudySession(userId: string, callId: string) {
   try {
