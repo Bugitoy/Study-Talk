@@ -363,7 +363,7 @@ export function useInfiniteConfessions(options: UseInfiniteConfessionsOptions = 
   // Initial load when dependencies change
   useEffect(() => {
     reset();
-  }, [universityId, sortBy, search]);
+  }, [universityId, sortBy, search, userId]);
 
   // Auto-refresh for new posts (but don't replace current view)
   useEffect(() => {

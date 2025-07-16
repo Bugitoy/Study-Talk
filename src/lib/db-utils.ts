@@ -565,25 +565,31 @@ export async function endStudyGroupRoom(callId: string) {
 // Study Session functions
 export async function startStudySession(userId: string, callId: string) {
   try {
+    console.log('startStudySession called with userId:', userId, 'callId:', callId);
+    
     // Check if user already has an active session for this call
     const existingSession = await prisma.studySession.findFirst({
       where: { userId, callId, leftAt: null },
     });
     
     if (existingSession) {
+      console.log('Found existing session:', existingSession);
       return existingSession;
     }
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    return await prisma.studySession.create({
+    const newSession = await prisma.studySession.create({
       data: {
         userId,
         callId,
         date: today,
       },
     });
+    
+    console.log('Created new study session:', newSession);
+    return newSession;
   } catch (error) {
     console.error('Error starting study session:', error);
     throw error;
@@ -592,23 +598,39 @@ export async function startStudySession(userId: string, callId: string) {
 
 export async function endStudySession(userId: string, callId: string) {
   try {
-    const session = await prisma.studySession.findFirst({
-      where: { userId, callId, leftAt: null },
+    console.log('endStudySession called with userId:', userId, 'callId:', callId);
+    
+    // First, let's see all sessions for this user and call
+    const allSessions = await prisma.studySession.findMany({
+      where: { userId, callId },
       orderBy: { joinedAt: 'desc' },
     });
+    console.log('All sessions for this user/call:', allSessions);
     
-    if (!session) {
+    // Find the most recent session that hasn't been ended yet
+    const activeSession = allSessions.find(session => session.leftAt === null);
+    console.log('Active session found:', activeSession);
+    
+    if (!activeSession) {
       console.warn('No active session found for user:', userId, 'call:', callId);
       return null;
     }
     
-    const leftAt = new Date();
-    const duration = Math.floor((leftAt.getTime() - session.joinedAt.getTime()) / (1000 * 60)); // duration in minutes
+    console.log('Found session to end:', activeSession);
     
-    return await prisma.studySession.update({
-      where: { id: session.id },
+    const leftAt = new Date();
+    const duration = Math.floor((leftAt.getTime() - activeSession.joinedAt.getTime()) / (1000 * 60)); // duration in minutes
+    
+    console.log('Calculated duration:', duration, 'minutes');
+    console.log('Updating session with leftAt:', leftAt, 'duration:', duration);
+    
+    const updatedSession = await prisma.studySession.update({
+      where: { id: activeSession.id },
       data: { leftAt, duration },
     });
+    
+    console.log('Updated session:', updatedSession);
+    return updatedSession;
   } catch (error) {
     console.error('Error ending study session:', error);
     throw error;
@@ -623,6 +645,8 @@ export async function getDailyStudyTime(userId: string, date?: Date) {
     const nextDay = new Date(targetDate);
     nextDay.setDate(nextDay.getDate() + 1);
     
+    console.log('getDailyStudyTime called for user:', userId, 'date:', targetDate);
+    
     const sessions = await prisma.studySession.findMany({
       where: {
         userId,
@@ -634,8 +658,12 @@ export async function getDailyStudyTime(userId: string, date?: Date) {
       },
     });
     
+    console.log('Found sessions with duration:', sessions.length, sessions);
+    
     const totalMinutes = sessions.reduce((sum, session) => sum + (session.duration || 0), 0);
-    return Math.round(totalMinutes / 60 * 100) / 100; // return hours with 2 decimal places
+    const result = Math.round(totalMinutes * 100) / 100;
+    console.log('Total minutes calculated:', result);
+    return result; // return minutes with 2 decimal places
   } catch (error) {
     console.error('Error getting daily study time:', error);
     return 0;
@@ -662,7 +690,7 @@ export async function getWeeklyStudyTime(userId: string) {
     });
     
     const totalMinutes = sessions.reduce((sum, session) => sum + (session.duration || 0), 0);
-    return Math.round(totalMinutes / 60 * 100) / 100; // return hours with 2 decimal places
+    return Math.round(totalMinutes * 100) / 100; // return minutes with 2 decimal places
   } catch (error) {
     console.error('Error getting weekly study time:', error);
     return 0;
@@ -711,8 +739,8 @@ export async function getLeaderboard(period: 'daily' | 'weekly' = 'weekly') {
       userId: user.id,
       name: user.name || 'Anonymous',
       image: user.image,
-      hours: Math.round((userStats.get(user.id) || 0) / 60 * 100) / 100,
-    })).sort((a, b) => b.hours - a.hours);
+      minutes: Math.round((userStats.get(user.id) || 0) * 100) / 100, // Return minutes directly
+    })).sort((a, b) => b.minutes - a.minutes);
     
     return leaderboard;
   } catch (error) {

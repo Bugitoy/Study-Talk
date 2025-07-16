@@ -1,18 +1,34 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs';
 
 export function useStudyTimeTracker(callId?: string) {
   const { user } = useKindeBrowserClient();
-  const [dailyHours, setDailyHours] = useState(0);
+  const [dailyMinutes, setDailyMinutes] = useState(0);
   const [isTracking, setIsTracking] = useState(false);
   const sessionStartedRef = useRef(false);
+  const hasEndedRef = useRef(false);
 
   // Start tracking when joining a call
-  const startTracking = async () => {
-    if (!user?.id || !callId || sessionStartedRef.current) return;
+  const startTracking = useCallback(async () => {
+    console.log('🟢 startTracking called with:', { 
+      userId: user?.id, 
+      callId, 
+      sessionStarted: sessionStartedRef.current,
+      hasEnded: hasEndedRef.current
+    });
+    
+    if (!user?.id || !callId || sessionStartedRef.current) {
+      console.log('🟡 Skipping startTracking - conditions not met:', { 
+        hasUser: !!user?.id, 
+        hasCallId: !!callId, 
+        sessionStarted: sessionStartedRef.current 
+      });
+      return;
+    }
     
     try {
+      console.log('🟢 Starting study session for user:', user.id, 'call:', callId);
       const response = await fetch('/api/study-sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -24,20 +40,62 @@ export function useStudyTimeTracker(callId?: string) {
       });
       
       if (response.ok) {
+        const result = await response.json();
+        console.log('🟢 Study session start response:', result);
         setIsTracking(true);
         sessionStartedRef.current = true;
-        console.log('Study session started');
+        hasEndedRef.current = false;
+        console.log('🟢 Study session started successfully');
+      } else {
+        console.error('🔴 Failed to start study session, response not ok:', response.status);
       }
     } catch (error) {
-      console.error('Failed to start study session:', error);
+      console.error('🔴 Failed to start study session:', error);
     }
-  };
+  }, [user?.id, callId]);
 
-  // End tracking when leaving a call
-  const endTracking = async () => {
-    if (!user?.id || !callId || !sessionStartedRef.current) return;
+  // Fetch current daily study minutes
+  const fetchDailyMinutes = useCallback(async () => {
+    if (!user?.id) return;
     
     try {
+      console.log('📊 Fetching daily minutes for user:', user.id);
+      const response = await fetch(`/api/study-sessions?userId=${user.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📊 API response:', data);
+        // The API returns { minutes: number }, so we use data.minutes directly
+        const minutes = data.minutes || 0;
+        console.log('📊 Received daily minutes:', minutes);
+        setDailyMinutes(minutes);
+      }
+    } catch (error) {
+      console.error('🔴 Failed to fetch daily minutes:', error);
+    }
+  }, [user?.id]);
+
+  // End tracking when leaving a call
+  const endTracking = useCallback(async () => {
+    console.log('🔴 endTracking called with:', { 
+      userId: user?.id, 
+      callId, 
+      sessionStarted: sessionStartedRef.current,
+      hasEnded: hasEndedRef.current
+    });
+    
+    if (!user?.id || !callId || !sessionStartedRef.current || hasEndedRef.current) {
+      console.log('🟡 Skipping endTracking - conditions not met:', { 
+        hasUser: !!user?.id, 
+        hasCallId: !!callId, 
+        sessionStarted: sessionStartedRef.current,
+        hasEnded: hasEndedRef.current
+      });
+      return;
+    }
+    
+    try {
+      console.log('🔴 Ending study session for user:', user.id, 'call:', callId);
+      hasEndedRef.current = true;
       const response = await fetch('/api/study-sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -49,61 +107,48 @@ export function useStudyTimeTracker(callId?: string) {
       });
       
       if (response.ok) {
+        const result = await response.json();
+        console.log('🔴 Study session end response:', result);
         setIsTracking(false);
         sessionStartedRef.current = false;
-        console.log('Study session ended');
-        // Refresh daily hours after ending session
-        await fetchDailyHours();
+        console.log('🔴 Study session ended successfully');
+        // Refresh daily minutes after ending session
+        await fetchDailyMinutes();
+      } else {
+        console.error('🔴 Failed to end study session, response not ok:', response.status);
+        hasEndedRef.current = false; // Reset flag if failed
       }
     } catch (error) {
-      console.error('Failed to end study session:', error);
+      console.error('🔴 Failed to end study session:', error);
+      hasEndedRef.current = false; // Reset flag if failed
     }
-  };
+  }, [user?.id, callId, fetchDailyMinutes]);
 
-  // Fetch current daily study hours
-  const fetchDailyHours = async () => {
-    if (!user?.id) return;
-    
-    try {
-      const response = await fetch(`/api/study-sessions?userId=${user.id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setDailyHours(data.hours);
-      }
-    } catch (error) {
-      console.error('Failed to fetch daily hours:', error);
-    }
-  };
-
-  // Load daily hours on mount and user change
+  // Load daily minutes on mount and user change
   useEffect(() => {
     if (user?.id) {
-      fetchDailyHours();
+      console.log('useEffect - fetching daily minutes for user:', user.id);
+      fetchDailyMinutes();
     }
-  }, [user?.id]);
+  }, [user?.id, fetchDailyMinutes]);
 
-  // Auto-refresh daily hours every 5 minutes while tracking
+  // Auto-refresh daily minutes every 5 minutes while tracking
   useEffect(() => {
     if (!isTracking) return;
     
-    const interval = setInterval(fetchDailyHours, 5 * 60 * 1000); // 5 minutes
-    return () => clearInterval(interval);
-  }, [isTracking, user?.id]);
-
-  // Cleanup on unmount
-  useEffect(() => {
+    console.log('Setting up auto-refresh for daily minutes');
+    const interval = setInterval(fetchDailyMinutes, 5 * 60 * 1000); // 5 minutes
     return () => {
-      if (sessionStartedRef.current) {
-        endTracking();
-      }
+      console.log('Clearing auto-refresh interval');
+      clearInterval(interval);
     };
-  }, []);
+  }, [isTracking, user?.id, fetchDailyMinutes]);
 
   return {
-    dailyHours,
+    dailyMinutes,
     isTracking,
     startTracking,
     endTracking,
-    refreshDailyHours: fetchDailyHours,
+    refreshDailyMinutes: fetchDailyMinutes,
   };
 } 
