@@ -43,6 +43,11 @@ export async function POST(req: NextRequest) {
         // Handle member added event for user blocking/banning
         await handleMemberAdded(event, client);
         break;
+      case 'call.member_removed':
+        // Handle member removed event (when users are banned/removed)
+        console.log('Member removed event received for call:', event.call_cid);
+        await handleMemberRemoved(event, client);
+        break;
       case 'call.member_updated':
         // Handle member updated events (these might include joins)
         console.log('Member updated event received for call:', event.call_cid);
@@ -102,6 +107,48 @@ async function handleSessionStarted(event: any, client: StreamClient) {
     });
   } catch (error) {
     console.error('Error handling session started event:', error);
+  }
+}
+
+async function handleMemberRemoved(event: any, client: StreamClient) {
+  try {
+    const callId = event.call?.id || event.call_cid?.split(':')[1];
+    
+    // Handle different event structures for member removal
+    let userId = null;
+    if (event.members && event.members.length > 0) {
+      userId = event.members[0];
+    }
+    
+    if (!callId || !userId) {
+      console.log('No callId or userId found in member removed event');
+      console.log('Event structure:', {
+        callId,
+        userId,
+        hasMembers: !!event.members,
+        eventType: event.type
+      });
+      return;
+    }
+    
+    console.log('Member removed:', userId, 'from call:', callId);
+    
+    // Update participant record to mark them as left
+    await prisma.callParticipant.updateMany({
+      where: { 
+        callId,
+        userId,
+        isActive: true
+      },
+      data: {
+        leftAt: new Date(),
+        isActive: false,
+      },
+    });
+    
+    console.log('Updated participant record for removed user:', userId);
+  } catch (error) {
+    console.error('Error handling member removed event:', error);
   }
 }
 
@@ -166,19 +213,10 @@ async function handleMemberAdded(event: any, client: StreamClient) {
         
         console.log('User still in call after removal attempt:', userStillInCall);
         
-        // If user is still in call, try alternative removal method
+        // If user is still in call, log but don't end the call to avoid removing all users
         if (userStillInCall) {
-          console.log('User still in call, trying alternative removal method...');
-          try {
-            // Try using a different approach - end the call for this specific user
-            await client.video.endCall({
-              id: callId,
-              type: event.call?.type || 'default'
-            });
-            console.log('Ended call as alternative removal method');
-          } catch (endCallError) {
-            console.error('Failed to end call as alternative removal:', endCallError);
-          }
+          console.log('User still in call, but not ending call to avoid removing all users');
+          console.log('Blocked user removal may not be immediate - webhook will handle future joins');
         } else {
           console.log('Successfully removed blocked user from call (member added):', userId);
         }
@@ -282,19 +320,10 @@ async function handleParticipantJoined(event: any, client: StreamClient) {
         
         console.log('User still in call after removal attempt:', userStillInCall);
         
-        // If user is still in call, try alternative removal method
+        // If user is still in call, log but don't end the call to avoid removing all users
         if (userStillInCall) {
-          console.log('User still in call, trying alternative removal method...');
-          try {
-            // Try using a different approach - end the call for this specific user
-            await client.video.endCall({
-              id: callId,
-              type: event.call?.type || 'default'
-            });
-            console.log('Ended call as alternative removal method');
-          } catch (endCallError) {
-            console.error('Failed to end call as alternative removal:', endCallError);
-          }
+          console.log('User still in call, but not ending call to avoid removing all users');
+          console.log('Blocked user removal may not be immediate - webhook will handle future joins');
         } else {
           console.log('Successfully removed blocked user from call:', userId);
         }

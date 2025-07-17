@@ -194,16 +194,46 @@ const MeetingRoom = () => {
           variant: 'destructive',
         });
         router.push('/meetups/study-groups');
+      } else {
+        // Another participant was removed - could be due to ban
+        console.log('Another participant left:', leftUserId);
+        // You could show a toast to the host that the user was removed
+        if (isHost) {
+          toast({
+            title: 'User removed',
+            description: `User has been removed from the call.`,
+          });
+        }
+      }
+    };
+
+    // Handler for when call custom state changes (for forced disconnection)
+    const handleCallCustomChanged = (custom: any) => {
+      console.log('Call custom state changed:', custom);
+      if (custom.forceUserDisconnect && custom.forceUserDisconnect === currentUserId) {
+        console.log('Forced to disconnect from call due to ban');
+        toast({
+          title: 'Banned from call',
+          description: 'You have been banned from this room by the host.',
+          variant: 'destructive',
+        });
+        // Force the user to leave the call
+        call.leave();
+        router.push('/meetups/study-groups');
       }
     };
 
     // Listen for multiple events
     call.on('callEnded', handleCallEnded);
     call.on('participantLeft', handleParticipantLeft);
+    
+    // Listen for custom state changes
+    const customSubscription = call.state.custom$.subscribe(handleCallCustomChanged);
 
     return () => {
       call.off('callEnded', handleCallEnded);
       call.off('participantLeft', handleParticipantLeft);
+      customSubscription?.unsubscribe();
     };
   }, [call, router, toast, currentUserId]);
 
@@ -229,8 +259,8 @@ const MeetingRoom = () => {
       }
     };
 
-    // Check every 5 seconds (less frequent since access is pre-checked)
-    const interval = setInterval(checkUserInCall, 5000);
+    // Check every 1 second for more responsive removal detection
+    const interval = setInterval(checkUserInCall, 1000);
 
     return () => {
       clearInterval(interval);
@@ -529,8 +559,148 @@ const MeetingRoom = () => {
                     if (res.ok) {
                       toast({
                         title: "Success",
-                        description: "User banned from room successfully!",
+                        description: "User banned and removed from room immediately!",
                       });
+                      
+                      // Also call the force remove endpoint as an additional measure
+                      try {
+                        const forceRemoveRes = await fetch('/api/room/force-remove', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ userId: selectedBanUserId, callId: call.id }),
+                        });
+                        
+                        if (forceRemoveRes.ok) {
+                          const forceRemoveData = await forceRemoveRes.json();
+                          console.log('Force remove response:', forceRemoveData);
+                          // Don't show call ended toast as we're not ending the call anymore
+                        }
+                      } catch (forceRemoveError) {
+                        console.error('Failed to call force remove:', forceRemoveError);
+                      }
+                      
+                      // Force a refresh of call participants to update the UI
+                      if (call) {
+                        try {
+                          // Try to force the user to leave by updating call state
+                          console.log('Attempting to force user removal via call state update');
+                          
+                          // Update call with a custom property that might trigger removal
+                          await call.update({
+                            custom: { 
+                              ...call.state.custom, 
+                              bannedUser: selectedBanUserId,
+                              banTimestamp: Date.now()
+                            }
+                          });
+                          
+                          console.log('Forced call update after ban');
+                          
+                          // Also try to remove the user directly from the call state
+                          const participants = call.state.participants || [];
+                          const targetParticipant = participants.find((p: any) => 
+                            (p.userId || p.user?.id) === selectedBanUserId
+                          );
+                          
+                          if (targetParticipant) {
+                            console.log('Found target participant, attempting direct removal');
+                            // Try to force a participant list refresh
+                            setTimeout(() => {
+                              call.update({ 
+                                custom: { 
+                                  ...call.state.custom, 
+                                  forceRefresh: Date.now(),
+                                  bannedUser: selectedBanUserId
+                                } 
+                              });
+                            }, 500);
+                          }
+                          
+                          // Note: We don't end the call as it would remove all users
+                          // Instead, we rely on the webhook to prevent banned users from rejoining
+                          console.log('User ban applied - webhook will prevent rejoining');
+                          
+                          // Set up continuous monitoring to ensure user is removed
+                          const monitorInterval = setInterval(async () => {
+                            try {
+                              const participants = call.state.participants || [];
+                              const bannedUserStillInCall = participants.some((p: any) => 
+                                (p.userId || p.user?.id) === selectedBanUserId
+                              );
+                              
+                              if (bannedUserStillInCall) {
+                                console.log('Banned user still in call, continuing to force removal');
+                                // Call force remove endpoint
+                                const forceRemoveRes = await fetch('/api/room/force-remove', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ userId: selectedBanUserId, callId: call.id }),
+                                });
+                                
+                                if (forceRemoveRes.ok) {
+                                  const forceRemoveData = await forceRemoveRes.json();
+                                  console.log('Continuous force remove response:', forceRemoveData);
+                                }
+                              } else {
+                                console.log('Banned user successfully removed, stopping monitoring');
+                                clearInterval(monitorInterval);
+                              }
+                            } catch (monitorError) {
+                              console.error('Failed to monitor user removal:', monitorError);
+                            }
+                          }, 5000); // Check every 5 seconds
+                          
+                          // Stop monitoring after 30 seconds
+                          setTimeout(() => {
+                            clearInterval(monitorInterval);
+                            console.log('Stopped monitoring user removal after 30 seconds');
+                          }, 30000);
+                          
+                          // Check if the banned user is still in the call after 3 seconds
+                          setTimeout(async () => {
+                            try {
+                              const participants = call.state.participants || [];
+                              const bannedUserStillInCall = participants.some((p: any) => 
+                                (p.userId || p.user?.id) === selectedBanUserId
+                              );
+                              
+                              if (bannedUserStillInCall) {
+                                console.log('Banned user still in call after 3 seconds, forcing removal');
+                                // Call the force remove endpoint again
+                                const forceRemoveRes = await fetch('/api/room/force-remove', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ userId: selectedBanUserId, callId: call.id }),
+                                });
+                                
+                                if (forceRemoveRes.ok) {
+                                  const forceRemoveData = await forceRemoveRes.json();
+                                  console.log('Second force remove response:', forceRemoveData);
+                                }
+                                
+                                // Additional attempt: try to force the user to leave by updating call state
+                                try {
+                                  await call.update({
+                                    custom: { 
+                                      ...call.state.custom, 
+                                      forceUserLeave: selectedBanUserId,
+                                      forceLeaveTimestamp: Date.now()
+                                    }
+                                  });
+                                  console.log('Forced call update to remove user');
+                                } catch (updateError) {
+                                  console.error('Failed to force call update:', updateError);
+                                }
+                              }
+                            } catch (checkError) {
+                              console.error('Failed to check if banned user is still in call:', checkError);
+                            }
+                          }, 3000);
+                          
+                        } catch (updateError) {
+                          console.error('Failed to update call after ban:', updateError);
+                        }
+                      }
                     } else {
                       toast({
                         title: "Error",

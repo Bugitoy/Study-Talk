@@ -1,12 +1,14 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
+import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs';
 
 import NextLayout from "@/components/NextLayout";
 import GroupCard from "@/components/group";
 import MeetingModal from "@/components/MeetingModal";
 import { useCompeteRooms } from "@/hooks/useCompeteRooms";
+import { useToast } from '@/hooks/use-toast';
 
 const pastelColors = [
   "bg-thanodi-lightPeach",
@@ -34,6 +36,34 @@ const Compete = ({
   const [meetingState, setMeetingState] = useState<"isJoiningMeeting" | undefined>(undefined);
   const [values, setValues] = useState(initialValues);
   const rooms = useCompeteRooms();
+  const { user } = useKindeBrowserClient();
+  const { toast } = useToast();
+
+  // Check if user is blocked
+  useEffect(() => {
+    if (user?.id) {
+      const checkBlockStatus = async () => {
+        try {
+          const res = await fetch(`/api/user/check-block?userId=${user.id}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.isBlocked) {
+              toast({
+                title: 'Account Blocked',
+                description: 'Your account has been blocked by an administrator. You cannot join or create compete rooms.',
+                variant: 'destructive',
+              });
+              router.push('/');
+            }
+          }
+        } catch (error) {
+          console.error('Error checking block status:', error);
+        }
+      };
+      
+      checkBlockStatus();
+    }
+  }, [user?.id, router, toast]);
 
   const filteredRooms = rooms.filter((room) => {
     return room.roomName.toLowerCase().includes(search.toLowerCase());
