@@ -28,14 +28,29 @@ export async function POST(req: NextRequest) {
     if (body.type === 'call.session_participant_left') {
       const callId = body.call_cid?.split(':')[1] || body.call?.id;
       const duration = body.duration_seconds || 0; // Duration in seconds
+      const participant = body.participant;
+      const userId = participant?.user?.id;
       
-      console.log('Participant left webhook:', { callId, duration });
+      console.log('Participant left webhook:', { callId, duration, userId });
       
-      if (callId && duration > 0) {
+      if (callId && duration > 0 && userId) {
         // Find the session for this call and update it with Stream.io duration
         const session = await updateStudySessionWithStreamDurationByCallId(callId, duration);
         console.log('Session updated from participant left:', session);
+        
+        if (!session) {
+          console.log('No session found for callId, trying to find by userId...');
+          // Try to find session by userId
+          const sessionByUser = await updateStudySessionWithStreamDuration(userId, callId, duration);
+          if (sessionByUser) {
+            console.log('Session found and updated by userId:', sessionByUser);
+            return NextResponse.json({ success: true, session: sessionByUser });
+          }
+        }
+        
         return NextResponse.json({ success: true, session });
+      } else {
+        console.log('Participant left webhook skipped:', { callId, duration, userId, hasCallId: !!callId, hasDuration: duration > 0, hasUserId: !!userId });
       }
     }
     
@@ -56,9 +71,25 @@ export async function POST(req: NextRequest) {
         
         if (durationSeconds > 0) {
           // Update all study sessions for this call with the session duration
-          const session = await updateStudySessionWithStreamDurationByCallId(callId, durationSeconds);
-          console.log('Study sessions updated with session duration:', session);
-          return NextResponse.json({ success: true, session });
+          const updatedSession = await updateStudySessionWithStreamDurationByCallId(callId, durationSeconds);
+          console.log('Study sessions updated with session duration:', updatedSession);
+          
+          if (!updatedSession) {
+            console.log('No session found for callId in session_ended, trying to find by created_by...');
+            // Try to find session by the call creator
+            const createdBy = body.call?.created_by;
+            if (createdBy?.id) {
+              const userId = createdBy.id;
+              console.log('Trying to find session by created_by userId:', userId);
+              const sessionByUser = await updateStudySessionWithStreamDuration(userId, callId, durationSeconds);
+              if (sessionByUser) {
+                console.log('Session found and updated by created_by userId:', sessionByUser);
+                return NextResponse.json({ success: true, session: sessionByUser });
+              }
+            }
+          }
+          
+          return NextResponse.json({ success: true, session: updatedSession });
         }
       }
     }

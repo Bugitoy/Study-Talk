@@ -39,6 +39,9 @@ model User {
   universityVerifiedAt DateTime? // When university was last verified
   universityChangeCount Int @default(0) // Number of times university has been changed
 
+  isAdmin    Boolean  @default(false)
+  isBlocked  Boolean  @default(false)
+
   Subscription Subscription?
   StarredWords StarredWord[]
   
@@ -47,6 +50,9 @@ model User {
   confessionVotes ConfessionVote[]
   confessionComments ConfessionComment[]
   savedConfessions SavedConfession[]
+
+  // Reports
+  reports Report[] @relation("UserReports")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -205,17 +211,21 @@ model CompeteRoom {
 }
 
 model StudySession {
-  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   userId    String
   callId    String
-  joinedAt  DateTime  @default(now())
+  joinedAt  DateTime @default(now())
   leftAt    DateTime?
-  duration  Int?      // duration in minutes
-  date      DateTime  @default(now()) // date for daily tracking
-  createdAt DateTime  @default(now())
+  duration  Int?     // in minutes
+  date      DateTime @default(now())
 
-  @@index([userId, date])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, callId, date])
+  @@index([userId])
   @@index([callId])
+  @@index([date])
 }
 
 model CallSession {
@@ -336,4 +346,54 @@ model SavedConfession {
   
   @@unique([userId, confessionId])
   @@index([userId])
+}
+
+enum ReportType {
+  INAPPROPRIATE_BEHAVIOR
+  HARASSMENT
+  SPAM
+  INAPPROPRIATE_CONTENT
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  DISMISSED
+}
+
+model Report {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  reporterId  String
+  reportedId  String
+  callId      String
+  reason      String
+  reportType  ReportType
+  status      ReportStatus @default(PENDING)
+  adminNotes  String?
+  resolvedBy  String?
+  resolvedAt  DateTime?
+  
+  reporter    User @relation("UserReports", fields: [reporterId], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([reporterId])
+  @@index([reportedId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model UserReport {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String
+  isBlocked   Boolean      @default(false)
+  blockedAt   DateTime?
+  blockedBy   String?
+  blockReason String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

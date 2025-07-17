@@ -4,8 +4,9 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { User } from "lucide-react";
+import { User, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface LayoutProps {
   children: ReactNode;
@@ -13,6 +14,7 @@ interface LayoutProps {
 
 export default function NextLayout({ children }: LayoutProps) {
   const pathname = usePathname();
+  const { user } = useCurrentUser();
 
   const isActive = (path: string) => {
     return pathname === path;
@@ -94,6 +96,17 @@ export default function NextLayout({ children }: LayoutProps) {
                 >
                   About
                 </Link>
+                {user?.isAdmin && (
+                  <Link href="/admin/reports"
+                  className={cn(
+                    "text-lg font-medium transition-colors hover:text-orange-600",
+                    isActive("/admin/reports") ? "text-orange-600" : "text-orange-300",
+                  )}
+                  style={{ fontFamily: "Alata, sans-serif" }}
+                  >
+                    Admin
+                  </Link>
+                )}
               </nav>
 
               {/* User Icon */}

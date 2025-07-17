@@ -151,31 +151,35 @@ const CallSetup = ({
         className="rounded-md bg-blue-300 hover:bg-blue-400 px-12 py-7 text-xl"
         onClick={async () => {
           await call.join();
-          // Ensure the current user becomes a call member so their avatar is queryable
-          try {
-            if (authUser) {
-              await call.updateCallMembers({
-                update_members: [
-                  {
-                    user_id: authUser.id,
-                  },
-                ],
-              } as any);
+          // Only the call creator can update call properties
+          const isCallCreator = call.state.createdBy?.id === authUser?.id;
+          if (isCallCreator) {
+            // Ensure the current user becomes a call member so their avatar is queryable
+            try {
+              if (authUser) {
+                await call.updateCallMembers({
+                  update_members: [
+                    {
+                      user_id: authUser.id,
+                    },
+                  ],
+                } as any);
+              }
+            } catch (err) {
+              console.error("Failed to add user as call member", err);
             }
-          } catch (err) {
-            console.error("Failed to add user as call member", err);
-          }
-          try {
-            await call.update({
-              custom: {
-                ...call.state.custom,
-                hostJoined: true,
-                availability: roomSettings?.availability || call.state.custom?.availability,
-                roomName: roomSettings?.roomName || call.state.custom?.roomName,
-              },
-            });
-          } catch (e) {
-            console.error('Failed to update call', e);
+            try {
+              await call.update({
+                custom: {
+                  ...call.state.custom,
+                  hostJoined: true,
+                  availability: roomSettings?.availability || call.state.custom?.availability,
+                  roomName: roomSettings?.roomName || call.state.custom?.roomName,
+                },
+              });
+            } catch (e) {
+              console.error('Failed to update call', e);
+            }
           }
           setIsSetupComplete(true);
         }}

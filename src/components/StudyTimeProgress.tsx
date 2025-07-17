@@ -28,11 +28,11 @@ export function StudyTimeProgress({
 
   return (
     <div className={`backdrop-blur-sm rounded-xl p-4 shadow-md pointer-events-auto rounded-[8px] ${className}`}>
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-col items-center justify-between mb-3">
         <h3 className="text-lg font-semibold text-[#19232d]">Daily Progress</h3>
         {isTracking && (
           <div className="flex items-center gap-2 text-green-600">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
             <span className="text-sm font-medium">Tracking</span>
           </div>
         )}

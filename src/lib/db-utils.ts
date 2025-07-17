@@ -265,6 +265,7 @@ export async function getUserInfo(userId: string) {
       university: user.university,
       universityVerifiedAt: user.universityVerifiedAt,
       universityChangeCount: user.universityChangeCount,
+      isAdmin: user.isAdmin,
       createdAt: user.createdAt,
       subscription: user.Subscription,
     };
@@ -649,18 +650,22 @@ export async function startStudySession(userId: string, callId: string) {
   try {
     console.log(`startStudySession called with userId: ${userId} callId: ${callId}`);
     
-    // Check if user already has an active session for this call
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Check if user already has a session for this call and date
     const existingSession = await prisma.studySession.findFirst({
-      where: { userId, callId, leftAt: null },
+      where: { 
+        userId, 
+        callId, 
+        date: today 
+      },
     });
     
     if (existingSession) {
       console.log('Found existing session:', existingSession.id);
       return existingSession;
     }
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     
     console.log('Creating new study session...');
     const newSession = await prisma.studySession.create({
@@ -684,6 +689,26 @@ export async function startStudySession(userId: string, callId: string) {
     
     return newSession;
   } catch (error) {
+    // If it's a unique constraint violation, try to find the existing session
+    if ((error as any).code === 'P2002') {
+      console.log('Duplicate session detected, finding existing session...');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const existingSession = await prisma.studySession.findFirst({
+        where: { 
+          userId, 
+          callId, 
+          date: today 
+        },
+      });
+      
+      if (existingSession) {
+        console.log('Found existing session after duplicate error:', existingSession.id);
+        return existingSession;
+      }
+    }
+    
     console.error('Error starting study session:', error);
     throw error;
   }
@@ -726,6 +751,14 @@ export async function updateStudySessionWithStreamDurationByCallId(callId: strin
     
     if (!session) {
       console.warn('No session found for call:', callId);
+      
+      // Let's check what sessions exist for this callId
+      const allSessions = await prisma.studySession.findMany({
+        where: { callId },
+        orderBy: { joinedAt: 'desc' },
+      });
+      console.log(`Found ${allSessions.length} sessions for callId ${callId}:`, allSessions.map(s => ({ id: s.id, userId: s.userId, joinedAt: s.joinedAt, leftAt: s.leftAt, duration: s.duration })));
+      
       return null;
     }
     
@@ -751,10 +784,13 @@ export async function updateStudySessionWithStreamDurationByCallId(callId: strin
     
     console.log(`Session duration: ${duration} minutes (Stream.io: ${streamDurationSeconds}s, Manual: ${Math.floor((leftAt.getTime() - session.joinedAt.getTime()) / (1000 * 60))}m)`);
     
-    return await prisma.studySession.update({
+    const updatedSession = await prisma.studySession.update({
       where: { id: session.id },
       data: { leftAt, duration },
     });
+    
+    console.log('Session updated successfully:', { id: updatedSession.id, duration: updatedSession.duration, leftAt: updatedSession.leftAt });
+    return updatedSession;
   } catch (error) {
     console.error('Error updating study session with Stream duration by callId:', error);
     throw error;
@@ -763,17 +799,48 @@ export async function updateStudySessionWithStreamDurationByCallId(callId: strin
 
 export async function updateStudySessionWithStreamDuration(userId: string, callId: string, streamDurationSeconds: number) {
   try {
-    const session = await prisma.studySession.findFirst({
-      where: { userId, callId, leftAt: null },
+    console.log(`Looking for active session with userId: ${userId}, callId: ${callId}`);
+    
+    // First try to find any session that hasn't been updated with duration yet
+    let session = await prisma.studySession.findFirst({
+      where: { 
+        userId, 
+        callId, 
+        duration: null  // Look for sessions without duration first
+      },
       orderBy: { joinedAt: 'desc' },
     });
     
+    // If no session without duration found, try to find any session for this user and call
     if (!session) {
-      console.warn('No active session found for user:', userId, 'call:', callId);
+      session = await prisma.studySession.findFirst({
+        where: { userId, callId },
+        orderBy: { joinedAt: 'desc' },
+      });
+    }
+    
+    if (!session) {
+      console.warn('No session found for user:', userId, 'call:', callId);
+      
+      // Let's check what sessions exist for this user and callId
+      const allSessions = await prisma.studySession.findMany({
+        where: { userId, callId },
+        orderBy: { joinedAt: 'desc' },
+      });
+      console.log(`Found ${allSessions.length} sessions for userId ${userId} and callId ${callId}:`, allSessions.map(s => ({ id: s.id, joinedAt: s.joinedAt, leftAt: s.leftAt, duration: s.duration })));
+      
       return null;
     }
     
-    const leftAt = new Date();
+    console.log(`Found session: ${session.id}, joinedAt: ${session.joinedAt}, leftAt: ${session.leftAt}, duration: ${session.duration}`);
+    
+    // If session already has duration, don't overwrite it
+    if (session.duration !== null) {
+      console.log('Session already has duration, skipping update');
+      return session;
+    }
+    
+    const leftAt = session.leftAt || new Date();
     
     // If Stream.io duration is 0, use manual calculation
     let duration: number;
@@ -787,10 +854,13 @@ export async function updateStudySessionWithStreamDuration(userId: string, callI
     
     console.log(`Session duration: ${duration} minutes (Stream.io: ${streamDurationSeconds}s, Manual: ${Math.floor((leftAt.getTime() - session.joinedAt.getTime()) / (1000 * 60))}m)`);
     
-    return await prisma.studySession.update({
+    const updatedSession = await prisma.studySession.update({
       where: { id: session.id },
       data: { leftAt, duration },
     });
+    
+    console.log('Session updated successfully:', { id: updatedSession.id, duration: updatedSession.duration, leftAt: updatedSession.leftAt });
+    return updatedSession;
   } catch (error) {
     console.error('Error updating study session with Stream duration:', error);
     throw error;

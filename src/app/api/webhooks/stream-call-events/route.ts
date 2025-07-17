@@ -36,6 +36,10 @@ export async function POST(req: NextRequest) {
       case 'call.ended':
         await handleCallEnded(event, client);
         break;
+      case 'call.member_added':
+        // Ignore this event type to prevent duplicate study sessions
+        console.log('Ignoring call.member_added event to prevent duplicates');
+        break;
       case 'user.updated':
         // Handle user updates (these are normal, not errors)
         console.log('User updated event received:', event.user?.id);
@@ -159,11 +163,22 @@ async function handleParticipantLeft(event: any, client: StreamClient) {
     });
     
     if (participantRecord && participantRecord.joinedAt) {
-      const duration = Math.floor(
-        (new Date().getTime() - participantRecord.joinedAt.getTime()) / (1000 * 60)
-      );
+      // Use duration from webhook payload if available, otherwise calculate manually
+      let durationSeconds = 0;
       
-      await updateStudySessionWithStreamDuration(userId, callId, duration * 60); // Convert to seconds
+      // Check if the event has duration_seconds (from Stream.io webhook)
+      if (event.duration_seconds) {
+        durationSeconds = event.duration_seconds;
+        console.log('Using duration from webhook payload:', durationSeconds, 'seconds');
+      } else {
+        // Fallback to manual calculation
+        durationSeconds = Math.floor(
+          (new Date().getTime() - participantRecord.joinedAt.getTime()) / 1000
+        );
+        console.log('Using manual duration calculation:', durationSeconds, 'seconds');
+      }
+      
+      await updateStudySessionWithStreamDuration(userId, callId, durationSeconds);
     }
 
     // Check if this was the host leaving (for study group rooms)
@@ -332,14 +347,14 @@ async function handleSessionEnded(event: any, client: StreamClient) {
     console.log('Ending', activeSessions.length, 'active study sessions for call:', callId);
 
     for (const session of activeSessions) {
-      const duration = Math.floor(
-        (new Date().getTime() - session.joinedAt.getTime()) / (1000 * 60)
+      const durationSeconds = Math.floor(
+        (new Date().getTime() - session.joinedAt.getTime()) / 1000
       );
       
       await updateStudySessionWithStreamDuration(
         session.userId,
         callId,
-        duration * 60 // Convert to seconds
+        durationSeconds // Pass seconds directly
       );
     }
   } catch (error) {
@@ -407,14 +422,14 @@ async function handleCallEnded(event: any, client: StreamClient) {
     console.log('Ending', activeSessions.length, 'active study sessions for call:', callId);
 
     for (const session of activeSessions) {
-      const duration = Math.floor(
-        (new Date().getTime() - session.joinedAt.getTime()) / (1000 * 60)
+      const durationSeconds = Math.floor(
+        (new Date().getTime() - session.joinedAt.getTime()) / 1000
       );
       
       await updateStudySessionWithStreamDuration(
         session.userId,
         callId,
-        duration * 60 // Convert to seconds
+        durationSeconds // Pass seconds directly
       );
     }
   } catch (error) {

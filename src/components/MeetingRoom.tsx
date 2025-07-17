@@ -10,7 +10,7 @@ import {
   useCall,
 } from '@stream-io/video-react-sdk';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Users, LayoutList, CheckCircle, Circle, SquarePlus, Handshake, MessageSquareText, Hourglass } from 'lucide-react';
+import { Users, LayoutList, CheckCircle, Circle, SquarePlus, Handshake, MessageSquareText, Hourglass, Flag } from 'lucide-react';
 
 import {
   DropdownMenu,
@@ -25,6 +25,7 @@ import { useRoomSettingByCallId } from '@/hooks/useRoomSettings';
 import StudyCallControls from './StudyCallControls';
 import { useStreamStudyTimeTracker } from '@/hooks/useStreamStudyTimeTracker';
 import { StudyTimeProgress } from './StudyTimeProgress';
+import { useToast } from '@/hooks/use-toast';
 
 type CallLayoutType = 'grid' | 'speaker-left' | 'speaker-right';
 
@@ -68,10 +69,16 @@ const MeetingRoom = () => {
   const router = useRouter();
   const call = useCall();
   const { startTracking, endTracking, isTracking, dailyHours } = useStreamStudyTimeTracker(call?.id);
+  const { toast } = useToast();
   const [layout, setLayout] = useState<CallLayoutType>('speaker-left');
   const [showParticipants, setShowParticipants] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [selectedReportedId, setSelectedReportedId] = useState('');
+  const [otherReportedName, setOtherReportedName] = useState('');
   const { useCallCallingState } = useCallStateHooks();
   const roomSettings = useRoomSettingByCallId(call?.id);
+  const [reportType, setReportType] = useState('INAPPROPRIATE_BEHAVIOR');
 
   // for more detail about types of CallingState see: https://getstream.io/video/docs/react/ui-cookbook/ringing-call/#incoming-call-panel
   const callingState = useCallCallingState();
@@ -121,8 +128,6 @@ const MeetingRoom = () => {
       unsub?.();
     };
   }, [call, hostId]);
-  
-  if (callingState !== CallingState.JOINED) return <Loader />;
 
   const CallLayout = () => {
     switch (layout) {
@@ -135,7 +140,19 @@ const MeetingRoom = () => {
     }
   };
 
+  const reportTypes = [
+    { value: 'INAPPROPRIATE_BEHAVIOR', label: 'Inappropriate Behavior' },
+    { value: 'HARASSMENT', label: 'Harassment' },
+    { value: 'SPAM', label: 'Spam' },
+    { value: 'INAPPROPRIATE_CONTENT', label: 'Inappropriate Content' },
+    { value: 'OTHER', label: 'Other' },
+  ];
+
   return (
+    <>
+      {callingState !== CallingState.JOINED ? (
+        <Loader />
+      ) : (
     <section className="relative h-screen w-full overflow-hidden pt-4 text-white">
       {/* Overlay: Group name title and MeetingGoalsBar */}
       <div className="absolute top-0 left-0 w-full flex flex-col items-center z-20 p-6 pointer-events-none">
@@ -148,7 +165,7 @@ const MeetingRoom = () => {
       </div>
       
       {/* Vertical Study Progress Widget - Right Side */}
-      <div className="absolute right-0 top-1/2 -translate-y-1/2 z-30 pointer-events-none">
+      <div className="absolute left-[-15px] top-1/2 -translate-y-1/2 z-30 pointer-events-none">
         <StudyTimeProgress 
           dailyHours={dailyHours} 
           isTracking={isTracking}
@@ -205,10 +222,132 @@ const MeetingRoom = () => {
             <Users size={20} className="text-white" />
           </div>
         </button>
+        {/* Report Button */}
+        <button onClick={() => setShowReportDialog(true)}>
+          <div className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-red-600 ml-2">
+            <Flag size={20} className="text-white" />
+          </div>
+        </button>
        
         {isHost && <EndCallButton />}
       </div>
+      {/* Report Dialog */}
+      {showReportDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
+            <h2 className="text-xl font-semibold mb-4 text-[#19232d]">Report Participant</h2>
+            <div className="mb-4">
+              <label className="block mb-2 text-[#19232d] font-medium">Who are you reporting?</label>
+              <select
+                className="w-full border border-gray-300 rounded p-2 text-black"
+                value={selectedReportedId}
+                onChange={e => setSelectedReportedId(e.target.value)}
+              >
+                <option value="">Select a participant</option>
+                {call?.state.participants?.map((p: any) => (
+                  <option key={p.userId} value={p.userId}>
+                    {p.name || p.user?.name || p.userId}
+                  </option>
+                ))}
+                <option value="other">Other (not in list)</option>
+              </select>
+              {selectedReportedId === 'other' && (
+                <input
+                  className="w-full border border-gray-300 rounded p-2 mt-2 text-black"
+                  placeholder="Enter name or details"
+                  value={otherReportedName}
+                  onChange={e => setOtherReportedName(e.target.value)}
+                />
+              )}
+            </div>
+            <div className="mb-4">
+              <label className="block mb-2 text-[#19232d] font-medium">Type of Report</label>
+              <select
+                className="w-full border border-gray-300 rounded p-2 text-black"
+                value={reportType}
+                onChange={e => setReportType(e.target.value)}
+              >
+                {reportTypes.map(rt => (
+                  <option key={rt.value} value={rt.value}>{rt.label}</option>
+                ))}
+              </select>
+            </div>
+            <textarea
+              className="w-full border border-gray-300 rounded p-2 mb-4 text-black"
+              rows={4}
+              placeholder="Describe the issue..."
+              value={reportReason}
+              onChange={e => setReportReason(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-black"
+                onClick={() => {
+                  setShowReportDialog(false);
+                  setReportReason('');
+                  setSelectedReportedId('');
+                  setOtherReportedName('');
+                  setReportType('INAPPROPRIATE_BEHAVIOR');
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                onClick={async () => {
+                  const reporterId = call?.state.localParticipant?.userId;
+                  const reportedId = selectedReportedId === 'other' ? otherReportedName : selectedReportedId;
+                  const callId = call?.id;
+                  if (!reporterId || !reportedId || !callId || !reportReason.trim()) {
+                    toast({
+                      title: "Error",
+                      description: "Please fill all fields.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  try {
+                    const res = await fetch('/api/report', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ reporterId, reportedId, callId, reason: reportReason, reportType }),
+                    });
+                    if (res.ok) {
+                      toast({
+                        title: "Success",
+                        description: "Report submitted successfully!",
+                      });
+                    } else {
+                      toast({
+                        title: "Error",
+                        description: "Failed to submit report.",
+                        variant: "destructive",
+                      });
+                    }
+                  } catch (err) {
+                    toast({
+                      title: "Error",
+                      description: "Failed to submit report.",
+                      variant: "destructive",
+                    });
+                  }
+                  setShowReportDialog(false);
+                  setReportReason('');
+                  setSelectedReportedId('');
+                  setOtherReportedName('');
+                  setReportType('INAPPROPRIATE_BEHAVIOR');
+                }}
+                disabled={(!selectedReportedId || (selectedReportedId === 'other' && !otherReportedName.trim()) || !reportReason.trim())}
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
+      )}
+    </>
   );
 };
 
