@@ -132,22 +132,64 @@ async function handleMemberAdded(event: any, client: StreamClient) {
     console.log('Member added:', userId, 'in call:', callId);
     
     // Check if user is globally blocked
+    console.log('Checking if user is globally blocked:', userId);
     const user = await prisma.user.findUnique({
       where: { id: userId }
     });
+    
+    console.log('User found:', user ? { id: user.id, name: user.name, isBlocked: user.isBlocked } : 'NOT FOUND');
     
     if (user?.isBlocked) {
       console.log('Blocked user attempted to join call:', userId);
       // Remove user from call using Stream.io
       try {
-        await client.video.updateCallMembers({
+        console.log('Attempting to remove blocked user using Stream.io API (member added)...');
+        console.log('Call details:', { callId, type: event.call?.type || 'default', userId });
+        
+        const removeResult = await client.video.updateCallMembers({
           id: callId,
           type: event.call?.type || 'default',
           remove_members: [userId],
         });
-        console.log('Removed blocked user from call:', userId);
+        
+        console.log('Stream.io API response for removing blocked user (member added):', removeResult);
+        
+        // Verify the user was actually removed by querying call members
+        const membersAfterRemoval = await client.video.queryCallMembers({
+          id: callId,
+          type: event.call?.type || 'default'
+        });
+        
+        const userStillInCall = (membersAfterRemoval.members || []).some((m: any) => 
+          (m.user_id || m.user?.id) === userId
+        );
+        
+        console.log('User still in call after removal attempt:', userStillInCall);
+        
+        // If user is still in call, try alternative removal method
+        if (userStillInCall) {
+          console.log('User still in call, trying alternative removal method...');
+          try {
+            // Try using a different approach - end the call for this specific user
+            await client.video.endCall({
+              id: callId,
+              type: event.call?.type || 'default'
+            });
+            console.log('Ended call as alternative removal method');
+          } catch (endCallError) {
+            console.error('Failed to end call as alternative removal:', endCallError);
+          }
+        } else {
+          console.log('Successfully removed blocked user from call (member added):', userId);
+        }
       } catch (removeError) {
-        console.error('Failed to remove blocked user from call:', removeError);
+        console.error('Failed to remove blocked user from call (member added):', removeError);
+        console.error('Error details:', {
+          message: (removeError as any).message,
+          code: (removeError as any).code,
+          status: (removeError as any).status,
+          response: (removeError as any).response
+        });
       }
       return;
     }
@@ -205,26 +247,65 @@ async function handleParticipantJoined(event: any, client: StreamClient) {
     
     console.log('Participant joined:', userId, 'in call:', callId);
     
-    // TODO: Implement user blocking and room banning after fixing Prisma client
     // Check if user is globally blocked
-  
+    console.log('Checking if user is globally blocked (participant joined):', userId);
     const user = await prisma.user.findUnique({
       where: { id: userId }
     });
+    
+    console.log('User found (participant joined):', user ? { id: user.id, name: user.name, isBlocked: user.isBlocked } : 'NOT FOUND');
     
     if (user?.isBlocked) {
       console.log('Blocked user attempted to join call:', userId);
       // Remove user from call using Stream.io
       try {
-        // Use the correct Stream.io API to remove user from call
-        await client.video.updateCallMembers({
+        console.log('Attempting to remove blocked user using Stream.io API...');
+        console.log('Call details:', { callId, type: event.call?.type || 'default', userId });
+        
+        const removeResult = await client.video.updateCallMembers({
           id: callId,
           type: event.call?.type || 'default',
           remove_members: [userId],
         });
-        console.log('Removed blocked user from call:', userId);
+        
+        console.log('Stream.io API response for removing blocked user:', removeResult);
+        
+        // Verify the user was actually removed by querying call members
+        const membersAfterRemoval = await client.video.queryCallMembers({
+          id: callId,
+          type: event.call?.type || 'default'
+        });
+        
+        const userStillInCall = (membersAfterRemoval.members || []).some((m: any) => 
+          (m.user_id || m.user?.id) === userId
+        );
+        
+        console.log('User still in call after removal attempt:', userStillInCall);
+        
+        // If user is still in call, try alternative removal method
+        if (userStillInCall) {
+          console.log('User still in call, trying alternative removal method...');
+          try {
+            // Try using a different approach - end the call for this specific user
+            await client.video.endCall({
+              id: callId,
+              type: event.call?.type || 'default'
+            });
+            console.log('Ended call as alternative removal method');
+          } catch (endCallError) {
+            console.error('Failed to end call as alternative removal:', endCallError);
+          }
+        } else {
+          console.log('Successfully removed blocked user from call:', userId);
+        }
       } catch (removeError) {
         console.error('Failed to remove blocked user from call:', removeError);
+        console.error('Error details:', {
+          message: (removeError as any).message,
+          code: (removeError as any).code,
+          status: (removeError as any).status,
+          response: (removeError as any).response
+        });
       }
       return;
     }

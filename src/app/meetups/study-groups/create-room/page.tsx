@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import NextLayout from "@/components/NextLayout";
 import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs';
 import { useStreamVideoClient } from '@stream-io/video-react-sdk';
@@ -26,6 +26,32 @@ export default function CreateRoom() {
     camera: "on",
     availability: "public",
   });
+
+  // Check if user is blocked
+  useEffect(() => {
+    if (user?.id) {
+      const checkBlockStatus = async () => {
+        try {
+          const res = await fetch(`/api/user/check-block?userId=${user.id}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.isBlocked) {
+              toast({
+                title: 'Account Blocked',
+                description: 'Your account has been blocked by an administrator. You cannot create study groups.',
+                variant: 'destructive',
+              });
+              router.push('/meetups/study-groups');
+            }
+          }
+        } catch (error) {
+          console.error('Error checking block status:', error);
+        }
+      };
+      
+      checkBlockStatus();
+    }
+  }, [user?.id, router, toast]);
 
   const setValue = (key: string, value: any) => {
     setRoomSettings((prev) => ({ ...prev, [key]: value }));

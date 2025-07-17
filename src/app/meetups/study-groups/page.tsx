@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import NextLayout from '@/components/NextLayout';
@@ -7,6 +7,8 @@ import GroupCard from '@/components/group';
 import MeetingModal from '@/components/MeetingModal';
 import { useStudyGroups } from '@/hooks/useStudyGroups';
 import { useStreamStudyTimeTracker } from '@/hooks/useStreamStudyTimeTracker';
+import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs';
+import { useToast } from '@/hooks/use-toast';
 
 const pastelColors = [
   'bg-thanodi-lightPeach',
@@ -32,9 +34,37 @@ const StudyGroups = () => {
   const router = useRouter();
   const [meetingState, setMeetingState] = useState< 'isJoiningMeeting' | undefined >(undefined);
   const [values, setValues] = useState(initialValues);
+  const { user } = useKindeBrowserClient();
+  const { toast } = useToast();
   
   const groups = useStudyGroups();
   const filteredGroups = groups.filter(g => g.roomName.toLowerCase().includes(search.toLowerCase()));
+
+  // Check if user is blocked
+  useEffect(() => {
+    if (user?.id) {
+      const checkBlockStatus = async () => {
+        try {
+          const res = await fetch(`/api/user/check-block?userId=${user.id}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.isBlocked) {
+              toast({
+                title: 'Account Blocked',
+                description: 'Your account has been blocked by an administrator. You cannot join or create study groups.',
+                variant: 'destructive',
+              });
+              router.push('/');
+            }
+          }
+        } catch (error) {
+          console.error('Error checking block status:', error);
+        }
+      };
+      
+      checkBlockStatus();
+    }
+  }, [user?.id, router, toast]);
 
   return (
     <NextLayout>

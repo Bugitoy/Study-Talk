@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { StreamClient } from '@stream-io/node-sdk';
 import prisma from '@/db/prisma';
-
-const apiKey = process.env.NEXT_PUBLIC_STREAM_API_KEY;
-const apiSecret = process.env.STREAM_SECRET_KEY;
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,10 +9,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const client = new StreamClient(apiKey!, apiSecret!);
-
-    // Unblock user in Stream.io
-    await client.video.unblockUser(userId);
+    // Note: Stream.io doesn't have a direct unblockUser method in the video namespace
+    // We'll rely on our database unblocking and webhook enforcement
+    console.log('Unblocking user in database:', userId);
 
     // Update user in database
     await prisma.user.update({

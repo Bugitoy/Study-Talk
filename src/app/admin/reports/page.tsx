@@ -28,6 +28,12 @@ interface Report {
     name: string;
     email: string;
   };
+  reportedUser?: {
+    id: string;
+    name: string;
+    email: string;
+    isBlocked: boolean;
+  };
 }
 
 interface Pagination {
@@ -252,32 +258,13 @@ export default function AdminReportsPage() {
                     </div>
                   )}
                   <div className="flex gap-2 pt-2">
+                    {/* Status management buttons */}
                     {report.status === 'PENDING' && (
-                      <>
-                        <Button
-                          size="sm"
-                          onClick={() => updateReportStatus(report.id, 'REVIEWED')}
-                        >
-                          Mark Reviewed
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => blockUser(report.id)}
-                        >
-                          <Shield className="w-4 h-4 mr-1" />
-                          Block User
-                        </Button>
-                      </>
-                    )}
-                    {report.status === 'RESOLVED' && (
                       <Button
                         size="sm"
-                        variant="outline"
-                        onClick={() => unblockUser(report.reportedId)}
+                        onClick={() => updateReportStatus(report.id, 'REVIEWED')}
                       >
-                        <Shield className="w-4 h-4 mr-1" />
-                        Unblock User
+                        Mark Reviewed
                       </Button>
                     )}
                     {report.status === 'REVIEWED' && (
@@ -297,6 +284,29 @@ export default function AdminReportsPage() {
                           Dismiss
                         </Button>
                       </>
+                    )}
+                    
+                    {/* Block/Unblock button - shows based on actual user status */}
+                    {report.reportedUser && (
+                      report.reportedUser.isBlocked ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => unblockUser(report.reportedId)}
+                        >
+                          <Shield className="w-4 h-4 mr-1" />
+                          Unblock User
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => blockUser(report.id)}
+                        >
+                          <Shield className="w-4 h-4 mr-1" />
+                          Block User
+                        </Button>
+                      )
                     )}
                   </div>
                 </div>

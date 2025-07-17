@@ -52,8 +52,28 @@ export async function GET(req: NextRequest) {
       prisma.report.count({ where }),
     ]);
 
+    // Get reported user information including block status
+    const reportsWithUsers = await Promise.all(
+      reports.map(async (report) => {
+        const reportedUser = await prisma.user.findUnique({
+          where: { id: report.reportedId },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            isBlocked: true,
+          },
+        });
+        
+        return {
+          ...report,
+          reportedUser,
+        };
+      })
+    );
+
     return NextResponse.json({
-      reports,
+      reports: reportsWithUsers,
       pagination: {
         page,
         limit,

@@ -120,7 +120,28 @@ const MeetingRoom = () => {
         }
       };
       
+      // Check if current user is globally blocked
+      const checkBlockStatus = async () => {
+        try {
+          const res = await fetch(`/api/user/check-block?userId=${currentUserId}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.isBlocked) {
+              toast({
+                title: 'Access Denied',
+                description: 'Your account has been blocked by an administrator.',
+                variant: 'destructive',
+              });
+              router.push('/meetups/study-groups');
+            }
+          }
+        } catch (error) {
+          console.error('Error checking block status:', error);
+        }
+      };
+      
       checkBanStatus();
+      checkBlockStatus();
     }
   }, [callingState, call?.id, currentUserId, router, toast]);
 
