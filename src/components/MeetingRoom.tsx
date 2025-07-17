@@ -10,7 +10,7 @@ import {
   useCall,
 } from '@stream-io/video-react-sdk';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Users, LayoutList, CheckCircle, Circle, SquarePlus, Handshake, MessageSquareText, Hourglass, Flag } from 'lucide-react';
+import { Users, LayoutList, CheckCircle, Circle, SquarePlus, Handshake, MessageSquareText, Hourglass, Flag, Shield } from 'lucide-react';
 
 import {
   DropdownMenu,
@@ -79,6 +79,9 @@ const MeetingRoom = () => {
   const { useCallCallingState } = useCallStateHooks();
   const roomSettings = useRoomSettingByCallId(call?.id);
   const [reportType, setReportType] = useState('INAPPROPRIATE_BEHAVIOR');
+  const [showBanDialog, setShowBanDialog] = useState(false);
+  const [selectedBanUserId, setSelectedBanUserId] = useState('');
+  const [banReason, setBanReason] = useState('');
 
   // for more detail about types of CallingState see: https://getstream.io/video/docs/react/ui-cookbook/ringing-call/#incoming-call-panel
   const callingState = useCallCallingState();
@@ -96,8 +99,30 @@ const MeetingRoom = () => {
   useEffect(() => {
     if (callingState === CallingState.JOINED && call?.id) {
       startTracking();
+      
+      // Check if current user is banned from this room
+      const checkBanStatus = async () => {
+        try {
+          const res = await fetch(`/api/room/ban/check?userId=${currentUserId}&callId=${call.id}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.isBanned) {
+              toast({
+                title: 'Access Denied',
+                description: 'You have been banned from this room.',
+                variant: 'destructive',
+              });
+              router.push('/meetups/study-groups');
+            }
+          }
+        } catch (error) {
+          console.error('Error checking ban status:', error);
+        }
+      };
+      
+      checkBanStatus();
     }
-  }, [callingState, call?.id]);
+  }, [callingState, call?.id, currentUserId, router, toast]);
 
   // End tracking when component unmounts or call ends
   useEffect(() => {
@@ -128,6 +153,54 @@ const MeetingRoom = () => {
       unsub?.();
     };
   }, [call, hostId]);
+
+  useEffect(() => {
+    if (!call) return;
+
+    // Handler for when the user is removed from the call
+    const handleCallEnded = (event: any) => {
+      console.log('Call ended event:', event);
+      toast({
+        title: 'Removed from call',
+        description: 'You have been removed from this room by the host.',
+        variant: 'destructive',
+      });
+      router.push('/meetups/study-groups');
+    };
+
+    // Handler for when the user is removed/kicked
+    const handleRemoved = (event: any) => {
+      console.log('User removed event:', event);
+      toast({
+        title: 'Removed from call',
+        description: 'You have been removed from this room by the host.',
+        variant: 'destructive',
+      });
+      router.push('/meetups/study-groups');
+    };
+
+    // Handler for when the call state changes
+    const handleCallStateChanged = (event: any) => {
+      console.log('Call state changed:', event);
+      if (event.state === 'ended' || event.state === 'disconnected') {
+        toast({
+          title: 'Removed from call',
+          description: 'You have been removed from this room by the host.',
+          variant: 'destructive',
+        });
+        router.push('/meetups/study-groups');
+      }
+    };
+
+    // Listen for multiple events
+    call.on('callEnded', handleCallEnded);
+    // Note: 'removed' and 'callStateChanged' might not be valid event types
+    // We'll stick with the main events that are supported
+
+    return () => {
+      call.off('callEnded', handleCallEnded);
+    };
+  }, [call, router, toast]);
 
   const CallLayout = () => {
     switch (layout) {
@@ -228,6 +301,15 @@ const MeetingRoom = () => {
             <Flag size={20} className="text-white" />
           </div>
         </button>
+        
+        {/* Ban User Button (only for host) */}
+        {isHost && (
+          <button onClick={() => setShowBanDialog(true)}>
+            <div className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-red-600 ml-2">
+              <Shield size={20} className="text-white" />
+            </div>
+          </button>
+        )}
        
         {isHost && <EndCallButton />}
       </div>
@@ -340,6 +422,101 @@ const MeetingRoom = () => {
                 disabled={(!selectedReportedId || (selectedReportedId === 'other' && !otherReportedName.trim()) || !reportReason.trim())}
               >
                 Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ban User Dialog */}
+      {showBanDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
+            <h2 className="text-xl font-semibold mb-4 text-[#19232d]">Ban User from Room</h2>
+            <div className="mb-4">
+              <label className="block mb-2 text-[#19232d] font-medium">Who are you banning?</label>
+              <select
+                className="w-full border border-gray-300 rounded p-2 text-black"
+                value={selectedBanUserId}
+                onChange={e => setSelectedBanUserId(e.target.value)}
+              >
+                <option value="">Select a participant</option>
+                {call?.state.participants?.map((p: any) => (
+                  <option key={p.userId} value={p.userId}>
+                    {p.name || p.user?.name || p.userId}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="mb-4">
+              <label className="block mb-2 text-[#19232d] font-medium">Reason (optional)</label>
+              <textarea
+                className="w-full border border-gray-300 rounded p-2 text-black"
+                rows={3}
+                placeholder="Why are you banning this user?"
+                value={banReason}
+                onChange={e => setBanReason(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-black"
+                onClick={() => {
+                  setShowBanDialog(false);
+                  setSelectedBanUserId('');
+                  setBanReason('');
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                onClick={async () => {
+                  if (!selectedBanUserId || !call?.id) {
+                    toast({
+                      title: "Error",
+                      description: "Please select a user to ban.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  try {
+                    const res = await fetch('/api/room/ban', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ 
+                        userId: selectedBanUserId, 
+                        callId: call.id,
+                        hostId: currentUserId,
+                        reason: banReason.trim() || 'Banned by host'
+                      }),
+                    });
+                    if (res.ok) {
+                      toast({
+                        title: "Success",
+                        description: "User banned from room successfully!",
+                      });
+                    } else {
+                      toast({
+                        title: "Error",
+                        description: "Failed to ban user from room.",
+                        variant: "destructive",
+                      });
+                    }
+                  } catch (err) {
+                    toast({
+                      title: "Error",
+                      description: "Failed to ban user from room.",
+                      variant: "destructive",
+                    });
+                  }
+                  setShowBanDialog(false);
+                  setSelectedBanUserId('');
+                  setBanReason('');
+                }}
+                disabled={!selectedBanUserId}
+              >
+                Ban User
               </button>
             </div>
           </div>

@@ -17,11 +17,20 @@ export async function POST(
       return NextResponse.json({ error: 'Report not found' }, { status: 404 });
     }
 
-    // Update the reported user to be blocked
-    await prisma.user.update({
-      where: { id: report.reportedId },
-      data: { isBlocked: true },
+    // Use the global block API
+    const blockRes = await fetch(`${req.nextUrl.origin}/api/user/block`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: report.reportedId,
+        reason: `Blocked due to report: ${report.reason}`,
+        blockedBy: 'admin'
+      }),
     });
+
+    if (!blockRes.ok) {
+      return NextResponse.json({ error: 'Failed to block user globally' }, { status: 500 });
+    }
 
     // Update the report status to resolved
     await prisma.report.update({
@@ -29,7 +38,7 @@ export async function POST(
       data: {
         status: 'RESOLVED',
         resolvedAt: new Date(),
-        adminNotes: 'User blocked due to this report',
+        adminNotes: 'User blocked globally due to this report',
       },
     });
 

@@ -113,6 +113,25 @@ export default function AdminReportsPage() {
     }
   };
 
+  const unblockUser = async (userId: string) => {
+    try {
+      const res = await fetch('/api/user/unblock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userId, 
+          unblockedBy: user?.id || 'admin' 
+        }),
+      });
+      
+      if (res.ok) {
+        fetchReports(currentPage, statusFilter);
+      }
+    } catch (error) {
+      console.error('Error unblocking user:', error);
+    }
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'PENDING': return <Clock className="w-4 h-4 text-yellow-500" />;
@@ -250,6 +269,16 @@ export default function AdminReportsPage() {
                           Block User
                         </Button>
                       </>
+                    )}
+                    {report.status === 'RESOLVED' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => unblockUser(report.reportedId)}
+                      >
+                        <Shield className="w-4 h-4 mr-1" />
+                        Unblock User
+                      </Button>
                     )}
                     {report.status === 'REVIEWED' && (
                       <>

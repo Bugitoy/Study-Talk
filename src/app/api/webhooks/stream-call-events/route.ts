@@ -9,7 +9,10 @@ const apiSecret = process.env.STREAM_SECRET_KEY;
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    console.log('Stream webhook received:', body);
+    console.log('=== WEBHOOK RECEIVED ===');
+    console.log('Headers:', Object.fromEntries(req.headers.entries()));
+    console.log('Stream.io webhook received:', body);
+    console.log('Webhook event type:', body.type);
 
     // Stream.io sends the event data directly, not wrapped in an 'event' property
     const event = body;
@@ -37,8 +40,17 @@ export async function POST(req: NextRequest) {
         await handleCallEnded(event, client);
         break;
       case 'call.member_added':
-        // Ignore this event type to prevent duplicate study sessions
-        console.log('Ignoring call.member_added event to prevent duplicates');
+        // Handle member added event for user blocking/banning
+        await handleMemberAdded(event, client);
+        break;
+      case 'call.member_updated':
+        // Handle member updated events (these might include joins)
+        console.log('Member updated event received for call:', event.call_cid);
+        // Check if this is actually a join event
+        if (event.members && event.members.length > 0) {
+          console.log('Processing member updated as potential join event');
+          await handleMemberAdded(event, client);
+        }
         break;
       case 'user.updated':
         // Handle user updates (these are normal, not errors)
@@ -50,6 +62,11 @@ export async function POST(req: NextRequest) {
         break;
       default:
         console.log('Unhandled Stream event type:', event.type);
+        // For any unhandled event, check if it contains member information
+        if (event.members && event.members.length > 0) {
+          console.log('Unhandled event contains members, checking for bans...');
+          await handleMemberAdded(event, client);
+        }
     }
 
     return NextResponse.json({ success: true });
@@ -88,6 +105,94 @@ async function handleSessionStarted(event: any, client: StreamClient) {
   }
 }
 
+async function handleMemberAdded(event: any, client: StreamClient) {
+  try {
+    const callId = event.call?.id || event.call_cid?.split(':')[1];
+    
+    // Handle different event structures
+    let userId = null;
+    if (event.members && event.members.length > 0) {
+      userId = event.members[0]?.user_id || event.members[0]?.user?.id;
+    } else if (event.participant) {
+      userId = event.participant?.user?.id || event.participant?.user_id;
+    }
+    
+    if (!callId || !userId) {
+      console.log('No callId or userId found in member added event');
+      console.log('Event structure:', {
+        callId,
+        userId,
+        hasMembers: !!event.members,
+        hasParticipant: !!event.participant,
+        eventType: event.type
+      });
+      return;
+    }
+    
+    console.log('Member added:', userId, 'in call:', callId);
+    
+    // Check if user is globally blocked
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+    
+    if (user?.isBlocked) {
+      console.log('Blocked user attempted to join call:', userId);
+      // Remove user from call using Stream.io
+      try {
+        await client.video.updateCallMembers({
+          id: callId,
+          type: event.call?.type || 'default',
+          remove_members: [userId],
+        });
+        console.log('Removed blocked user from call:', userId);
+      } catch (removeError) {
+        console.error('Failed to remove blocked user from call:', removeError);
+      }
+      return;
+    }
+    
+    // Check if user is banned from this specific room
+    console.log('Checking for room ban - userId:', userId, 'callId:', callId);
+    const roomBan = await prisma.roomBan.findUnique({
+      where: {
+        userId_callId: {
+          userId,
+          callId
+        }
+      }
+    });
+    
+    console.log('Room ban check result:', roomBan ? 'BANNED' : 'NOT BANNED');
+    
+    if (roomBan) {
+      console.log('Room-banned user attempted to join call:', userId, 'callId:', callId);
+      // Remove user from call using Stream.io
+      try {
+        console.log('Attempting to remove banned user from call using Stream.io API...');
+        const removeResult = await client.video.updateCallMembers({
+          id: callId,
+          type: event.call?.type || 'default',
+          remove_members: [userId],
+        });
+        console.log('Stream.io API response for removing banned user:', removeResult);
+        console.log('Successfully removed room-banned user from call:', userId);
+      } catch (removeError) {
+        console.error('Failed to remove room-banned user from call:', removeError);
+        console.error('Error details:', {
+          message: (removeError as any).message,
+          code: (removeError as any).code,
+          status: (removeError as any).status,
+          response: (removeError as any).response
+        });
+      }
+      return;
+    }
+  } catch (error) {
+    console.error('Error handling member added event:', error);
+  }
+}
+
 async function handleParticipantJoined(event: any, client: StreamClient) {
   try {
     const callId = event.call?.id || event.call_cid?.split(':')[1];
@@ -99,6 +204,67 @@ async function handleParticipantJoined(event: any, client: StreamClient) {
     }
     
     console.log('Participant joined:', userId, 'in call:', callId);
+    
+    // TODO: Implement user blocking and room banning after fixing Prisma client
+    // Check if user is globally blocked
+  
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+    
+    if (user?.isBlocked) {
+      console.log('Blocked user attempted to join call:', userId);
+      // Remove user from call using Stream.io
+      try {
+        // Use the correct Stream.io API to remove user from call
+        await client.video.updateCallMembers({
+          id: callId,
+          type: event.call?.type || 'default',
+          remove_members: [userId],
+        });
+        console.log('Removed blocked user from call:', userId);
+      } catch (removeError) {
+        console.error('Failed to remove blocked user from call:', removeError);
+      }
+      return;
+    }
+    
+    // Check if user is banned from this specific room
+    console.log('Checking for room ban - userId:', userId, 'callId:', callId);
+    const roomBan = await prisma.roomBan.findUnique({
+      where: {
+        userId_callId: {
+          userId,
+          callId
+        }
+      }
+    });
+    
+    console.log('Room ban check result:', roomBan ? 'BANNED' : 'NOT BANNED');
+    
+    if (roomBan) {
+      console.log('Room-banned user attempted to join call:', userId, 'callId:', callId);
+      // Remove user from call using Stream.io
+      try {
+        console.log('Attempting to remove banned user from call using Stream.io API...');
+        const removeResult = await client.video.updateCallMembers({
+          id: callId,
+          type: event.call?.type || 'default',
+          remove_members: [userId],
+        });
+        console.log('Stream.io API response for removing banned user:', removeResult);
+        console.log('Successfully removed room-banned user from call:', userId);
+      } catch (removeError) {
+        console.error('Failed to remove room-banned user from call:', removeError);
+        console.error('Error details:', {
+          message: (removeError as any).message,
+          code: (removeError as any).code,
+          status: (removeError as any).status,
+          response: (removeError as any).response
+        });
+      }
+      return;
+    }
     
     // Start study session for this user
     await startStudySession(userId, callId);
