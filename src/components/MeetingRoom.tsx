@@ -82,6 +82,7 @@ const MeetingRoom = () => {
   const [showBanDialog, setShowBanDialog] = useState(false);
   const [selectedBanUserId, setSelectedBanUserId] = useState('');
   const [banReason, setBanReason] = useState('');
+  const [isCheckingAccess, setIsCheckingAccess] = useState(true);
 
   // for more detail about types of CallingState see: https://getstream.io/video/docs/react/ui-cookbook/ringing-call/#incoming-call-panel
   const callingState = useCallCallingState();
@@ -92,6 +93,13 @@ const MeetingRoom = () => {
   const currentUserId = localParticipant?.userId;
   const isHost = currentUserId && hostId && currentUserId === hostId;
 
+  // Access is already checked before joining the call, so we can skip this check
+  useEffect(() => {
+    if (currentUserId && call?.id) {
+      setIsCheckingAccess(false);
+    }
+  }, [currentUserId, call?.id]);
+
   // Mock completed goals for now
   const [completedGoals, setCompletedGoals] = useState<string[]>(['join']);
 
@@ -100,50 +108,10 @@ const MeetingRoom = () => {
     if (callingState === CallingState.JOINED && call?.id) {
       startTracking();
       
-      // Check if current user is banned from this room
-      const checkBanStatus = async () => {
-        try {
-          const res = await fetch(`/api/room/ban/check?userId=${currentUserId}&callId=${call.id}`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.isBanned) {
-              toast({
-                title: 'Access Denied',
-                description: 'You have been banned from this room.',
-                variant: 'destructive',
-              });
-              router.push('/meetups/study-groups');
-            }
-          }
-        } catch (error) {
-          console.error('Error checking ban status:', error);
-        }
-      };
-      
-      // Check if current user is globally blocked
-      const checkBlockStatus = async () => {
-        try {
-          const res = await fetch(`/api/user/check-block?userId=${currentUserId}`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.isBlocked) {
-              toast({
-                title: 'Access Denied',
-                description: 'Your account has been blocked by an administrator.',
-                variant: 'destructive',
-              });
-              router.push('/meetups/study-groups');
-            }
-          }
-        } catch (error) {
-          console.error('Error checking block status:', error);
-        }
-      };
-      
-      checkBanStatus();
-      checkBlockStatus();
+      // Access is already checked before joining, so we just start tracking
+      console.log('Call joined, starting tracking...');
     }
-  }, [callingState, call?.id, currentUserId, router, toast]);
+  }, [callingState, call?.id, startTracking]);
 
   // End tracking when component unmounts or call ends
   useEffect(() => {
@@ -213,15 +181,61 @@ const MeetingRoom = () => {
       }
     };
 
+    // Handler for when participants are removed
+    const handleParticipantLeft = (event: any) => {
+      console.log('Participant left event:', event);
+      const leftUserId = event.participant?.userId || event.participant?.user?.id;
+      
+      // Check if the current user was removed
+      if (leftUserId === currentUserId) {
+        toast({
+          title: 'Removed from call',
+          description: 'You have been removed from this room by the host.',
+          variant: 'destructive',
+        });
+        router.push('/meetups/study-groups');
+      }
+    };
+
     // Listen for multiple events
     call.on('callEnded', handleCallEnded);
-    // Note: 'removed' and 'callStateChanged' might not be valid event types
-    // We'll stick with the main events that are supported
+    call.on('participantLeft', handleParticipantLeft);
 
     return () => {
       call.off('callEnded', handleCallEnded);
+      call.off('participantLeft', handleParticipantLeft);
     };
-  }, [call, router, toast]);
+  }, [call, router, toast, currentUserId]);
+
+  // Keep event listeners for when user is removed during the call
+  useEffect(() => {
+    if (!call || !currentUserId) return;
+
+    const checkUserInCall = async () => {
+      // Only check if user is still in the call (for cases where they're removed during the call)
+      const participants = call.state.participants || [];
+      const userStillInCall = participants.some((p: any) => 
+        (p.userId || p.user?.id) === currentUserId
+      );
+
+      if (!userStillInCall) {
+        console.log('User no longer in call, redirecting...');
+        toast({
+          title: 'Removed from call',
+          description: 'You have been removed from this room.',
+          variant: 'destructive',
+        });
+        router.push('/meetups/study-groups');
+      }
+    };
+
+    // Check every 5 seconds (less frequent since access is pre-checked)
+    const interval = setInterval(checkUserInCall, 5000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [call, currentUserId, router, toast]);
 
   const CallLayout = () => {
     switch (layout) {
@@ -244,7 +258,7 @@ const MeetingRoom = () => {
 
   return (
     <>
-      {callingState !== CallingState.JOINED ? (
+      {callingState !== CallingState.JOINED || isCheckingAccess ? (
         <Loader />
       ) : (
     <section className="relative h-screen w-full overflow-hidden pt-4 text-white">
