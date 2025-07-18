@@ -13,15 +13,14 @@ export default function NotFound() {
               Page not found
             </h2>
             <p className="text-gray-500 max-w-md mx-auto">
-              Sorry, we couldn&apos;t find the page you&apos;re looking for. The
-              word you seek might be in our dictionary though!
+              Sorry, we couldn&apos;t find the page you&apos;re looking for.
             </p>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/">
               <Button size="lg" className="rounded-full">
-                Browse Dictionary
+                Go Home
               </Button>
             </Link>
             <Link href="/about">

@@ -94,16 +94,6 @@ export default function ChatPage() {
                                 Meetups
                             </Link>
                             <Link
-                                href="/dictionary"
-                                className={cn(
-                                    "text-lg font-medium transition-colors hover:text-orange-600",
-                                    isActive("/dictionary") ? "text-orange-600" : "text-gray-600"
-                                )}
-                                style={{ fontFamily: "Alata, sans-serif" }}
-                            >
-                                Dictionary
-                            </Link>
-                            <Link
                                 href="/pricing"
                                 className={cn(
                                     "text-lg font-medium transition-colors hover:text-orange-600",
@@ -140,16 +130,6 @@ export default function ChatPage() {
 
                     {/* Mobile Navigation */}
                     <nav className="md:hidden flex items-center justify-center space-x-6 mt-4 pt-4 border-t border-gray-200">
-                        <Link
-                            href="/dictionary"
-                            className={cn(
-                                "text-sm font-medium transition-colors hover:text-orange-600",
-                                isActive("/dictionary") ? "text-orange-600" : "text-gray-600"
-                            )}
-                            style={{ fontFamily: "Alata, sans-serif" }}
-                        >
-                            Dictionary
-                        </Link>
                         <Link
                             href="/pricing"
                             className={cn(

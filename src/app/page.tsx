@@ -18,13 +18,13 @@ export default function HomePage() {
               <span className="text-yellow-500">Thanodi</span>
             </h1>
             <p className="text-xl lg:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Your bridge between Setswana and English languages. Discover, learn, and master both languages with our comprehensive dictionary.
+              Your bridge between Setswana and English languages. Discover, learn, and master both languages with our comprehensive platform.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/dictionary">
+              <Link href="/meetups">
                 <Button size="lg" className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 px-8 py-4 text-lg rounded-lg">
                   <BookOpen className="w-5 h-5 mr-2" />
-                  Explore Dictionary
+                  Explore Meetups
             </Button>
               </Link>
               <Link href="/about">
@@ -50,7 +50,7 @@ export default function HomePage() {
                 </CardHeader>
                 <CardContent className="text-center">
                   <p className="text-gray-600">
-                    Search through thousands of words with instant results. Find translations, definitions, and pronunciations.
+                    Connect with other language learners and join study groups. Find your perfect learning community.
                   </p>
                 </CardContent>
               </Card>
@@ -78,7 +78,7 @@ export default function HomePage() {
                 </CardHeader>
                 <CardContent className="text-center">
                   <p className="text-gray-600">
-                    Save your favorite words for quick access. Build your personal vocabulary collection.
+                    Save your favorite confessions and experiences. Build your personal collection.
                   </p>
                 </CardContent>
               </Card>
@@ -106,7 +106,7 @@ export default function HomePage() {
                 </CardHeader>
                 <CardContent className="text-center">
                   <p className="text-gray-600">
-                    Built for the community, by the community. Continuously updated with new words and improvements.
+                    Built for the community, by the community. Continuously updated with new features and improvements.
                   </p>
                       </CardContent>
                     </Card>
@@ -136,7 +136,7 @@ export default function HomePage() {
               <p className="text-xl text-gray-800 mb-8 max-w-2xl mx-auto">
                 Join thousands of users who are already improving their language skills with Thanodi.
               </p>
-              <Link href="/dictionary">
+              <Link href="/meetups">
                 <Button size="lg" className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-4 text-lg rounded-lg">
                   Start Exploring Now
                 </Button>

@@ -29,12 +29,12 @@ const pricingList: PricingProps[] = [
     popular: 0,
     price: 0,
     description:
-      "Perfect for getting started with basic Setswana-English translations.",
+      "Perfect for getting started with basic language learning features.",
     buttonText: "Get Started",
     benefitList: [
-      "Basic word lookups",
-      "Limited daily searches",
-      "Basic pronunciation guides",
+      "Basic meetup access",
+      "Limited daily interactions",
+      "Basic study groups",
       "Community support",
       "Mobile access",
     ],
@@ -49,10 +49,10 @@ const pricingList: PricingProps[] = [
       "Unlock the full power of Thanodi with unlimited access and premium features.",
     buttonText: "Buy Now",
     benefitList: [
-      "Unlimited word lookups",
-      "Advanced search filters",
-      "Audio pronunciations",
-      "Save unlimited words",
+      "Unlimited meetup access",
+      "Advanced study features",
+      "Premium study groups",
+      "Save unlimited content",
       "Priority support",
       "Offline access",
     ],
@@ -70,7 +70,7 @@ const pricingList: PricingProps[] = [
     benefitList: [
       "Everything in Premium",
       "Multi-user accounts",
-      "Custom word collections",
+      "Custom study collections",
       "Advanced analytics",
       "API access",
       "Priority support",
@@ -94,7 +94,7 @@ export default function PricingPage() {
           Access
         </h2>
         <h3 className="text-xl text-center text-muted-foreground pt-4 pb-8">
-          Choose the perfect plan for your Setswana-English learning journey.
+          Choose the perfect plan for your language learning journey.
         </h3>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {pricingList.map((pricing: PricingProps) => (

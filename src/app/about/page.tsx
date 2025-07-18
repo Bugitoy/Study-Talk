@@ -47,28 +47,26 @@ export default function AboutPage() {
 
               <div className="prose text-gray-700 leading-relaxed space-y-4">
                 <p>
-                  Thanodi is a comprehensive Setswana-English dictionary
-                  designed to preserve and celebrate the rich linguistic
+                  Thanodi is a comprehensive platform designed to preserve and celebrate the rich linguistic
                   heritage of Botswana while making it accessible to speakers
                   worldwide.
                 </p>
 
                 <p>
                   Our mission is to bridge language barriers and help people
-                  connect with Setswana culture through accurate translations,
-                  clear definitions, and authentic pronunciation guides.
+                  connect with Setswana culture through our meetup platform.
                 </p>
 
                 <p>
-                  Whether you&apos;re a native speaker looking to refine your
-                  vocabulary, a language learner taking your first steps, or a
+                  Whether you&apos;re a native speaker looking to connect with others,
+                  a language learner taking your first steps, or a
                   researcher studying Southern African languages, Thanodi
                   provides the tools you need.
                 </p>
 
                 <p>
                   We believe that language is more than words—it&apos;s culture,
-                  identity, and connection. Every definition in our dictionary
+                  identity, and connection. Every feature in our platform
                   is crafted with respect for the nuances and beauty of both
                   English and Setswana.
                 </p>
@@ -127,23 +125,23 @@ export default function AboutPage() {
               <ul className="space-y-2 text-gray-700">
                 <li className="flex items-center gap-2">
                   <Heart className="w-4 h-4 text-orange-500 flex-shrink-0" />
-                  <span>Authentic pronunciation guides for every word</span>
+                  <span>Connect with other language learners</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Heart className="w-4 h-4 text-orange-500 flex-shrink-0" />
-                  <span>Contextual examples from real usage</span>
+                  <span>Join study groups and compete rooms</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Heart className="w-4 h-4 text-orange-500 flex-shrink-0" />
-                  <span>Save and organize your favorite words</span>
+                  <span>Share confessions and experiences</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Heart className="w-4 h-4 text-orange-500 flex-shrink-0" />
-                  <span>Regular updates with new vocabulary</span>
+                  <span>Regular updates with new features</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Heart className="w-4 h-4 text-orange-500 flex-shrink-0" />
-                  <span>Cultural context and usage notes</span>
+                  <span>Cultural context and community support</span>
                 </li>
               </ul>
             </div>

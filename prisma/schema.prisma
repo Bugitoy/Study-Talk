@@ -23,10 +23,7 @@ enum SubscriptionPeriod {
   yearly
 }
 
-enum Language {
-  en
-  tn
-}
+
 
 model User {
   id         String  @id @map("_id")
@@ -43,8 +40,6 @@ model User {
   isBlocked  Boolean  @default(false)
 
   Subscription Subscription?
-  StarredWords StarredWord[]
-  
   // Confessions relationships
   confessions Confession[]
   confessionVotes ConfessionVote[]
@@ -73,38 +68,7 @@ model Subscription {
   User User @relation(fields: [userId], references: [id])
 }
 
-model Word {
-  id            String   @id @default(cuid()) @map("_id")
-  word          String
-  language      Language
-  translation   String
-  definition    String
-  pronunciation String?
-  audioUrl      String?
-  partOfSpeech  String
-  examples      String[]
 
-  StarredWords StarredWord[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([language])
-  @@index([word])
-}
-
-model StarredWord {
-  id     String @id @default(cuid()) @map("_id")
-  userId String
-  wordId String
-
-  User User @relation(fields: [userId], references: [id])
-  Word Word @relation(fields: [wordId], references: [id])
-
-  createdAt DateTime @default(now())
-
-  @@unique([userId, wordId])
-}
 
 model Room {
   id     String  @id @default(auto()) @map("_id") @db.ObjectId
