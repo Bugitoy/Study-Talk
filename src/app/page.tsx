@@ -15,7 +15,7 @@ export default function HomePage() {
           <div className="text-center py-16 lg:py-24">
             <h1 className="text-5xl lg:text-7xl font-bold text-gray-900 mb-6">
               Welcome to{" "}
-              <span className="text-yellow-500">Thanodi</span>
+              <span className="text-yellow-500">Lets Study</span>
             </h1>
             <p className="text-xl lg:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
               Your bridge between Setswana and English languages. Discover, learn, and master both languages with our comprehensive platform.
@@ -38,7 +38,7 @@ export default function HomePage() {
           {/* Features Section */}
           <div className="py-16">
             <h2 className="text-3xl lg:text-4xl font-bold text-center text-gray-900 mb-12">
-              Why Choose Thanodi?
+              Why Choose Lets Study?
             </h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               <Card className="border-2 border-gray-200 hover:border-yellow-300 transition-all duration-300 hover:shadow-lg">
@@ -134,7 +134,7 @@ export default function HomePage() {
                 Ready to Start Learning?
               </h2>
               <p className="text-xl text-gray-800 mb-8 max-w-2xl mx-auto">
-                Join thousands of users who are already improving their language skills with Thanodi.
+                Join thousands of users who are already improving their language skills with Lets Study.
               </p>
               <Link href="/meetups">
                 <Button size="lg" className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-4 text-lg rounded-lg">

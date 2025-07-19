@@ -77,7 +77,7 @@ export default function ChatPage() {
                                 className="text-xl font-bold text-gray-900"
                                 style={{ fontFamily: "Alata, sans-serif" }}
                             >
-                                Thanodi
+                                Lets Study
                             </span>
                         </Link>
 

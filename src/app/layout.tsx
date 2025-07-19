@@ -12,7 +12,7 @@ import '@stream-io/video-react-sdk/dist/css/styles.css';
 import { SocketProvider } from "./SocketProvider";
 
 export const metadata: Metadata = {
-  title: "Thanodi - Language Learning Platform",
+  title: "Lets Study - Language Learning Platform",
   description: "Your bridge between Setswana and English languages",
   icons: {
     icon: '/favicon.ico',
@@ -30,15 +30,15 @@ export default function RootLayout({
         <DevErrorHandler />
         <ErrorBoundary>
           <ReactQueryProvider>
-            <TooltipProvider>
-              <StreamVideoProvider>
-                <SocketProvider>
-                  <Toaster />
-                  <Sonner />
-                  {children}
-                </SocketProvider>
-              </StreamVideoProvider>
-            </TooltipProvider>
+              <TooltipProvider>
+                <StreamVideoProvider>
+                  <SocketProvider>
+                    <Toaster />
+                    <Sonner />
+                    {children}
+                  </SocketProvider>
+                </StreamVideoProvider>
+              </TooltipProvider>
           </ReactQueryProvider>
         </ErrorBoundary>
       </body>

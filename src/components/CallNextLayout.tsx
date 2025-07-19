@@ -48,7 +48,7 @@ export default function NextLayout({ children }: LayoutProps) {
                   className="text-xl font-bold text-gray-900"
                   style={{ fontFamily: "Alata, sans-serif" }}
                 >
-                  Thanodi
+                  Lets Study
                 </span>
               </Link>
 

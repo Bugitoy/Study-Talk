@@ -25,7 +25,7 @@ const Alert = ({ title, iconUrl }: PermissionCardProps) => {
             </div>
 
             <Button asChild className="bg-blue-300 hover:bg-blue-200 text-white text-lg py-8 px-6">
-              <Link href="/">Back to Home</Link>
+              <Link href="/meetups">Back to dashboard</Link>
             </Button>
           </div>
         </CardContent>

@@ -39,7 +39,7 @@ export default function AboutPage() {
           <div className="space-y-6">
             <div>
               <h1 className="text-4xl font-bold text-gray-900 mb-3">
-                About Thanodi
+                About Lets Study
               </h1>
               <h2 className="text-xl text-gray-600 mb-6">
                 Your Bridge Between Languages
@@ -47,7 +47,7 @@ export default function AboutPage() {
 
               <div className="prose text-gray-700 leading-relaxed space-y-4">
                 <p>
-                  Thanodi is a comprehensive platform designed to preserve and celebrate the rich linguistic
+                  Lets Study is a comprehensive platform designed to preserve and celebrate the rich linguistic
                   heritage of Botswana while making it accessible to speakers
                   worldwide.
                 </p>
@@ -60,7 +60,7 @@ export default function AboutPage() {
                 <p>
                   Whether you&apos;re a native speaker looking to connect with others,
                   a language learner taking your first steps, or a
-                  researcher studying Southern African languages, Thanodi
+                  researcher studying Southern African languages, Lets Study
                   provides the tools you need.
                 </p>
 
@@ -120,7 +120,7 @@ export default function AboutPage() {
             {/* Features */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                What makes Thanodi special
+                What makes Lets Study special
               </h3>
               <ul className="space-y-2 text-gray-700">
                 <li className="flex items-center gap-2">
