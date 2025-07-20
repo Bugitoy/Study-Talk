@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { X, User, Mail, Calendar, CreditCard, Star, Loader2, Edit3, AlertTriangle } from "lucide-react";
+import { X, User, Mail, Calendar, CreditCard, Star, Edit3, AlertTriangle } from "lucide-react";
+import Loader from "@/components/Loader";
 import { Plan } from "@prisma/client";
 import { useToast } from "@/hooks/use-toast";
 import { UniversityAutocomplete } from "@/components/ui/university-autocomplete";
@@ -202,7 +203,7 @@ export default function AccountPage() {
             </p>
           </div>
           <div className="flex justify-center items-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+            <Loader fullScreen={false} className="w-8 h-8 text-orange-500" />
             <span className="ml-2 text-gray-600">Loading account information...</span>
           </div>
         </div>
@@ -388,7 +389,7 @@ export default function AccountPage() {
                       >
                         {createPortalSessionMutation.isPending ? (
                           <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            <Loader fullScreen={false} className="w-4 h-4 mr-2" />
                             Opening...
                           </>
                         ) : (
@@ -510,7 +511,7 @@ export default function AccountPage() {
             >
               {updateUniversityMutation.isPending ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader fullScreen={false} className="w-4 h-4 mr-2" />
                   Updating...
                 </>
               ) : (

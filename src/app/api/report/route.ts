@@ -3,15 +3,22 @@ import prisma from '@/db/prisma';
 
 export async function POST(req: NextRequest) {
   try {
-    const { reporterId, reportedId, callId, reason, reportType } = await req.json();
-    if (!reporterId || !reportedId || !callId || !reason || !reportType) {
+    const { reporterId, reportedId, callId, confessionId, reason, reportType } = await req.json();
+    if (!reporterId || !reportedId || !reason || !reportType) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
+    
+    // Either callId or confessionId must be provided
+    if (!callId && !confessionId) {
+      return NextResponse.json({ error: 'Either callId or confessionId must be provided' }, { status: 400 });
+    }
+    
     const report = await prisma.report.create({
       data: {
         reporterId,
         reportedId,
         callId,
+        confessionId,
         reason,
         reportType,
       },
@@ -52,8 +59,8 @@ export async function GET(req: NextRequest) {
       prisma.report.count({ where }),
     ]);
 
-    // Get reported user information including block status
-    const reportsWithUsers = await Promise.all(
+    // Get reported user information and confession details
+    const reportsWithDetails = await Promise.all(
       reports.map(async (report) => {
         const reportedUser = await prisma.user.findUnique({
           where: { id: report.reportedId },
@@ -65,15 +72,38 @@ export async function GET(req: NextRequest) {
           },
         });
         
+        // Get confession details if this is a confession report
+        let confession = null;
+        if (report.confessionId) {
+          confession = await prisma.confession.findUnique({
+            where: { id: report.confessionId },
+            select: {
+              id: true,
+              title: true,
+              content: true,
+              isAnonymous: true,
+              createdAt: true,
+              author: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          });
+        }
+        
         return {
           ...report,
           reportedUser,
+          confession,
         };
       })
     );
 
     return NextResponse.json({
-      reports: reportsWithUsers,
+      reports: reportsWithDetails,
       pagination: {
         page,
         limit,

@@ -31,7 +31,7 @@ const data = [
     title: "K-12",
     description:
       "This quiz contains questions about the different subjects and the different levels of education.",
-    backgroundImage: "",
+    backgroundImage: "/Images/meetups/topics/k-12.png",
   },
   {
     title: "MCAT",
@@ -43,13 +43,13 @@ const data = [
     title: "Cars",
     description:
       "This quiz contains questions about the different types of cars and the different parts of a car.",
-    backgroundImage: "",
+    backgroundImage: "/Images/meetups/topics/cars.png",
   },
   {
     title: "Countries",
     description:
       "This quiz contains questions about the different countries and the different capitals.",
-    backgroundImage: "",
+    backgroundImage: "/Images/meetups/topics/countries.png",
   },
 ];
 

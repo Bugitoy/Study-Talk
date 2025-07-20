@@ -151,8 +151,7 @@ const MeetingRoom = () => {
       console.log('Call ended event:', event);
       toast({
         title: 'Removed from call',
-        description: 'You have been removed from this room by the host.',
-        variant: 'destructive',
+        description: 'You have been removed from this room by the host.'
       });
       router.push('/meetups/study-groups');
     };
@@ -162,8 +161,7 @@ const MeetingRoom = () => {
       console.log('User removed event:', event);
       toast({
         title: 'Removed from call',
-        description: 'You have been removed from this room by the host.',
-        variant: 'destructive',
+        description: 'You have been removed from this room by the host.'
       });
       router.push('/meetups/study-groups');
     };
@@ -175,7 +173,6 @@ const MeetingRoom = () => {
         toast({
           title: 'Removed from call',
           description: 'You have been removed from this room by the host.',
-          variant: 'destructive',
         });
         router.push('/meetups/study-groups');
       }
@@ -191,7 +188,6 @@ const MeetingRoom = () => {
         toast({
           title: 'Removed from call',
           description: 'You have been removed from this room by the host.',
-          variant: 'destructive',
         });
         router.push('/meetups/study-groups');
       } else {

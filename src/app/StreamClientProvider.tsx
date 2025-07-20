@@ -4,7 +4,7 @@ import { StreamVideo, StreamVideoClient } from "@stream-io/video-react-sdk";
 import { tokenProvider } from "actions/stream.actions";
 import { ReactNode, useEffect, useState } from 'react';
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
-import { Loader2 } from "lucide-react";
+import Loader from "@/components/Loader";
 import { useRouter } from 'next/navigation';
 
 const apiKey = process.env.NEXT_PUBLIC_STREAM_API_KEY;
@@ -40,7 +40,7 @@ const StreamVideoProvider = ({ children }: { children: ReactNode }) => {
         // Optionally render a fallback while redirecting
         return (
             <div className="flex justify-center items-center min-h-screen">
-                <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+                <Loader fullScreen={false} className="w-8 h-8 text-orange-500" />
                 <span className="ml-2 text-gray-600">Redirecting to login...</span>
             </div>
         );
@@ -49,7 +49,7 @@ const StreamVideoProvider = ({ children }: { children: ReactNode }) => {
     if (!videoClient) {
         return (
             <div className="flex justify-center items-center min-h-screen">
-                <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+                <Loader fullScreen={false} className="w-8 h-8 text-orange-500" />
                 <span className="ml-2 text-gray-600">Loading video client...</span>
             </div>
         );

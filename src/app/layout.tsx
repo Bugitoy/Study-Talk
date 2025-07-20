@@ -16,6 +16,8 @@ export const metadata: Metadata = {
   description: "Your bridge between Setswana and English languages",
   icons: {
     icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/favicon.ico',
   },
 };
 
@@ -26,6 +28,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/favicon.ico" />
+      </head>
       <body style={{ fontFamily: "Alata, sans-serif" }}>
         <DevErrorHandler />
         <ErrorBoundary>

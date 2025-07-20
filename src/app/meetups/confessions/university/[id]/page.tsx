@@ -11,6 +11,7 @@ import { useSavedConfessions } from "@/hooks/useSavedConfessions";
 import { InfiniteScrollContainer } from "@/components/InfiniteScrollContainer";
 import { ConfessionListSkeleton } from "@/components/ConfessionSkeleton";
 import { CommentSection } from "@/components/CommentSection";
+import ShareButton from "@/components/ShareButton";
 
 export default function UniversityConfessionsPage() {
   const { user } = useKindeBrowserClient();
@@ -138,7 +139,12 @@ export default function UniversityConfessionsPage() {
           </div>
           
           {/* Title */}
-          <h3 className="font-semibold text-lg text-gray-900 mb-2">{post.title}</h3>
+          <h3 
+            className="font-semibold text-lg text-gray-900 mb-2 cursor-pointer hover:text-blue-600 transition-colors"
+            onClick={() => router.push(`/meetups/confessions/post/${post.id}`)}
+          >
+            {post.title}
+          </h3>
           
           {/* Content */}
           <p className="text-gray-700 whitespace-pre-line mb-4 line-clamp-3 lg:line-clamp-none">
@@ -194,9 +200,13 @@ export default function UniversityConfessionsPage() {
                 <MessageCircle className="w-4 h-4" /> {post.commentCount} Comments
               </button>
             </div>
-            <div className="flex items-center gap-1 cursor-pointer hover:text-gray-800">
-              <Share2 className="w-4 h-4" /> Share
-            </div>
+            <ShareButton 
+              confessionId={post.id}
+              confessionTitle={post.title}
+              variant="ghost"
+              size="sm"
+              className="flex items-center gap-1 cursor-pointer hover:text-gray-800"
+            />
             <div
               className="flex items-center gap-1 cursor-pointer hover:text-gray-800"
               onClick={(e) => {

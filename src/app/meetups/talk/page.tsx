@@ -13,11 +13,15 @@ import ChangeLocalMediaStream from '@/components/talk/videoCall/changeCam';
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { User } from "lucide-react";
+import { User, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useToast } from '@/hooks/use-toast';
 
 export default function ChatPage() {
     const { user } = useKindeBrowserClient();
+    const { user: currentUser } = useCurrentUser();
+    const { toast } = useToast();
     const [message, setMessage] = useState<string[]>([]);
     const [peerConnection, setPeerConnection] = useState<RTCPeerConnection>(new RTCPeerConnection());
     const [ChangeCamOverly, setChangeCamOverly] = useState<boolean>(false);
@@ -25,6 +29,19 @@ export default function ChatPage() {
     const [stream, setStream] = useState<MediaStream>(new MediaStream());
     const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
     const [strangerData, setStrangerData] = useState(null);
+    
+    // Report functionality
+    const [showReportDialog, setShowReportDialog] = useState(false);
+    const [reportReason, setReportReason] = useState('');
+    const [reportType, setReportType] = useState('INAPPROPRIATE_BEHAVIOR');
+    
+    const reportTypes = [
+        { value: 'INAPPROPRIATE_BEHAVIOR', label: 'Inappropriate Behavior' },
+        { value: 'HARASSMENT', label: 'Harassment' },
+        { value: 'SPAM', label: 'Spam' },
+        { value: 'INAPPROPRIATE_CONTENT', label: 'Inappropriate Content' },
+        { value: 'OTHER', label: 'Other' },
+    ];
     
     const localVideo = useRef<HTMLVideoElement | null>(null);
     const remoteVideo = useRef<HTMLVideoElement | null>(null);
@@ -46,6 +63,53 @@ export default function ChatPage() {
     if (stream) {
         startWebRtcNegotiation(socket, strangerData, peerConnection, stream);
     }
+
+    const handleReport = async () => {
+        if (!user?.id || !strangerUserId || !reportReason.trim()) {
+            toast({
+                title: "Error",
+                description: "Please fill all fields.",
+                variant: "destructive",
+            });
+            return;
+        }
+        
+        try {
+            const res = await fetch('/api/report/talk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    reporterId: user.id, 
+                    reportedId: strangerUserId,
+                    reason: reportReason, 
+                    reportType 
+                }),
+            });
+            
+            if (res.ok) {
+                toast({
+                    title: "Success",
+                    description: "Report submitted successfully!",
+                });
+            } else {
+                toast({
+                    title: "Error",
+                    description: "Failed to submit report.",
+                    variant: "destructive",
+                });
+            }
+        } catch (err) {
+            toast({
+                title: "Error",
+                description: "Failed to submit report.",
+                variant: "destructive",
+            });
+        }
+        
+        setShowReportDialog(false);
+        setReportReason('');
+        setReportType('INAPPROPRIATE_BEHAVIOR');
+    };
 
     const pathname = usePathname();
 
@@ -113,6 +177,18 @@ export default function ChatPage() {
                             >
                                 About
                             </Link>
+                            {currentUser?.isAdmin && (
+                                <Link
+                                    href="/admin/reports"
+                                    className={cn(
+                                        "text-lg font-medium transition-colors hover:text-orange-600",
+                                        isActive("/admin/reports") ? "text-orange-600" : "text-orange-300"
+                                    )}
+                                    style={{ fontFamily: "Alata, sans-serif" }}
+                                >
+                                    Admin
+                                </Link>
+                            )}
                         </nav>
 
                         {/* User Icon */}
@@ -150,6 +226,18 @@ export default function ChatPage() {
                         >
                             About
                         </Link>
+                        {currentUser?.isAdmin && (
+                            <Link
+                                href="/admin/reports"
+                                className={cn(
+                                    "text-sm font-medium transition-colors hover:text-orange-600",
+                                    isActive("/admin/reports") ? "text-orange-600" : "text-orange-300"
+                                )}
+                                style={{ fontFamily: "Alata, sans-serif" }}
+                            >
+                                Admin
+                            </Link>
+                        )}
                     </nav>
                 </div>
             </header>
@@ -186,7 +274,18 @@ export default function ChatPage() {
                         </div>
                         <div className='w-[60%] max-w-[2000px] max-h-[100vh] flex flex-col 
                             justify-between rounded-[10px] p-[10px] m-[1%]'>
-                            <ConnectionStatusBar strangerUsername={strangerUsername || 'Unknown'} />
+                            <div className="flex items-center justify-between mb-2">
+                                <ConnectionStatusBar strangerUsername={strangerUsername || 'Unknown'} />
+                                {strangerUserId && (
+                                    <button 
+                                        onClick={() => setShowReportDialog(true)}
+                                        className="flex items-center gap-2 px-3 py-1 bg-red-300 hover:bg-red-600 text-white rounded-[8px] text-sm transition-colors"
+                                    >
+                                        <Flag className="w-4 h-4" />
+                                        Report
+                                    </button>
+                                )}
+                            </div>
                             <MessageBox
                                 message={message}
                                 username={username}
@@ -209,6 +308,58 @@ export default function ChatPage() {
                     </>
                 )}
             </div>
+
+            {/* Report Dialog */}
+            {showReportDialog && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
+                        <h2 className="text-xl font-semibold mb-4 text-gray-800">Report User</h2>
+                        <div className="mb-4">
+                            <p className="text-sm text-gray-600 mb-2">
+                                Reporting: <span className="font-medium">{strangerUsername || 'Unknown User'}</span>
+                            </p>
+                        </div>
+                        <div className="mb-4">
+                            <label className="block mb-2 text-gray-800 font-medium">Type of Report</label>
+                            <select
+                                className="w-full border border-gray-300 rounded p-2 text-black"
+                                value={reportType}
+                                onChange={e => setReportType(e.target.value)}
+                            >
+                                {reportTypes.map(rt => (
+                                    <option key={rt.value} value={rt.value}>{rt.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <textarea
+                            className="w-full border border-gray-300 rounded p-2 mb-4 text-black"
+                            rows={4}
+                            placeholder="Describe the issue..."
+                            value={reportReason}
+                            onChange={e => setReportReason(e.target.value)}
+                        />
+                        <div className="flex justify-end gap-2">
+                            <button
+                                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-black"
+                                onClick={() => {
+                                    setShowReportDialog(false);
+                                    setReportReason('');
+                                    setReportType('INAPPROPRIATE_BEHAVIOR');
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                                onClick={handleReport}
+                                disabled={!reportReason.trim()}
+                            >
+                                Submit
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

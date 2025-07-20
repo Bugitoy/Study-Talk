@@ -187,7 +187,16 @@ export async function getQuizResults(roomId: string, sessionId?: string) {
 
 export async function getTopicQuestions(topic: string) {
   try {
-    return await prisma.topicQuestion.findMany({ where: { topic } });
+    const questions = await prisma.topicQuestion.findMany({ where: { topic } });
+    
+    // Randomize the questions array using Fisher-Yates shuffle algorithm
+    const shuffledQuestions = [...questions];
+    for (let i = shuffledQuestions.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledQuestions[i], shuffledQuestions[j]] = [shuffledQuestions[j], shuffledQuestions[i]];
+    }
+    
+    return shuffledQuestions;
   } catch (error) {
     console.error("Error fetching topic questions:", error);
     return [];
@@ -241,7 +250,6 @@ export async function createRoomSetting(data: {
   camera: string;
   participants: number;
   availability: string;
-  allowReview: boolean;
 }) {
   try {
     return await prisma.roomSetting.create({ data });
@@ -1220,6 +1228,59 @@ export async function getSavedConfessions(userId: string) {
     });
   } catch (error) {
     console.error('Error getting saved confessions:', error);
+    throw error;
+  }
+}
+
+export async function getConfessionById(confessionId: string, userId?: string) {
+  try {
+    const confession = await prisma.confession.findUnique({
+      where: { 
+        id: confessionId,
+        isHidden: false 
+      },
+      include: {
+        author: {
+          select: { id: true, name: true, image: true, university: true },
+        },
+        university: {
+          select: { id: true, name: true },
+        },
+        votes: {
+          select: { voteType: true },
+        },
+        _count: {
+          select: {
+            comments: true,
+            savedBy: true,
+          },
+        },
+      },
+    });
+
+    if (!confession) {
+      return null;
+    }
+
+    // Calculate vote counts and engagement metrics
+    const believeCount = confession.votes.filter(v => v.voteType === 'BELIEVE').length;
+    const doubtCount = confession.votes.filter(v => v.voteType === 'DOUBT').length;
+    
+    // Find user's vote if userId is provided
+    const userVote = userId ? confession.votes.find(v => (v as any).userId === userId) : null;
+    
+    return {
+      ...confession,
+      believeCount,
+      doubtCount,
+      commentCount: confession._count.comments,
+      savedCount: confession._count.savedBy,
+      userVote: userVote ? userVote.voteType : null,
+      votes: undefined, // Remove raw votes from response
+      _count: undefined,
+    };
+  } catch (error) {
+    console.error('Error getting confession by ID:', error);
     throw error;
   }
 }

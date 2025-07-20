@@ -42,9 +42,11 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
   const [callDetail, setCallDetail] = useState<Call>();
   const [selectedTopic, setSelectedTopic] = useState<
         { title: string, description: string; backgroundImage: string } | null>(null);
+  const [selectedUserQuiz, setSelectedUserQuiz] = useState<any>(null);
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const settingsId = searchParams.get('settings') || undefined;
+  const selectedQuizId = searchParams.get('selectedQuiz');
   const roomSettings = useRoomSetting(settingsId);
 
   const saveTopicName = async (topicName: string) => {
@@ -57,11 +59,11 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
   };
 
   const createMeeting = async () => {
-    // Check if a topic is selected
-    if (!selectedTopic) {
+    // Check if a topic or user quiz is selected
+    if (!selectedTopic && !selectedUserQuiz) {
       toast({
         title: 'Topic Required',
-        description: 'Please select a topic before proceeding.',
+        description: 'Please select a topic or your own quiz before proceeding.',
         variant: 'destructive',
       });
       return;
@@ -103,6 +105,24 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
             correct: q.correct,
           }));
         }
+      } else if (selectedUserQuiz) {
+        // Use the selected user quiz questions and randomize them
+        const userQuizQuestions = selectedUserQuiz.questions.map((q: any) => ({
+          question: q.question,
+          optionA: q.optionA,
+          optionB: q.optionB,
+          optionC: q.optionC,
+          optionD: q.optionD,
+          correct: q.correct,
+        }));
+        
+        // Randomize the user quiz questions using Fisher-Yates shuffle
+        for (let i = userQuizQuestions.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [userQuizQuestions[i], userQuizQuestions[j]] = [userQuizQuestions[j], userQuizQuestions[i]];
+        }
+        
+        sampleQuestions = userQuizQuestions;
       }
       if (roomSettings) {
         const timePerQuestion = roomSettings.timePerQuestion ?? null;
@@ -167,9 +187,27 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
     };
     fetchTopics();
   }, []);
+
+  // Load selected user quiz if quizId is provided
+  useEffect(() => {
+    const loadSelectedQuiz = async () => {
+      if (selectedQuizId && user?.id) {
+        try {
+          const res = await fetch(`/api/user-quizzes/${selectedQuizId}?userId=${user.id}`);
+          if (res.ok) {
+            const quizData = await res.json();
+            setSelectedUserQuiz(quizData);
+          }
+        } catch (error) {
+          console.error('Failed to load selected quiz:', error);
+        }
+      }
+    };
+    loadSelectedQuiz();
+  }, [selectedQuizId, user?.id]);
   
   const handleNext = () => {
-    router.push("/");
+    router.push("/meetups/compete/quiz-library");
   };
 
   type Topic = {
@@ -193,13 +231,13 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
           <div className="flex-grow border-t border-blue-200"></div>
         </div>
         
-        {!selectedTopic ? (
+        {!selectedTopic && !selectedUserQuiz ? (
           <div className="text-center mb-8">
             <div className="inline-flex items-center px-4 py-2 bg-blue-100 border border-blue-300 rounded-lg">
               <svg className="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
               </svg>
-              <span className="text-blue-800 font-medium">Please select a topic to continue</span>
+              <span className="text-blue-800 font-medium">Please select a topic or your own quiz to continue</span>
             </div>
           </div>
         ) : (
@@ -208,7 +246,9 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
               <svg className="w-5 h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
-              <span className="text-green-800 font-medium">Topic selected: {selectedTopic.title}</span>
+              <span className="text-green-800 font-medium">
+                {selectedTopic ? `Topic selected: ${selectedTopic.title}` : `Quiz selected: ${selectedUserQuiz?.title}`}
+              </span>
             </div>
           </div>
         )}
@@ -230,7 +270,7 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
         <div className="grid grid-cols-2 gap-7">
             <div
               className={`button h-[50px] rounded-lg select-none transition-all duration-150 border-b-[1px] shadow ${
-                selectedTopic 
+                (selectedTopic || selectedUserQuiz)
                   ? "bg-orange-300 cursor-pointer active:translate-y-2 active:[box-shadow:0_0px_0_0_#f5c782,0_0px_0_0_#f5c78241] active:border-b-[0px] [box-shadow:0_10px_0_0_#f5c782,0_15px_0_0_#f5c78241] border-orange-300" 
                   : "bg-gray-300 cursor-not-allowed border-gray-300"
               }`}
@@ -239,9 +279,9 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
               onClick={createMeeting}
             >
               <span className={`flex flex-col justify-center items-center h-full font-bold text-lg ${
-                selectedTopic ? "text-gray-800" : "text-gray-500"
+                (selectedTopic || selectedUserQuiz) ? "text-gray-800" : "text-gray-500"
               }`}>
-                {selectedTopic ? "Next" : "Select a topic first"}
+                {(selectedTopic || selectedUserQuiz) ? "Next" : "Select a topic first"}
               </span>
             </div>
 

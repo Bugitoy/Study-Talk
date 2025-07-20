@@ -15,7 +15,8 @@ interface Report {
   id: string;
   reporterId: string;
   reportedId: string;
-  callId: string;
+  callId?: string;
+  confessionId?: string;
   reason: string;
   reportType: string;
   status: string;
@@ -33,6 +34,18 @@ interface Report {
     name: string;
     email: string;
     isBlocked: boolean;
+  };
+  confession?: {
+    id: string;
+    title: string;
+    content: string;
+    isAnonymous: boolean;
+    createdAt: string;
+    author: {
+      id: string;
+      name: string;
+      email: string;
+    };
   };
 }
 
@@ -229,7 +242,7 @@ export default function AdminReportsPage() {
                       Report #{report.id.slice(-8)}
                     </CardTitle>
                     <p className="text-sm text-gray-600 mt-1">
-                      Reported by: {report.reporter.name || report.reporter.email}
+                      Reported by: {report.reporter.name || report.reporter.email} • {new Date(report.createdAt).toLocaleString()}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -239,9 +252,83 @@ export default function AdminReportsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
+                  {/* Report Type Indicator */}
+                  <div className="mb-4">
+                    <Badge variant={
+                      report.confessionId ? "default" : 
+                      report.callId === 'TALK_CONVERSATION' ? "destructive" : 
+                      "secondary"
+                    } className="mb-2">
+                      {report.confessionId ? "Confession Report" : 
+                       report.callId === 'TALK_CONVERSATION' ? "Talk Report" : 
+                       "Call Report"}
+                    </Badge>
+                  </div>
+                  
+                  {/* Confession Details */}
+                  {report.confession && (
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                      <p className="font-medium text-sm text-blue-700 mb-2 flex items-center gap-2">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                        Reported Confession:
+                      </p>
+                      <div className="space-y-2">
+                        <div>
+                          <p className="font-medium text-xs text-gray-600">Title:</p>
+                          <p className="text-sm text-gray-800">{report.confession.title}</p>
+                        </div>
+                        <div>
+                          <p className="font-medium text-xs text-gray-600">Content:</p>
+                          <p className="text-sm text-gray-800 line-clamp-3">{report.confession.content}</p>
+                          <button 
+                            className="text-xs text-blue-600 hover:text-blue-800 mt-1"
+                            onClick={() => {
+                              // Show full content in a modal or expand the content
+                              const fullContent = report.confession?.content;
+                              if (fullContent) {
+                                alert(`Full confession content:\n\n${fullContent}`);
+                              }
+                            }}
+                          >
+                            View full content
+                          </button>
+                        </div>
+                        <div className="flex gap-4 text-xs text-gray-600">
+                          <span>Author: {report.confession.isAnonymous ? "Anonymous" : report.confession.author.name}</span>
+                          <span>Posted: {new Date(report.confession.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Talk Report Details */}
+                  {report.callId === 'TALK_CONVERSATION' && (
+                    <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                      <p className="font-medium text-sm text-red-700 mb-2 flex items-center gap-2">
+                        <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                        Talk Conversation Report:
+                      </p>
+                      <div className="space-y-2">
+                        <div>
+                          <p className="font-medium text-xs text-gray-600">Reported User:</p>
+                          <p className="text-sm text-gray-800">{report.reportedId}</p>
+                        </div>
+                        <div className="flex gap-4 text-xs text-gray-600">
+                          <span>Report Type: Talk Conversation</span>
+                          <span>Reported: {new Date(report.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div>
                     <p className="font-medium">Reported User:</p>
-                    <p className="text-sm text-gray-600">{report.reportedId}</p>
+                    <p className="text-sm text-gray-600">
+                      {report.confessionId && report.confession 
+                        ? (report.confession.isAnonymous ? "Anonymous" : report.confession.author.name)
+                        : report.reportedId
+                      }
+                    </p>
                   </div>
                   <div>
                     <p className="font-medium">Reason:</p>

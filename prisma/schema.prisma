@@ -46,6 +46,9 @@ model User {
   confessionComments ConfessionComment[]
   savedConfessions SavedConfession[]
 
+  // User Quizzes
+  userQuizzes UserQuiz[]
+
   // Reports
   reports Report[] @relation("UserReports")
 
@@ -151,7 +154,6 @@ model RoomSetting {
   camera         String
   participants   Int
   availability   String
-  allowReview    Boolean
   topicName      String?
   callId         String?
   createdAt      DateTime @default(now())
@@ -331,7 +333,8 @@ model Report {
   id          String       @id @default(auto()) @map("_id") @db.ObjectId
   reporterId  String
   reportedId  String
-  callId      String
+  callId      String?
+  confessionId String?     @db.ObjectId
   reason      String
   reportType  ReportType
   status      ReportStatus @default(PENDING)
@@ -376,4 +379,33 @@ model RoomBan {
   @@unique([userId, callId])
   @@index([userId])
   @@index([callId])
+}
+
+model UserQuiz {
+  id          String         @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String
+  title       String
+  description String
+  questions   UserQuizQuestion[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model UserQuizQuestion {
+  id       String   @id @default(auto()) @map("_id") @db.ObjectId
+  quizId   String   @db.ObjectId
+  question String
+  optionA  String
+  optionB  String
+  optionC  String
+  optionD  String
+  correct  String
+
+  quiz UserQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([quizId])
 }

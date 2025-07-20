@@ -19,7 +19,6 @@ export default function CreateRoom() {
     camera: "on",
     participants: 15,
     availability: "public",
-    allowReview: false,
   });
 
   // Check if user is blocked
@@ -173,30 +172,6 @@ export default function CreateRoom() {
           <option value="public">Public</option>
           <option value="private">Private</option>
         </select>
-      </div>
-
-      <div className="mb-4">
-        <label className="block mb-2 font-medium">
-          Ability to Revise Before Match:
-        </label>
-        <div className="flex gap-4">
-          <button
-            className={`px-4 py-2 rounded-[8px] ${
-              roomSettings.allowReview ? "bg-thanodi-peach text-white" : ""
-            }`}
-            onClick={() => setValue("allowReview", true)}
-          >
-            Yes
-          </button>
-          <button
-            className={`px-4 py-2 rounded-[8px] ${
-              !roomSettings.allowReview ? "bg-thanodi-peach text-white" : ""
-            }`}
-            onClick={() => setValue("allowReview", false)}
-          >
-            No
-          </button>
-        </div>
       </div>
 
       <button

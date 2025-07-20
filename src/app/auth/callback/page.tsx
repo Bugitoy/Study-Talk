@@ -2,7 +2,7 @@
 
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { useQuery } from "@tanstack/react-query";
-import { Loader } from "lucide-react";
+import Loader from "@/components/Loader";
 import { useRouter } from "next/navigation";
 import { checkAuthStatus } from "./actions";
 import { useEffect } from "react";
@@ -32,7 +32,7 @@ const Page = () => {
   return (
     <div className="mt-20 w-full flex justify-center">
       <div className="flex flex-col items-center gap-2">
-        <Loader className="w-10 h-10 animate-spin text-primary" />
+        <Loader />
         <h3 className="text-xl font-bold">Redirecting...</h3>
         <p>Please wait</p>
       </div>

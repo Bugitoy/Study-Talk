@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import NextLayout from "@/components/NextLayout";
-import { User as UserIcon, ThumbsUp, ThumbsDown, MessageCircle, Share2, Bookmark, Plus } from "lucide-react";
+import { User as UserIcon, ThumbsUp, ThumbsDown, MessageCircle, Share2, Bookmark, Plus, Flag } from "lucide-react";
 import Image from "next/image";
 import clsx from "clsx";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -17,6 +17,8 @@ import { useRouter } from "next/navigation";
 import { InfiniteScrollContainer } from "@/components/InfiniteScrollContainer";
 import { ConfessionListSkeleton } from "@/components/ConfessionSkeleton";
 import { CommentSection } from "@/components/CommentSection";
+import { useToast } from '@/hooks/use-toast';
+import ShareButton from "@/components/ShareButton";
 
 const tabs = [
   { key: "posts", label: "Posts" },
@@ -28,6 +30,7 @@ const tabs = [
 export default function ConfessionsPage() {
   const { user } = useKindeBrowserClient();
   const router = useRouter();
+  const { toast } = useToast();
   
   const [activeTab, setActiveTab] = useState<string>("posts");
   const [searchQuery, setSearchQuery] = useState("");
@@ -36,6 +39,20 @@ export default function ConfessionsPage() {
   const [newBody, setNewBody] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(true);
   const [openCommentSections, setOpenCommentSections] = useState<Set<string>>(new Set());
+  
+  // Report functionality
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportType, setReportType] = useState('INAPPROPRIATE_BEHAVIOR');
+  const [selectedConfessionId, setSelectedConfessionId] = useState('');
+  
+  const reportTypes = [
+    { value: 'INAPPROPRIATE_BEHAVIOR', label: 'Inappropriate Behavior' },
+    { value: 'HARASSMENT', label: 'Harassment' },
+    { value: 'SPAM', label: 'Spam' },
+    { value: 'INAPPROPRIATE_CONTENT', label: 'Inappropriate Content' },
+    { value: 'OTHER', label: 'Other' },
+  ];
 
   // Hook configurations based on active tab
   const sortBy = activeTab === "hottest" ? "hot" : "recent";
@@ -114,6 +131,53 @@ export default function ConfessionsPage() {
       console.error("Failed to toggle save:", error);
     }
   };
+  
+  const handleReport = async () => {
+    if (!user?.id || !selectedConfessionId || !reportReason.trim()) {
+      toast({
+        title: "Error",
+        description: "Please fill all fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      const res = await fetch(`/api/confessions/${selectedConfessionId}/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          reporterId: user.id, 
+          reason: reportReason, 
+          reportType 
+        }),
+      });
+      
+      if (res.ok) {
+        toast({
+          title: "Success",
+          description: "Report submitted successfully!",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to submit report.",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to submit report.",
+        variant: "destructive",
+      });
+    }
+    
+    setShowReportDialog(false);
+    setReportReason('');
+    setSelectedConfessionId('');
+    setReportType('INAPPROPRIATE_BEHAVIOR');
+  };
 
   const toggleCommentSection = (confessionId: string) => {
     setOpenCommentSections(prev => {
@@ -183,7 +247,12 @@ export default function ConfessionsPage() {
             </div>
             
             {/* Title */}
-            <h3 className="font-semibold text-lg text-gray-900 mb-2">{post.title}</h3>
+            <h3 
+              className="font-semibold text-lg text-gray-900 mb-2 cursor-pointer hover:text-blue-600 transition-colors"
+              onClick={() => router.push(`/meetups/confessions/post/${post.id}`)}
+            >
+              {post.title}
+            </h3>
             
             {/* Content */}
             <p className="text-gray-700 whitespace-pre-line mb-4 line-clamp-3 lg:line-clamp-none">
@@ -239,9 +308,13 @@ export default function ConfessionsPage() {
                   <MessageCircle className="w-4 h-4" /> {post.commentCount} Comments
                 </button>
               </div>
-              <div className="flex items-center gap-1 cursor-pointer hover:text-gray-800">
-                <Share2 className="w-4 h-4" /> Share
-              </div>
+              <ShareButton 
+                confessionId={post.id}
+                confessionTitle={post.title}
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-1 cursor-pointer hover:text-gray-800"
+              />
               <div
                 className="flex items-center gap-1 cursor-pointer hover:text-gray-800"
                 onClick={(e) => {
@@ -254,6 +327,16 @@ export default function ConfessionsPage() {
                   fill={isConfessionSaved(post.id) ? '#FACC15' : 'none'}
                 />
                 {isConfessionSaved(post.id) ? 'Saved' : 'Save'}
+              </div>
+              <div
+                className="flex items-center gap-1 cursor-pointer hover:text-red-600"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedConfessionId(post.id);
+                  setShowReportDialog(true);
+                }}
+              >
+                <Flag className="w-4 h-4" /> Report
               </div>
               <div className="ml-auto text-gray-500">
                 {formatTimeAgo(post.createdAt)}
@@ -470,6 +553,54 @@ export default function ConfessionsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Report Dialog */}
+        {showReportDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
+              <h2 className="text-xl font-semibold mb-4 text-gray-800">Report Confession</h2>
+              <div className="mb-4">
+                <label className="block mb-2 text-gray-800 font-medium">Type of Report</label>
+                <select
+                  className="w-full border border-gray-300 rounded p-2 text-black"
+                  value={reportType}
+                  onChange={e => setReportType(e.target.value)}
+                >
+                  {reportTypes.map(rt => (
+                    <option key={rt.value} value={rt.value}>{rt.label}</option>
+                  ))}
+                </select>
+              </div>
+              <textarea
+                className="w-full border border-gray-300 rounded p-2 mb-4 text-black"
+                rows={4}
+                placeholder="Describe the issue..."
+                value={reportReason}
+                onChange={e => setReportReason(e.target.value)}
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-black"
+                  onClick={() => {
+                    setShowReportDialog(false);
+                    setReportReason('');
+                    setSelectedConfessionId('');
+                    setReportType('INAPPROPRIATE_BEHAVIOR');
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                  onClick={handleReport}
+                  disabled={!reportReason.trim()}
+                >
+                  Submit
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </NextLayout>
   );
