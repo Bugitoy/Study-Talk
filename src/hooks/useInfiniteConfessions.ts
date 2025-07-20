@@ -8,7 +8,6 @@ export interface Confession {
   authorId: string;
   universityId?: string;
   isAnonymous: boolean;
-  viewCount: number;
   hotScore: number;
   believeCount: number;
   doubtCount: number;
@@ -329,37 +328,6 @@ export function useInfiniteConfessions(options: UseInfiniteConfessionsOptions = 
     }
   };
 
-  const incrementView = async (confessionId: string) => {
-    try {
-      // Optimistically increment view count
-      setConfessions(prev => prev.map(confession => {
-        if (confession.id === confessionId) {
-          return {
-            ...confession,
-            viewCount: confession.viewCount + 1,
-          };
-        }
-        return confession;
-      }));
-
-      const params = new URLSearchParams({ viewConfessionId: confessionId });
-      if (userId) params.append('userId', userId);
-      await fetch(`/api/confessions/infinite?${params}`);
-    } catch (error) {
-      console.error('Failed to increment view:', error);
-      // Revert optimistic update on error
-      setConfessions(prev => prev.map(confession => {
-        if (confession.id === confessionId) {
-          return {
-            ...confession,
-            viewCount: Math.max(0, confession.viewCount - 1),
-          };
-        }
-        return confession;
-      }));
-    }
-  };
-
   // Initial load when dependencies change
   useEffect(() => {
     reset();
@@ -402,7 +370,6 @@ export function useInfiniteConfessions(options: UseInfiniteConfessionsOptions = 
     reset,
     createConfession,
     voteOnConfession,
-    incrementView,
     updateCommentCount,
   };
 } 

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { 
-  getConfessionsInfinite,
-  incrementConfessionView 
+  getConfessionsInfinite
 } from '@/lib/db-utils';
 
 export async function GET(req: NextRequest) {
@@ -12,12 +11,6 @@ export async function GET(req: NextRequest) {
     const universityId = searchParams.get('universityId') || undefined;
     const sortBy = (searchParams.get('sortBy') as 'recent' | 'hot') || 'recent';
     const search = searchParams.get('search') || undefined;
-    const viewConfessionId = searchParams.get('viewConfessionId');
-
-    // Increment view count if specified
-    if (viewConfessionId) {
-      await incrementConfessionView(viewConfessionId);
-    }
 
     const userId = searchParams.get('userId') || undefined;
     

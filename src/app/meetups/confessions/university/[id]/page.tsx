@@ -12,6 +12,7 @@ import { InfiniteScrollContainer } from "@/components/InfiniteScrollContainer";
 import { ConfessionListSkeleton } from "@/components/ConfessionSkeleton";
 import { CommentSection } from "@/components/CommentSection";
 import ShareButton from "@/components/ShareButton";
+import { UserReputationBadge } from '@/components/UserReputationBadge';
 
 export default function UniversityConfessionsPage() {
   const { user } = useKindeBrowserClient();
@@ -36,7 +37,6 @@ export default function UniversityConfessionsPage() {
     loadMore,
     loadNewPosts,
     voteOnConfession,
-    incrementView,
     updateCommentCount,
   } = useInfiniteConfessions({ 
     universityId,
@@ -107,12 +107,22 @@ export default function UniversityConfessionsPage() {
       {posts.map((post, index) => (
         <div
           key={post.id}
-          className="confession-card rounded-[12px] border border-gray-300 bg-white p-4 shadow-sm lg:p-6"
+          className="rounded-[12px] border border-gray-300 bg-white p-4 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out transform hover:scale-[1.01] lg:p-6 relative"
           style={{ 
             animation: `fadeInUp 0.5s ease-out ${index * 0.1}s both`,
           }}
-          onClick={() => incrementView(post.id)}
         >
+          {/* Shield Badge - Top Right Corner */}
+          {!post.isAnonymous && (
+            <div className="absolute top-3 right-3 z-10">
+              <UserReputationBadge 
+                userId={post.authorId} 
+                variant="shield"
+                className="hover:scale-110 transition-transform duration-200"
+              />
+            </div>
+          )}
+
           {/* Header */}
           <div className="flex items-center gap-3 mb-4">
             {post.author?.image && !post.isAnonymous ? (

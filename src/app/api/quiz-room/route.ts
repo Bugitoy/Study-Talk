@@ -5,9 +5,11 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { id, name, timePerQuestion, questions } = body
-    if (!id || !timePerQuestion || !questions) {
+    
+    if (!id || timePerQuestion === undefined || !questions) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
     }
+    
     const room = await createQuizRoom({ id, name: name || 'Quiz', timePerQuestion, questions })
     return NextResponse.json(room)
   } catch (error) {

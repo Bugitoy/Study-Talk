@@ -90,6 +90,20 @@ const CallRoom = () => {
   const { startTracking, endTracking, isTracking } = useStreamStudyTimeTracker(call?.id);
   const [showTopicModal, setShowTopicModal] = useState(false);
 
+  // Debug logging for quiz room data
+  useEffect(() => {
+    console.log('CallRoom Debug - Room ID:', id);
+    console.log('CallRoom Debug - Quiz Room Data:', quizRoom);
+    console.log('CallRoom Debug - Room Settings:', roomSettings);
+  }, [id, quizRoom, roomSettings]);
+
+  useEffect(() => {
+    if (quizRoom) {
+      console.log('CallRoom Debug - Setting current room:', quizRoom);
+      setCurrentRoom(quizRoom);
+    }
+  }, [quizRoom]);
+
   const reportTypes = [
     { value: 'INAPPROPRIATE_BEHAVIOR', label: 'Inappropriate Behavior' },
     { value: 'HARASSMENT', label: 'Harassment' },

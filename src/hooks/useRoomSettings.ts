@@ -45,9 +45,12 @@ export function useRoomSettingByCallId(callId: string | undefined) {
         if (res.ok) {
           const json = await res.json()
           setData(json)
+        } else {
+          setData(null)
         }
       } catch (err) {
         console.error('Failed to load room setting by call', err)
+        setData(null)
       }
     }
     load()

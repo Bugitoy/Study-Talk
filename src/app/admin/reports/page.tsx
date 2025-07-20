@@ -188,8 +188,20 @@ export default function AdminReportsPage() {
     <NextLayout>
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Reports</h1>
-        <p className="text-gray-600">Manage user reports and take action on violations</p>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Reports</h1>
+            <p className="text-gray-600">Manage user reports and take action on violations</p>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => router.push('/admin/reputation')}
+            >
+              Reputation Management
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}

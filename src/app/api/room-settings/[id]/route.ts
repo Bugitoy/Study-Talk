@@ -23,8 +23,10 @@ export async function PUT(
     const { id } = await context.params;
     try {
       const data = await req.json();
+      
       const setting = await updateRoomSetting(id, data);
-    return NextResponse.json(setting);
+      
+      return NextResponse.json(setting);
   } catch (error) {
     console.error('Error updating room setting:', error);
     return NextResponse.json({ error: 'Failed' }, { status: 500 });

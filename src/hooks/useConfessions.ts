@@ -8,7 +8,6 @@ export interface Confession {
   authorId: string;
   universityId?: string;
   isAnonymous: boolean;
-  viewCount: number;
   hotScore: number;
   believeCount: number;
   doubtCount: number;
@@ -241,7 +240,7 @@ export function useConfessions(options: UseConfessionsOptions = {}) {
       const requestBody = action === 'unvote' 
         ? { userId, confessionId, action: 'unvote' }
         : { userId, confessionId, voteType, action: 'vote' };
-
+      
       const response = await fetch('/api/confessions/vote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -270,37 +269,6 @@ export function useConfessions(options: UseConfessionsOptions = {}) {
     }
   };
 
-  const incrementView = async (confessionId: string) => {
-    try {
-      // Optimistically increment view count
-      setConfessions(prev => prev.map(confession => {
-        if (confession.id === confessionId) {
-          return {
-            ...confession,
-            viewCount: confession.viewCount + 1,
-          };
-        }
-        return confession;
-      }));
-
-      const params = new URLSearchParams({ viewConfessionId: confessionId });
-      if (userId) params.append('userId', userId);
-      await fetch(`/api/confessions?${params}`);
-    } catch (error) {
-      console.error('Failed to increment view:', error);
-      // Revert optimistic update on error
-      setConfessions(prev => prev.map(confession => {
-        if (confession.id === confessionId) {
-          return {
-            ...confession,
-            viewCount: Math.max(0, confession.viewCount - 1),
-          };
-        }
-        return confession;
-      }));
-    }
-  };
-
   // Initial load and dependency changes
   useEffect(() => {
     fetchConfessions(true, false);
@@ -324,7 +292,6 @@ export function useConfessions(options: UseConfessionsOptions = {}) {
     backgroundRefresh,       // Smooth background refresh
     createConfession,
     voteOnConfession,
-    incrementView,
     fetchMore: () => fetchConfessions(false),
   };
 } 

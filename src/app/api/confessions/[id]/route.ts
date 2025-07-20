@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getConfessionById, incrementConfessionView } from '@/lib/db-utils';
+import { getConfessionById } from '@/lib/db-utils';
 
 export async function GET(
   req: NextRequest,
@@ -9,9 +9,6 @@ export async function GET(
     const { id } = await params;
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId') || undefined;
-
-    // Increment view count
-    await incrementConfessionView(id);
 
     const confession = await getConfessionById(id, userId);
 

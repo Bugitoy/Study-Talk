@@ -8,7 +8,6 @@ export interface University {
   isVerified: boolean;
   confessionCount: number;
   studentCount: number;
-  totalViews: number;
   totalVotes: number;
   createdAt: string;
   updatedAt: string;

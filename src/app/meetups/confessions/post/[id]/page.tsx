@@ -11,6 +11,7 @@ import { CommentSection } from "@/components/CommentSection";
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { UserReputationBadge } from '@/components/UserReputationBadge';
 import Head from "next/head";
 
 interface Confession {
@@ -20,7 +21,6 @@ interface Confession {
   authorId: string;
   universityId?: string;
   isAnonymous: boolean;
-  viewCount: number;
   hotScore: number;
   believeCount: number;
   doubtCount: number;
@@ -321,7 +321,18 @@ export default function ConfessionPostPage() {
           </div>
 
           {/* Confession Card */}
-          <div className="rounded-[12px] border border-gray-300 bg-white p-6 shadow-sm lg:p-8">
+          <div className="rounded-[12px] border border-gray-300 bg-white p-6 shadow-sm lg:p-8 relative">
+            {/* Shield Badge - Top Right Corner */}
+            {!confession.isAnonymous && (
+              <div className="absolute top-4 right-4 z-10">
+                <UserReputationBadge 
+                  userId={confession.authorId} 
+                  variant="shield"
+                  className="hover:scale-110 transition-transform duration-200"
+                />
+              </div>
+            )}
+
             {/* Header */}
             <div className="flex items-center gap-3 mb-6">
               {confession.author?.image && !confession.isAnonymous ? (
@@ -345,7 +356,7 @@ export default function ConfessionPostPage() {
                   {confession.university?.name || "Unknown University"}
                 </p>
                 <p className="text-sm text-gray-400">
-                  {formatTimeAgo(confession.createdAt)} • {confession.viewCount} views
+                  {formatTimeAgo(confession.createdAt)}
                 </p>
               </div>
             </div>

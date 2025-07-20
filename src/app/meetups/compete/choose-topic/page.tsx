@@ -43,10 +43,13 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
   const [selectedTopic, setSelectedTopic] = useState<
         { title: string, description: string; backgroundImage: string } | null>(null);
   const [selectedUserQuiz, setSelectedUserQuiz] = useState<any>(null);
+  const [isLoadingQuiz, setIsLoadingQuiz] = useState(false);
+  const [isCreatingMeeting, setIsCreatingMeeting] = useState(false);
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const settingsId = searchParams.get('settings') || undefined;
   const selectedQuizId = searchParams.get('selectedQuiz');
+  
   const roomSettings = useRoomSetting(settingsId);
 
   const saveTopicName = async (topicName: string) => {
@@ -69,16 +72,37 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
       return;
     }
 
-    if (!client || !user) return;
+    // If user quiz is selected but still loading, show loading message
+    if (selectedQuizId && !selectedUserQuiz && isLoadingQuiz) {
+      toast({
+        title: 'Loading Quiz',
+        description: 'Please wait while your quiz is being loaded...',
+      });
+      return;
+    }
+
+    if (!client || !user) {
+      return;
+    }
+    
+    setIsCreatingMeeting(true);
+    
     try {
+      
       const id = new ObjectId().toString(); // Generate a valid ObjectID
+      
       const call = client.call('default', id);
+      
       if (!call) throw new Error('Failed to create meeting');
+      
+      
       const startsAt =
         values.dateTime.toISOString() || new Date(Date.now()).toISOString();
       const description = values.description || 'Instant Meeting';
       const availability = roomSettings?.availability || 'public';
       const roomName = roomSettings?.roomName || 'Unnamed Room';
+      
+      
       await call.getOrCreate({
         data: {
           starts_at: startsAt,
@@ -90,6 +114,8 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
           },
         },
       });
+      
+      
       setCallDetail(call);
       let sampleQuestions: QuizQuestion[] = [];
       if (selectedTopic) {
@@ -106,6 +132,7 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
           }));
         }
       } else if (selectedUserQuiz) {
+        
         // Use the selected user quiz questions and randomize them
         const userQuizQuestions = selectedUserQuiz.questions.map((q: any) => ({
           question: q.question,
@@ -124,7 +151,10 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
         
         sampleQuestions = userQuizQuestions;
       }
+      
+      
       if (roomSettings) {
+        
         const timePerQuestion = roomSettings.timePerQuestion ?? null;
         const numQuestions = roomSettings.numQuestions || sampleQuestions.length;
         sampleQuestions = sampleQuestions.slice(0, numQuestions);
@@ -140,12 +170,21 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
           }),
         });
       
+        
         if (settingsId) {
-          await fetch(`/api/room-settings/${settingsId}`, {
+          
+          const updateResponse = await fetch(`/api/room-settings/${settingsId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ callId: call.id }),
           });
+          
+          
+          if (updateResponse.ok) {
+          } else {
+            console.error('Failed to update room settings with callId:', updateResponse.status);
+          }
+        } else {
         }
         
         // Create compete room in database
@@ -168,6 +207,8 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
     } catch (error) {
       console.error(error);
       toast({ title: 'Failed to create Meeting' });
+    } finally {
+      setIsCreatingMeeting(false);
     }
   };
 
@@ -192,22 +233,39 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
   useEffect(() => {
     const loadSelectedQuiz = async () => {
       if (selectedQuizId && user?.id) {
+        setIsLoadingQuiz(true);
         try {
           const res = await fetch(`/api/user-quizzes/${selectedQuizId}?userId=${user.id}`);
+          
           if (res.ok) {
             const quizData = await res.json();
             setSelectedUserQuiz(quizData);
+          } else {
+            console.error('Failed to load quiz, status:', res.status);
+            toast({
+              title: 'Error',
+              description: 'Failed to load quiz data',
+              variant: 'destructive',
+            });
           }
         } catch (error) {
-          console.error('Failed to load selected quiz:', error);
+          console.error('Error loading quiz:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to load quiz data',
+            variant: 'destructive',
+          });
+        } finally {
+          setIsLoadingQuiz(false);
         }
       }
     };
+
     loadSelectedQuiz();
-  }, [selectedQuizId, user?.id]);
+  }, [selectedQuizId, user?.id, toast]);
   
   const handleNext = () => {
-    router.push("/meetups/compete/quiz-library");
+    handleQuizLibraryClick();
   };
 
   type Topic = {
@@ -218,8 +276,34 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
 
   const handleTopicClick = (topic: Topic) => {
     setSelectedTopic(topic);
+    setSelectedUserQuiz(null);
     saveTopicName(topic.title);
   };
+
+  const handleQuizLibraryClick = () => {
+    // Preserve the settings parameter when navigating to quiz library
+    const settingsParam = settingsId ? `?settings=${settingsId}` : '';
+    router.push(`/meetups/compete/quiz-library${settingsParam}`);
+  };
+
+  // Show loading state when quiz is being loaded
+  if (selectedQuizId && isLoadingQuiz) {
+    return (
+      <NextLayout>
+        <div className="p-6 max-w-7xl mx-auto">
+          <div className="flex items-center justify-center mb-20">
+            <div className="flex-grow border-t border-blue-200"></div>
+            <h1 className="text-5xl font-bold mx-[5rem]">Loading Your Quiz</h1>
+            <div className="flex-grow border-t border-blue-200"></div>
+          </div>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading your quiz data...</p>
+          </div>
+        </div>
+      </NextLayout>
+    );
+  }
 
   return (
     <NextLayout>
@@ -270,18 +354,22 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
         <div className="grid grid-cols-2 gap-7">
             <div
               className={`button h-[50px] rounded-lg select-none transition-all duration-150 border-b-[1px] shadow ${
-                (selectedTopic || selectedUserQuiz)
+                (selectedTopic || selectedUserQuiz) && !isCreatingMeeting
                   ? "bg-orange-300 cursor-pointer active:translate-y-2 active:[box-shadow:0_0px_0_0_#f5c782,0_0px_0_0_#f5c78241] active:border-b-[0px] [box-shadow:0_10px_0_0_#f5c782,0_15px_0_0_#f5c78241] border-orange-300" 
                   : "bg-gray-300 cursor-not-allowed border-gray-300"
               }`}
               tabIndex={0}
               role="button"
-              onClick={createMeeting}
+              onClick={() => {
+                if (!isCreatingMeeting) {
+                  createMeeting();
+                }
+              }}
             >
               <span className={`flex flex-col justify-center items-center h-full font-bold text-lg ${
-                (selectedTopic || selectedUserQuiz) ? "text-gray-800" : "text-gray-500"
+                (selectedTopic || selectedUserQuiz) && !isCreatingMeeting ? "text-gray-800" : "text-gray-500"
               }`}>
-                {(selectedTopic || selectedUserQuiz) ? "Next" : "Select a topic first"}
+                {isCreatingMeeting ? "Creating..." : (selectedTopic || selectedUserQuiz) ? "Next" : "Select a topic first"}
               </span>
             </div>
 

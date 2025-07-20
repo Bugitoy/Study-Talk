@@ -1,4 +1,5 @@
 import prisma from "@/db/prisma";
+import { botDetectionService, BotDetectionResult } from './bot-detection';
 
 // Get user information with subscription details
 export async function getUserInfo(userId: string) {
@@ -264,21 +265,8 @@ export async function updateRoomSetting(id: string, data: {
   topicName?: string;
 }) {
   try {
-    // If setting a callId, check for uniqueness at application level
-    if (data.callId) {
-      const existingWithCallId = await prisma.roomSetting.findFirst({
-        where: { 
-          callId: data.callId,
-          id: { not: id } // Exclude the current record
-        }
-      });
-      
-      if (existingWithCallId) {
-        throw new Error(`CallId ${data.callId} is already in use by another room setting`);
-      }
-    }
-    
-    return await prisma.roomSetting.update({ where: { id }, data });
+    const result = await prisma.roomSetting.update({ where: { id }, data });
+    return result;
   } catch (error) {
     console.error("Error updating room setting:", error);
     throw error;
@@ -296,10 +284,13 @@ export async function getRoomSetting(id: string) {
 
 export async function getRoomSettingByCallId(callId: string) {
   try {
-    return await prisma.roomSetting.findFirst({ where: { callId } });
+    const roomSetting = await prisma.roomSetting.findFirst({
+      where: { callId },
+    });
+    return roomSetting;
   } catch (error) {
-    console.error("Error fetching room setting by callId:", error);
-    return null;
+    console.error('Error getting room setting by callId:', error);
+    throw error;
   }
 }
 export async function createStudyGroupRoom(data: { callId: string; roomName: string; hostId: string }) {
@@ -322,31 +313,23 @@ export async function listActiveStudyGroupRooms() {
 
 export async function endStudyGroupRoom(callId: string) {
   try {
-    console.log('endStudyGroupRoom called for callId:', callId);
-    
     // Check if room exists and is not already ended
     const room = await prisma.studyGroupRoom.findFirst({
       where: { callId }
     });
     
     if (!room) {
-      console.log('No study group room found for callId:', callId);
       return;
     }
     
     if (room.ended) {
-      console.log('Room already ended for callId:', callId);
       return;
     }
     
-    console.log('Ending room:', room.roomName, 'for callId:', callId);
-    
-    const result = await prisma.studyGroupRoom.updateMany({ 
+    await prisma.studyGroupRoom.updateMany({ 
       where: { callId }, 
       data: { ended: true } 
     });
-    
-    console.log('Room ended successfully. Updated count:', result.count);
   } catch (error) {
     console.error('Error ending study group room:', error);
   }
@@ -747,25 +730,36 @@ export async function createConfession(data: {
   isAnonymous?: boolean;
 }) {
   try {
-    return await prisma.confession.create({
+    const confession = await prisma.confession.create({
       data: {
-        ...data,
+        title: data.title,
+        content: data.content,
+        authorId: data.authorId,
+        universityId: data.universityId,
         isAnonymous: data.isAnonymous ?? true,
       },
       include: {
         author: {
-          select: { id: true, name: true, image: true, university: true },
-        },
-        university: true,
-        _count: {
           select: {
-            votes: true,
-            comments: true,
-            savedBy: true,
+            id: true,
+            name: true,
+            image: true,
+            university: true,
+          },
+        },
+        university: {
+          select: {
+            id: true,
+            name: true,
           },
         },
       },
     });
+
+    // Monitor user activity and update reputation
+    await monitorUserActivity(data.authorId, 'confession');
+
+    return confession;
   } catch (error) {
     console.error('Error creating confession:', error);
     throw error;
@@ -1022,28 +1016,48 @@ export async function getConfessionsInfinite(options: {
   }
 }
 
-export async function voteOnConfession(data: {
-  userId: string;
-  confessionId: string;
-  voteType: 'BELIEVE' | 'DOUBT';
-}) {
+export async function voteConfession(confessionId: string, userId: string, voteType: 'BELIEVE' | 'DOUBT') {
   try {
-    // Upsert vote (update if exists, create if not)
-    const vote = await prisma.confessionVote.upsert({
+    // Check if user already voted
+    const existingVote = await prisma.confessionVote.findUnique({
       where: {
         userId_confessionId: {
-          userId: data.userId,
-          confessionId: data.confessionId,
+          userId,
+          confessionId,
         },
       },
-      update: {
-        voteType: data.voteType,
-      },
-      create: data,
     });
 
-    // Update confession hot score
-    await updateConfessionHotScore(data.confessionId);
+    let vote;
+    if (existingVote) {
+      // Update existing vote
+      vote = await prisma.confessionVote.update({
+        where: {
+          userId_confessionId: {
+            userId,
+            confessionId,
+          },
+        },
+        data: {
+          voteType,
+        },
+      });
+    } else {
+      // Create new vote
+      vote = await prisma.confessionVote.create({
+        data: {
+          userId,
+          confessionId,
+          voteType,
+        },
+      });
+    }
+
+    // Monitor user activity and update reputation
+    await monitorUserActivity(userId, 'vote');
+
+    // Update hot score
+    await updateConfessionHotScore(confessionId);
 
     return vote;
   } catch (error) {
@@ -1128,26 +1142,33 @@ export async function createConfessionComment(data: {
   content: string;
   authorId: string;
   confessionId: string;
-  isAnonymous?: boolean;
   parentId?: string;
 }) {
   try {
     const comment = await prisma.confessionComment.create({
-      data,
+      data: {
+        content: data.content,
+        authorId: data.authorId,
+        confessionId: data.confessionId,
+        parentId: data.parentId,
+      },
       include: {
         author: {
-          select: { id: true, name: true, image: true },
-        },
-        replies: {
-          include: {
-            author: {
-              select: { id: true, name: true, image: true },
-            },
+          select: {
+            id: true,
+            name: true,
+            image: true,
+            university: true,
           },
-          orderBy: { createdAt: 'asc' },
         },
       },
     });
+
+    // Monitor user activity and update reputation
+    await monitorUserActivity(data.authorId, 'comment');
+
+    // Update confession hot score
+    await updateConfessionHotScore(data.confessionId);
 
     return comment;
   } catch (error) {
@@ -1325,16 +1346,6 @@ export async function getUniversities() {
     // Get additional stats for each university
     const universitiesWithStats = await Promise.all(
       universities.map(async (uni) => {
-        const stats = await prisma.confession.aggregate({
-          where: { universityId: uni.id },
-          _sum: {
-            viewCount: true,
-          },
-          _count: {
-            authorId: true,
-          },
-        });
-
         const votes = await prisma.confessionVote.count({
           where: {
             confession: {
@@ -1353,7 +1364,6 @@ export async function getUniversities() {
           ...uni,
           confessionCount: uni._count.confessions,
           studentCount: uniqueStudents.length,
-          totalViews: stats._sum.viewCount || 0,
           totalVotes: votes,
           _count: undefined,
         };
@@ -1429,8 +1439,8 @@ async function updateConfessionHotScore(confessionId: string) {
       ? 1 - Math.abs(believeCount - doubtCount) / totalVotes 
       : 0;
     
-    // Engagement score
-    const engagementScore = totalVotes + (confession.comments.length * 2) + (confession.viewCount * 0.1);
+    // Engagement score (removed viewCount)
+    const engagementScore = totalVotes + (confession.comments.length * 2);
     
     // Time decay factor (content gets less hot over time)
     const timeDecay = Math.exp(-ageInHours / 24); // Decay over 24 hours
@@ -1447,20 +1457,494 @@ async function updateConfessionHotScore(confessionId: string) {
   }
 }
 
-export async function incrementConfessionView(confessionId: string) {
+/**
+ * Determine reputation level based on score
+ */
+function determineReputationLevel(score: number): string {
+  if (score >= 800) return 'LEGENDARY';
+  if (score >= 600) return 'EXPERT';
+  if (score >= 400) return 'TRUSTED';
+  if (score >= 200) return 'ACTIVE';
+  if (score >= 100) return 'REGULAR';
+  return 'NEW';
+}
+
+/**
+ * Enhanced reputation calculation with bot detection
+ */
+export async function calculateUserReputation(userId: string): Promise<void> {
   try {
-    await prisma.confession.update({
-      where: { id: confessionId },
-      data: {
-        viewCount: {
-          increment: 1,
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        confessions: {
+          select: {
+            id: true,
+            createdAt: true,
+            hotScore: true
+          }
         },
+        confessionVotes: {
+          select: {
+            id: true,
+            createdAt: true,
+            voteType: true
+          }
+        },
+        confessionComments: {
+          select: {
+            id: true,
+            createdAt: true,
+            content: true
+          }
+        }
+      }
+    });
+
+    if (!user) return;
+
+    // Calculate activity score
+    const activityScore = calculateActivityScore(user);
+    
+    // Calculate quality score
+    const qualityScore = calculateQualityScore(user);
+    
+    // Calculate trust score
+    const trustScore = calculateTrustScore(user);
+
+    // Enhanced bot detection
+    const botDetectionResult = await botDetectionService.detectBot(userId);
+    
+    // Update user's bot probability
+    await botDetectionService.updateUserBotProbability(userId, botDetectionResult.probability);
+
+    // Calculate final reputation score with bot penalty
+    const botPenalty = botDetectionResult.probability > 50 ? (botDetectionResult.probability - 50) * 0.5 : 0;
+    const reputationScore = Math.max(0, activityScore + qualityScore + trustScore - botPenalty);
+
+    // Determine reputation level
+    const reputationLevel = determineReputationLevel(reputationScore);
+
+    // Update user reputation
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        reputationScore: Math.round(reputationScore),
+        activityScore: Math.round(activityScore),
+        qualityScore: Math.round(qualityScore),
+        trustScore: Math.round(trustScore),
+        botProbability: Math.round(botDetectionResult.probability),
+        reputationLevel,
+        isFlagged: botDetectionResult.riskLevel === 'CRITICAL' || botDetectionResult.riskLevel === 'HIGH',
+        updatedAt: new Date()
+      }
+    });
+
+    // Log reputation history
+    await prisma.reputationHistory.create({
+      data: {
+        userId,
+        changeType: 'REPUTATION_CALCULATION',
+        changeAmount: Math.round(reputationScore) - (user.reputationScore || 0),
+        reason: 'Reputation recalculated with bot detection',
+        previousScore: user.reputationScore || 0,
+        newScore: Math.round(reputationScore),
+        reputationScore: Math.round(reputationScore),
+        activityScore: Math.round(activityScore),
+        qualityScore: Math.round(qualityScore),
+        trustScore: Math.round(trustScore),
+        botProbability: Math.round(botDetectionResult.probability),
+        reputationLevel,
+        changeReason: 'reputation_calculation',
+        botIndicators: botDetectionResult.indicators,
+        riskLevel: botDetectionResult.riskLevel
+      }
+    });
+
+    console.log(`Reputation updated for user ${userId}:`, {
+      reputationScore: Math.round(reputationScore),
+      botProbability: Math.round(botDetectionResult.probability),
+      riskLevel: botDetectionResult.riskLevel,
+      indicators: botDetectionResult.indicators
+    });
+
+  } catch (error) {
+    console.error('Error calculating user reputation:', error);
+  }
+}
+
+/**
+ * Enhanced user activity monitoring with bot detection
+ */
+export async function monitorUserActivity(userId: string, action: 'confession' | 'vote' | 'comment'): Promise<void> {
+  try {
+    // Update daily activity counts
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const updateData: any = {
+      lastActivityAt: new Date()
+    };
+
+    switch (action) {
+      case 'confession':
+        updateData.dailyConfessions = { increment: 1 };
+        updateData.confessionsCreated = { increment: 1 };
+        break;
+      case 'vote':
+        updateData.dailyVotes = { increment: 1 };
+        updateData.votesCast = { increment: 1 };
+        break;
+      case 'comment':
+        updateData.dailyComments = { increment: 1 };
+        updateData.commentsCreated = { increment: 1 };
+        break;
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: updateData
+    });
+
+    // Trigger bot detection analysis
+    const botDetectionResult = await botDetectionService.detectBot(userId);
+    
+    // Update bot probability
+    await botDetectionService.updateUserBotProbability(userId, botDetectionResult.probability);
+
+    // Flag user if critical risk detected
+    if (botDetectionResult.riskLevel === 'CRITICAL') {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { 
+          isFlagged: true,
+          botProbability: botDetectionResult.probability
+        }
+      });
+
+      console.log(`Critical bot risk detected for user ${userId}:`, {
+        probability: botDetectionResult.probability,
+        indicators: botDetectionResult.indicators,
+        recommendations: botDetectionResult.recommendations
+      });
+    }
+
+    // Recalculate reputation with bot detection
+    await calculateUserReputation(userId);
+
+  } catch (error) {
+    console.error('Error monitoring user activity:', error);
+  }
+}
+
+/**
+ * Get bot detection statistics for admin dashboard
+ */
+export async function getBotDetectionStats() {
+  try {
+    return await botDetectionService.getBotDetectionStats();
+  } catch (error) {
+    console.error('Error getting bot detection stats:', error);
+    return {
+      totalUsers: 0,
+      suspiciousUsers: 0,
+      criticalUsers: 0,
+      averageProbability: 0
+    };
+  }
+}
+
+/**
+ * Get detailed bot detection information for a user
+ */
+export async function getUserBotDetectionInfo(userId: string): Promise<BotDetectionResult | null> {
+  try {
+    return await botDetectionService.detectBot(userId);
+  } catch (error) {
+    console.error('Error getting user bot detection info:', error);
+    return null;
+  }
+}
+
+// Calculate activity-based reputation score
+function calculateActivityScore(user: any) {
+  let score = 0;
+  
+  // Account age bonus (1 point per day, max 365)
+  const accountAgeDays = Math.floor((Date.now() - user.createdAt.getTime()) / (1000 * 60 * 60 * 24));
+  score += Math.min(accountAgeDays, 365);
+  
+  // Confession activity (5 points per confession)
+  score += user.confessions.length * 5;
+  
+  // Voting activity (1 point per vote)
+  score += user.confessionVotes.length;
+  
+  // Comment activity (2 points per comment)
+  score += user.confessionComments.length * 2;
+  
+  // Recent activity bonus (last 7 days)
+  const recentActivity = user.confessions.filter((c: any) => 
+    c.createdAt > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  ).length;
+  score += recentActivity * 3;
+  
+  return Math.min(score, 1000); // Cap at 1000
+}
+
+// Calculate quality-based reputation score
+function calculateQualityScore(user: any) {
+  let score = 0;
+  
+  if (user.confessions.length === 0) return 0;
+  
+  // Average votes received per confession
+  const totalVotesReceived = user.confessions.reduce((sum: number, confession: any) => 
+    sum + confession.votes.length, 0
+  );
+  const avgVotesPerConfession = totalVotesReceived / user.confessions.length;
+  score += avgVotesPerConfession * 10;
+  
+  // Positive vote ratio (BELIEVE votes vs total votes)
+  const totalVotes = user.confessions.reduce((sum: number, confession: any) => 
+    sum + confession.votes.length, 0
+  );
+  const positiveVotes = user.confessions.reduce((sum: number, confession: any) => 
+    sum + confession.votes.filter((v: any) => v.voteType === 'BELIEVE').length, 0
+  );
+  
+  if (totalVotes > 0) {
+    const positiveRatio = positiveVotes / totalVotes;
+    score += positiveRatio * 200; // Max 200 points for 100% positive
+  }
+  
+  // Comment engagement (comments received per confession)
+  const totalCommentsReceived = user.confessions.reduce((sum: number, confession: any) => 
+    sum + confession.comments.length, 0
+  );
+  const avgCommentsPerConfession = totalCommentsReceived / user.confessions.length;
+  score += avgCommentsPerConfession * 15;
+  
+  // Content length quality (longer content gets more points)
+  const avgContentLength = user.confessions.reduce((sum: number, confession: any) => 
+    sum + confession.content.length, 0
+  ) / user.confessions.length;
+  score += Math.min(avgContentLength / 10, 50); // Max 50 points for long content
+  
+  return Math.min(score, 1000); // Cap at 1000
+}
+
+// Calculate trust-based reputation score
+function calculateTrustScore(user: any) {
+  let score = 0;
+  
+  // No reports bonus (100 points)
+  if (user.reports.length === 0) {
+    score += 100;
+  } else {
+    // Penalty for reports (-50 per report)
+    score -= user.reports.length * 50;
+  }
+  
+  // Account verification bonus (50 points)
+  if (user.universityVerifiedAt) {
+    score += 50;
+  }
+  
+  // Consistent activity (no long gaps)
+  const recentActivity = user.confessions.filter((c: any) => 
+    c.createdAt > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  ).length;
+  if (recentActivity > 0) {
+    score += 50;
+  }
+  
+  // No suspicious patterns
+  if (!hasSuspiciousPatterns(user)) {
+    score += 100;
+  }
+  
+  return Math.max(score, 0); // Don't go below 0
+}
+
+// Detect bot activity and suspicious patterns
+async function detectBotActivity(user: any) {
+  let botScore = 0;
+  const reasons: string[] = [];
+  
+  // Check for rapid activity
+  const accountAgeHours = (Date.now() - user.createdAt.getTime()) / (1000 * 60 * 60);
+  const activityRate = user.confessions.length / Math.max(accountAgeHours, 1);
+  
+  if (activityRate > 2) { // More than 2 confessions per hour
+    botScore += 30;
+    reasons.push('High activity rate');
+  }
+  
+  // Check for repetitive content
+  if (hasRepetitiveContent(user.confessions)) {
+    botScore += 25;
+    reasons.push('Repetitive content');
+  }
+  
+  // Check for unnatural timing
+  if (hasUnnaturalTiming(user.confessions)) {
+    botScore += 20;
+    reasons.push('Unnatural timing');
+  }
+  
+  // Check for suspicious patterns
+  if (hasSuspiciousPatterns(user)) {
+    botScore += 15;
+    reasons.push('Suspicious patterns');
+  }
+  
+  // Check for no engagement
+  const totalVotes = user.confessions.reduce((sum: number, confession: any) => 
+    sum + confession.votes.length, 0
+  );
+  if (user.confessions.length > 5 && totalVotes === 0) {
+    botScore += 20;
+    reasons.push('No engagement');
+  }
+  
+  return {
+    botProbability: Math.min(botScore, 100),
+    isBot: botScore > 70,
+    isFlagged: botScore > 50,
+    reasons,
+  };
+}
+
+// Check for repetitive content
+function hasRepetitiveContent(confessions: any[]) {
+  if (confessions.length < 3) return false;
+  
+  const titles = confessions.map(c => c.title.toLowerCase());
+  const contents = confessions.map(c => c.content.toLowerCase());
+  
+  // Check for duplicate titles
+  const duplicateTitles = titles.filter((title, index) => 
+    titles.indexOf(title) !== index
+  ).length;
+  
+  // Check for duplicate content
+  const duplicateContents = contents.filter((content, index) => 
+    contents.indexOf(content) !== index
+  ).length;
+  
+  return duplicateTitles > 1 || duplicateContents > 0;
+}
+
+// Check for unnatural timing patterns
+function hasUnnaturalTiming(confessions: any[]) {
+  if (confessions.length < 3) return false;
+  
+  const timestamps = confessions.map(c => c.createdAt.getTime()).sort((a, b) => a - b);
+  const intervals = [];
+  
+  for (let i = 1; i < timestamps.length; i++) {
+    intervals.push(timestamps[i] - timestamps[i-1]);
+  }
+  
+  // Check for too-regular intervals (bot-like)
+  const regularIntervals = intervals.filter(interval => 
+    interval > 5000 && interval < 15000 // 5-15 second intervals
+  ).length;
+  
+  return regularIntervals > intervals.length * 0.6; // 60% regular intervals
+}
+
+// Check for suspicious patterns
+function hasSuspiciousPatterns(user: any) {
+  // Check for very short content
+  const shortContent = user.confessions.filter((c: any) => 
+    c.content.length < 20
+  ).length;
+  
+  // Check for generic titles
+  const genericTitles = user.confessions.filter((c: any) => 
+    c.title.toLowerCase().includes('test') || 
+    c.title.toLowerCase().includes('hello') ||
+    c.title.toLowerCase().includes('hi')
+  ).length;
+  
+  return shortContent > user.confessions.length * 0.5 || genericTitles > 2;
+}
+
+// Get verification level based on reputation and bot probability
+function getVerificationLevel(reputationScore: number, botProbability: number): string {
+  if (botProbability > 70) return 'SUSPICIOUS';
+  if (reputationScore > 500) return 'TRUSTED';
+  if (reputationScore > 200) return 'VERIFIED';
+  return 'NEW_USER';
+}
+
+// Log reputation changes for audit trail
+async function logReputationChange(userId: string, changeType: string, changeAmount: number, reason: string) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { reputationScore: true },
+    });
+
+    if (!user) return;
+
+    await prisma.reputationHistory.create({
+      data: {
+        userId,
+        changeType,
+        changeAmount,
+        reason,
+        previousScore: user.reputationScore,
+        newScore: user.reputationScore + changeAmount,
       },
     });
-    
-    // Update hot score after view increment
-    await updateConfessionHotScore(confessionId);
   } catch (error) {
-    console.error('Error incrementing view count:', error);
+    console.error('Error logging reputation change:', error);
   }
+}
+
+// Get user reputation for display
+export async function getUserReputation(userId: string) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        reputationScore: true,
+        activityScore: true,
+        qualityScore: true,
+        trustScore: true,
+        botProbability: true,
+        verificationLevel: true,
+        isFlagged: true,
+      },
+    });
+
+    if (!user) return null;
+
+    return {
+      reputationScore: user.reputationScore,
+      activityScore: user.activityScore,
+      qualityScore: user.qualityScore,
+      trustScore: user.trustScore,
+      botProbability: user.botProbability,
+      verificationLevel: user.verificationLevel,
+      isFlagged: user.isFlagged,
+      reputationLevel: getReputationLevel(user.reputationScore),
+    };
+  } catch (error) {
+    console.error('Error getting user reputation:', error);
+    return null;
+  }
+}
+
+// Get reputation level for display
+function getReputationLevel(reputationScore: number): string {
+  if (reputationScore >= 800) return 'LEGENDARY';
+  if (reputationScore >= 600) return 'EXPERT';
+  if (reputationScore >= 400) return 'TRUSTED';
+  if (reputationScore >= 200) return 'ACTIVE';
+  if (reputationScore >= 100) return 'REGULAR';
+  return 'NEW';
 }

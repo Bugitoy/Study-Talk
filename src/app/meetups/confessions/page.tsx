@@ -19,6 +19,9 @@ import { ConfessionListSkeleton } from "@/components/ConfessionSkeleton";
 import { CommentSection } from "@/components/CommentSection";
 import { useToast } from '@/hooks/use-toast';
 import ShareButton from "@/components/ShareButton";
+import { UserReputationBadge } from '@/components/UserReputationBadge';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { formatDistanceToNow } from "date-fns";
 
 const tabs = [
   { key: "posts", label: "Posts" },
@@ -68,7 +71,6 @@ export default function ConfessionsPage() {
     loadNewPosts,
     createConfession,
     voteOnConfession,
-    incrementView,
     refresh: refreshConfessions,
     updateCommentCount,
   } = useInfiniteConfessions({ 
@@ -215,12 +217,22 @@ export default function ConfessionsPage() {
       {posts.map((post, index) => (
           <div
             key={post.id}
-            className="rounded-[12px] border border-gray-300 bg-white p-4 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out transform hover:scale-[1.01] lg:p-6"
+            className="rounded-[12px] border border-gray-300 bg-white p-4 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out transform hover:scale-[1.01] lg:p-6 relative"
             style={{ 
               animation: `fadeInUp 0.5s ease-out ${index * 0.1}s both`,
             }}
-            onClick={() => incrementView(post.id)}
           >
+            {/* Shield Badge - Top Right Corner */}
+            {!post.isAnonymous && (
+              <div className="absolute top-3 right-3 z-10">
+                <UserReputationBadge 
+                  userId={post.authorId} 
+                  variant="shield"
+                  className="hover:scale-110 transition-transform duration-200"
+                />
+              </div>
+            )}
+
             {/* Header */}
             <div className="flex items-center gap-3 mb-4">
               {post.author?.image && !post.isAnonymous ? (
@@ -236,12 +248,17 @@ export default function ConfessionsPage() {
                   <UserIcon className="w-6 h-6 text-gray-500" />
                 </span>
               )}
-              <div className="text-sm lg:text-base">
-                <p className="font-semibold text-gray-800">
-                  Posted by {post.isAnonymous ? "Anonymous" : (post.author?.name || "Unknown")}
-                </p>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-gray-800">
+                    {post.isAnonymous ? "Anonymous" : (post.author?.name || "Unknown")}
+                  </p>
+                  {!post.isAnonymous && (
+                    <UserReputationBadge userId={post.authorId} />
+                  )}
+                </div>
                 <p className="text-gray-500">
-                                     {post.university?.name || (post.author as any)?.university || "Unknown University"}
+                  {post.university?.name || (post.author as any)?.university || "Unknown University"}
                 </p>
               </div>
             </div>
@@ -418,15 +435,9 @@ export default function ConfessionsPage() {
                   <p>
                     {uni.confessionCount} confession{uni.confessionCount !== 1 ? "s" : ""}
                   </p>
-                  <p>
-                    {uni.studentCount} student{uni.studentCount !== 1 ? "s" : ""}
-                  </p>
-                  <p>
-                    {formatNumber(uni.totalViews)} total views
-                  </p>
-                  <p>
-                    {formatNumber(uni.totalVotes)} total votes
-                  </p>
+                  <div className="text-sm text-gray-600">
+                    {formatNumber(uni.confessionCount)} confessions • {formatNumber(uni.studentCount)} students • {formatNumber(uni.totalVotes)} votes
+                  </div>
                 </div>
               </div>
             ))}

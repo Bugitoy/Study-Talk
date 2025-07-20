@@ -39,6 +39,30 @@ model User {
   isAdmin    Boolean  @default(false)
   isBlocked  Boolean  @default(false)
 
+  // Reputation system fields
+  reputationScore    Int @default(0) // Overall reputation score
+  activityScore      Int @default(0) // Activity-based score
+  qualityScore       Int @default(0) // Content quality score
+  trustScore         Int @default(0) // Community trust score
+  reputationLevel    String @default("NEW") // NEW, REGULAR, ACTIVE, TRUSTED, EXPERT, LEGENDARY
+  
+  // Activity tracking
+  lastActivityAt     DateTime?
+  dailyConfessions   Int @default(0)
+  dailyVotes         Int @default(0)
+  dailyComments      Int @default(0)
+  confessionsCreated Int @default(0)
+  votesCast          Int @default(0)
+  commentsCreated    Int @default(0)
+  
+  // Bot detection
+  botProbability     Int @default(0) // 0-100, higher = more likely bot
+  isFlagged          Boolean @default(false)
+  verificationLevel   String @default("NEW_USER") // NEW_USER, VERIFIED, TRUSTED, SUSPICIOUS
+  
+  // Reputation history
+  reputationHistory  ReputationHistory[]
+  
   Subscription Subscription?
   // Confessions relationships
   confessions Confession[]
@@ -54,6 +78,34 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model ReputationHistory {
+  id              String @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String
+  changeType      String // ACTIVITY, QUALITY, TRUST, BOT_DETECTION, MANUAL
+  changeAmount    Int    // Positive or negative change
+  reason          String // Description of the change
+  previousScore   Int    // Score before change
+  newScore        Int    // Score after change
+  
+  // Enhanced reputation tracking
+  reputationScore    Int?
+  activityScore      Int?
+  qualityScore       Int?
+  trustScore         Int?
+  botProbability     Int?
+  reputationLevel    String?
+  changeReason       String?
+  botIndicators      String[] // Array of bot detection indicators
+  riskLevel          String? // LOW, MEDIUM, HIGH, CRITICAL
+  
+  user            User @relation(fields: [userId], references: [id])
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model Subscription {
@@ -81,7 +133,7 @@ model Room {
 model QuizRoom {
  id              String         @id @default(auto()) @map("_id") @db.ObjectId
   name            String
-  timePerQuestion Int
+  timePerQuestion Int?
   sessions        QuizSession[]
   questions       QuizQuestion[]
   answers         QuizAnswer[]
@@ -236,7 +288,6 @@ model Confession {
   isAnonymous Boolean @default(true)
   
   // Engagement metrics
-  viewCount   Int @default(0)
   hotScore    Float @default(0) // calculated hotness score
   
   // Content moderation

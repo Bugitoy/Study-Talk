@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import NextLayout from "@/components/NextLayout";
 import { Plus, ArrowLeft } from "lucide-react";
@@ -19,9 +19,13 @@ interface UserQuiz {
 export default function QuizLibraryPage() {
   const { user } = useKindeBrowserClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [userQuizzes, setUserQuizzes] = useState<UserQuiz[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Get the settings parameter to preserve it when navigating back
+  const settingsId = searchParams.get('settings');
 
   useEffect(() => {
     const fetchUserQuizzes = async () => {
@@ -62,8 +66,9 @@ export default function QuizLibraryPage() {
       if (res.ok) {
         const quizData = await res.json();
         
-        // Navigate back to choose-topic with the quiz data
-        router.push(`/meetups/compete/choose-topic?selectedQuiz=${quiz.id}`);
+        // Navigate back to choose-topic with the quiz data and preserve settings parameter
+        const settingsParam = settingsId ? `&settings=${settingsId}` : '';
+        router.push(`/meetups/compete/choose-topic?selectedQuiz=${quiz.id}${settingsParam}`);
       }
     } catch (error) {
       console.error('Error fetching quiz data:', error);
