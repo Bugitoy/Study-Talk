@@ -56,7 +56,9 @@ export default function QuizLibraryPage() {
   }, [user?.id, toast]);
 
   const handleCreateNewQuiz = () => {
-    router.push('/meetups/compete/create-quiz');
+    // Preserve the settings parameter when navigating to create-quiz
+    const settingsParam = settingsId ? `?settings=${settingsId}` : '';
+    router.push(`/meetups/compete/create-quiz${settingsParam}`);
   };
 
   const handleQuizSelect = async (quiz: UserQuiz) => {

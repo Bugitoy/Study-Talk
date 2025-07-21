@@ -33,6 +33,7 @@ export default function CreateQuizPage() {
   const { toast } = useToast();
   
   const quizId = searchParams.get('quizId');
+  const settingsId = searchParams.get('settings');
   const [quiz, setQuiz] = useState<UserQuiz | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -231,8 +232,9 @@ export default function CreateQuizPage() {
         });
         
         if (!quizId) {
-          // Redirect to the edit page for the newly created quiz
-          router.push(`/meetups/compete/create-quiz?quizId=${savedQuiz.id}`);
+          // Redirect to the edit page for the newly created quiz, preserving settings
+          const settingsParam = settingsId ? `&settings=${settingsId}` : '';
+          router.push(`/meetups/compete/create-quiz?quizId=${savedQuiz.id}${settingsParam}`);
         }
       } else {
         throw new Error('Failed to save quiz');
@@ -250,7 +252,9 @@ export default function CreateQuizPage() {
   };
 
   const handleDone = () => {
-    router.push('/meetups/compete/quiz-library');
+    // Preserve the settings parameter when navigating back to quiz library
+    const settingsParam = settingsId ? `?settings=${settingsId}` : '';
+    router.push(`/meetups/compete/quiz-library${settingsParam}`);
   };
 
   if (loading) {

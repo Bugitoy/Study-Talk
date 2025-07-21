@@ -82,6 +82,11 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
     }
 
     if (!client || !user) {
+      toast({
+        title: 'Error',
+        description: 'Unable to create meeting. Please try again.',
+        variant: 'destructive',
+      });
       return;
     }
     
@@ -93,7 +98,9 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
       
       const call = client.call('default', id);
       
-      if (!call) throw new Error('Failed to create meeting');
+      if (!call) {
+        throw new Error('Failed to create meeting');
+      }
       
       
       const startsAt =
@@ -103,17 +110,40 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
       const roomName = roomSettings?.roomName || 'Unnamed Room';
       
       
-      await call.getOrCreate({
-        data: {
-          starts_at: startsAt,
-          custom: {
-            description,
-            availability,
-            roomName,
-            quizStarted: false,
-          },
-        },
-      });
+      // Add retry mechanism for network issues
+      let retryCount = 0;
+      const maxRetries = 3;
+      let lastError;
+      
+      while (retryCount < maxRetries) {
+        try {
+          await call.getOrCreate({
+            data: {
+              starts_at: startsAt,
+              custom: {
+                description,
+                availability,
+                roomName,
+                quizStarted: false,
+              },
+            },
+          });
+          break; // Success, exit retry loop
+        } catch (error) {
+          lastError = error;
+          retryCount++;
+          
+          if (retryCount < maxRetries) {
+            // Wait before retrying (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          }
+        }
+      }
+      
+      // If all retries failed, throw the last error
+      if (retryCount === maxRetries && lastError) {
+        throw lastError;
+      }
       
       
       setCallDetail(call);
@@ -205,8 +235,26 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
         title: 'Meeting Created',
       });
     } catch (error) {
-      console.error(error);
-      toast({ title: 'Failed to create Meeting' });
+      console.error('Error creating meeting:', error);
+      
+      // Provide more specific error messages based on the error type
+      let errorMessage = 'Failed to create meeting. Please try again.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('network') || error.message.includes('ERR_NETWORK_CHANGED')) {
+          errorMessage = 'Network connection issue. Please check your internet connection and try again.';
+        } else if (error.message.includes('timeout')) {
+          errorMessage = 'Request timed out. Please try again.';
+        } else if (error.message.includes('Failed to create meeting')) {
+          errorMessage = 'Unable to create meeting. Please try again.';
+        }
+      }
+      
+      toast({ 
+        title: 'Failed to create Meeting',
+        description: errorMessage,
+        variant: 'destructive'
+      });
     } finally {
       setIsCreatingMeeting(false);
     }
