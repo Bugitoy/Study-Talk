@@ -66,10 +66,25 @@ export default function CreateQuizPage() {
         if (res.ok) {
           const data = await res.json();
           setQuiz(data);
+          
+          // Convert correct answer text back to letter format for UI
+          const questionsWithLetterFormat = data.questions.map((q: QuizQuestion) => {
+            let correctLetter = "A"; // default
+            if (q.correct === q.optionA) correctLetter = "A";
+            else if (q.correct === q.optionB) correctLetter = "B";
+            else if (q.correct === q.optionC) correctLetter = "C";
+            else if (q.correct === q.optionD) correctLetter = "D";
+            
+            return {
+              ...q,
+              correct: correctLetter
+            };
+          });
+          
           setFormData({
             title: data.title,
             description: data.description,
-            questions: data.questions
+            questions: questionsWithLetterFormat
           });
         }
       } catch (error) {
@@ -180,6 +195,20 @@ export default function CreateQuizPage() {
 
     setSaving(true);
     try {
+      // Convert correct answer letters to actual answer text
+      const questionsWithCorrectText = formData.questions.map(q => {
+        const correctAnswerText = 
+          q.correct === "A" ? q.optionA :
+          q.correct === "B" ? q.optionB :
+          q.correct === "C" ? q.optionC :
+          q.correct === "D" ? q.optionD : q.optionA;
+        
+        return {
+          ...q,
+          correct: correctAnswerText
+        };
+      });
+
       const url = quizId ? `/api/user-quizzes/${quizId}` : '/api/user-quizzes';
       const method = quizId ? 'PUT' : 'POST';
       
@@ -190,7 +219,7 @@ export default function CreateQuizPage() {
           userId: user.id,
           title: formData.title,
           description: formData.description,
-          questions: formData.questions
+          questions: questionsWithCorrectText
         }),
       });
 
