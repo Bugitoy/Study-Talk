@@ -69,8 +69,8 @@ const StudyGroups = () => {
   return (
     <NextLayout>
       <div className="flex flex-col gap-6 sm:gap-8 lg:gap-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-5xl mx-auto w-full flex flex-col lg:flex-row items-center lg:items-end justify-between gap-4 mb-0">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-7xl font-extrabold text-lightBlue-100 text-center lg:text-left">
+        <div className="max-w-5xl mx-auto w-full flex flex-col md:flex-row items-center md:items-end justify-between gap-4 mb-0">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-4xl xl:text-7xl font-extrabold text-lightBlue-100 text-center md:text-left">
             Join a study group
           </h1>
           <input
@@ -139,7 +139,7 @@ const StudyGroups = () => {
                 className="absolute left-0 top-0 h-full bg-thanodi-blue transition-all duration-500 rounded-[8px]"
                 style={{ width: `${percent}%` }}
               />
-              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-700 font-semibold text-xs sm:text-sm lg:text-lg select-none pointer-events-none px-2">
+              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-700 font-semibold text-xs sm:text-sm lg:text-lg select-none pointer-events-none px-2 whitespace-nowrap">
                 {dailyHours.toFixed(1)}h / {hoursGoal}h studied today
               </span>
             </div>

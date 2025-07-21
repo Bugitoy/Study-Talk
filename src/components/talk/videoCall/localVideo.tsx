@@ -40,7 +40,7 @@ export default function LocalVideo({
                 return () => {
                     if (streamInstance && streamInstance.getVideoTracks()[0]) {
                         streamInstance.getVideoTracks()[0].stop();
-                        console.log("Media stream stopped");
+
                     }
                 }
             }

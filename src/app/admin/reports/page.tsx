@@ -186,17 +186,18 @@ export default function AdminReportsPage() {
 
   return (
     <NextLayout>
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
+    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8">
+      <div className="mb-6 sm:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Reports</h1>
-            <p className="text-gray-600">Manage user reports and take action on violations</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Admin Reports</h1>
+            <p className="text-sm sm:text-base text-gray-600">Manage user reports and take action on violations</p>
           </div>
           <div className="flex gap-2">
             <Button 
               variant="outline" 
               onClick={() => router.push('/admin/reputation')}
+              className="text-sm sm:text-base"
             >
               Reputation Management
             </Button>
@@ -205,31 +206,33 @@ export default function AdminReportsPage() {
       </div>
 
       {/* Filters */}
-      <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <Input
-            placeholder="Search reports..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
-        </div>
-        <div className="flex gap-2">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All Status</SelectItem>
-              <SelectItem value="PENDING">Pending</SelectItem>
-              <SelectItem value="REVIEWED">Reviewed</SelectItem>
-              <SelectItem value="RESOLVED">Resolved</SelectItem>
-              <SelectItem value="DISMISSED">Dismissed</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={() => fetchReports(1, statusFilter)} disabled={loadingReports}>
-            Refresh
-          </Button>
+      <div className="mb-6 flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
+            <Input
+              placeholder="Search reports..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full sm:max-w-sm"
+            />
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Status</SelectItem>
+                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="REVIEWED">Reviewed</SelectItem>
+                <SelectItem value="RESOLVED">Resolved</SelectItem>
+                <SelectItem value="DISMISSED">Dismissed</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={() => fetchReports(1, statusFilter)} disabled={loadingReports} className="w-full sm:w-auto">
+              Refresh
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -247,13 +250,13 @@ export default function AdminReportsPage() {
           reports.map((report) => (
             <Card key={report.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-lg flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                  <div className="flex-1">
+                    <CardTitle className="text-base sm:text-lg flex items-center gap-2">
                       {getStatusIcon(report.status)}
                       Report #{report.id.slice(-8)}
                     </CardTitle>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-xs sm:text-sm text-gray-600 mt-1">
                       Reported by: {report.reporter.name || report.reporter.email} • {new Date(report.createdAt).toLocaleString()}
                     </p>
                   </div>
@@ -305,7 +308,7 @@ export default function AdminReportsPage() {
                             View full content
                           </button>
                         </div>
-                        <div className="flex gap-4 text-xs text-gray-600">
+                        <div className="flex flex-col sm:flex-row gap-1 sm:gap-4 text-xs text-gray-600">
                           <span>Author: {report.confession.isAnonymous ? "Anonymous" : report.confession.author.name}</span>
                           <span>Posted: {new Date(report.confession.createdAt).toLocaleDateString()}</span>
                         </div>
@@ -325,7 +328,7 @@ export default function AdminReportsPage() {
                           <p className="font-medium text-xs text-gray-600">Reported User:</p>
                           <p className="text-sm text-gray-800">{report.reportedId}</p>
                         </div>
-                        <div className="flex gap-4 text-xs text-gray-600">
+                        <div className="flex flex-col sm:flex-row gap-1 sm:gap-4 text-xs text-gray-600">
                           <span>Report Type: Talk Conversation</span>
                           <span>Reported: {new Date(report.createdAt).toLocaleDateString()}</span>
                         </div>
@@ -356,22 +359,24 @@ export default function AdminReportsPage() {
                       <p className="text-sm text-gray-600">{report.adminNotes}</p>
                     </div>
                   )}
-                  <div className="flex gap-2 pt-2">
+                  <div className="flex flex-col sm:flex-row gap-2 pt-2">
                     {/* Status management buttons */}
                     {report.status === 'PENDING' && (
                       <Button
                         size="sm"
                         onClick={() => updateReportStatus(report.id, 'REVIEWED')}
+                        className="w-full sm:w-auto"
                       >
                         Mark Reviewed
                       </Button>
                     )}
                     {report.status === 'REVIEWED' && (
-                      <>
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => updateReportStatus(report.id, 'RESOLVED')}
+                          className="w-full sm:w-auto"
                         >
                           Resolve
                         </Button>
@@ -379,10 +384,11 @@ export default function AdminReportsPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => updateReportStatus(report.id, 'DISMISSED')}
+                          className="w-full sm:w-auto"
                         >
                           Dismiss
                         </Button>
-                      </>
+                      </div>
                     )}
                     
                     {/* Block/Unblock button - shows based on actual user status */}
@@ -392,6 +398,7 @@ export default function AdminReportsPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => unblockUser(report.reportedId)}
+                          className="w-full sm:w-auto"
                         >
                           <Shield className="w-4 h-4 mr-1" />
                           Unblock User
@@ -401,6 +408,7 @@ export default function AdminReportsPage() {
                           size="sm"
                           variant="destructive"
                           onClick={() => blockUser(report.id)}
+                          className="w-full sm:w-auto"
                         >
                           <Shield className="w-4 h-4 mr-1" />
                           Block User
@@ -417,22 +425,24 @@ export default function AdminReportsPage() {
 
       {/* Pagination */}
       {pagination && pagination.pages > 1 && (
-        <div className="flex justify-center mt-8">
-          <div className="flex gap-2">
+        <div className="flex justify-center mt-6 sm:mt-8">
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-2">
             <Button
               variant="outline"
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(currentPage - 1)}
+              className="w-full sm:w-auto"
             >
               Previous
             </Button>
-            <span className="flex items-center px-4">
+            <span className="flex items-center px-2 sm:px-4 text-sm sm:text-base">
               Page {currentPage} of {pagination.pages}
             </span>
             <Button
               variant="outline"
               disabled={currentPage === pagination.pages}
               onClick={() => setCurrentPage(currentPage + 1)}
+              className="w-full sm:w-auto"
             >
               Next
             </Button>

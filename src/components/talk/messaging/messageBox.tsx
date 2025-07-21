@@ -37,7 +37,7 @@ export default function MessageBox({ message, userId, username, socket, setMessa
 
         return (
             <div className='grow overflow-y-auto p-[10px] bg-slate-400 rounded-[10px] mb-[10px]
-                            max-w-[100%] relative flex flex-col'>
+                            max-w-[100%] relative flex flex-col min-h-[50px] sm:min-h-[60px] md:min-h-[70px]'>
                 {(connectionStatus !== null && message.length === 0) && (
                     <div className='absolute top-0 left-0 w-[100%] h-[100%] bg-slate-400 
                                     text-white flex items-center justify-center rounded-[10px] z-1'>

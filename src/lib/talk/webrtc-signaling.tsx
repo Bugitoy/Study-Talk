@@ -7,14 +7,14 @@ export default function webrtcSignaling(
         const polite = strangerdata['polite']
         const strangerId = strangerdata['pairedUserId']
 
-        console.log(strangerId, "strangerId");
+
 
         async function sendOffer() {
             try {
                 makingOffer = true;
                 await pc.setLocalDescription()
                 socket.emit('message', {description: pc.localDescription, to: strangerId })
-                console.log("sent offer", strangerdata['strangerUsername']);
+
             } catch (err) {
                 console.error(err);
             } finally {
@@ -28,7 +28,7 @@ export default function webrtcSignaling(
 
         async function handleNegotiation(m: any) {
             if (m === undefined) return
-            console.log('running');
+
             if (pc.signalingState === 'closed') return
             const [description, candidate] = [m['description'], m['candidate']]
             try {
@@ -41,7 +41,7 @@ export default function webrtcSignaling(
                         return;
                      }
                      await pc.setRemoteDescription(description);
-                     console.log("recieved offer/answer", strangerdata['strangerUsername']);
+
                      if (description.type === "offer") {
                         await pc.setLocalDescription();
                         socket.emit('message', { description: pc.localDescription, to: strangerId })

@@ -10,14 +10,9 @@ import {
   useCall,
 } from '@stream-io/video-react-sdk';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Users, LayoutList, CheckCircle, Circle, SquarePlus, Handshake, MessageSquareText, Hourglass, Flag, Shield } from 'lucide-react';
+import { Users, SquarePlus, Handshake, MessageSquareText, Hourglass, Flag, Shield } from 'lucide-react';
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from './ui/dropdown-menu';
+
 import Loader from './Loader';
 import EndCallButton from './StudyEndCallButton';
 import { cn } from '@/lib/utils';
@@ -25,6 +20,7 @@ import { useRoomSettingByCallId } from '@/hooks/useRoomSettings';
 import StudyCallControls from './StudyCallControls';
 import { useStreamStudyTimeTracker } from '@/hooks/useStreamStudyTimeTracker';
 import { StudyTimeProgress } from './StudyTimeProgress';
+import { MobileStudyTimeProgress } from './MobileStudyTimeProgress';
 import { useToast } from '@/hooks/use-toast';
 
 type CallLayoutType = 'grid' | 'speaker-left' | 'speaker-right';
@@ -43,11 +39,11 @@ const MeetingGoalsBar = ({ completedGoals = [] }: { completedGoals: string[] }) 
         const Icon = goal.icon;
         return (
           <React.Fragment key={goal.key}>
-            <div className="flex flex-col items-center w-24">
-              <div className={`w-12 h-12 flex items-center justify-center z-10 bg-white rounded-[8px] border-2 ${completedGoals.includes(goal.key) ? 'border-yellow-400' : 'border-gray-300'}`}>
-                <Icon className={`w-8 h-8 ${completedGoals.includes(goal.key) ? 'text-yellow-500' : 'text-gray-400'}`} />
+            <div className="flex flex-col items-center w-16 sm:w-24">
+              <div className={`w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center z-10 bg-white rounded-[8px] border-2 ${completedGoals.includes(goal.key) ? 'border-yellow-400' : 'border-gray-300'}`}>
+                <Icon className={`w-5 h-5 sm:w-8 sm:h-8 ${completedGoals.includes(goal.key) ? 'text-yellow-500' : 'text-gray-400'}`} />
               </div>
-              <span className="mt-2 text-xs text-[#19232d] font-medium text-center w-full">
+              <span className="mt-1 sm:mt-2 text-[10px] sm:text-xs text-[#19232d] font-medium text-center w-full">
                 {goal.label}
               </span>
             </div>
@@ -70,7 +66,7 @@ const MeetingRoom = () => {
   const call = useCall();
   const { startTracking, endTracking, isTracking, dailyHours } = useStreamStudyTimeTracker(call?.id);
   const { toast } = useToast();
-  const [layout, setLayout] = useState<CallLayoutType>('speaker-left');
+  const [layout, setLayout] = useState<CallLayoutType>('grid');
   const [showParticipants, setShowParticipants] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [reportReason, setReportReason] = useState('');
@@ -279,17 +275,17 @@ const MeetingRoom = () => {
       ) : (
     <section className="relative h-screen w-full overflow-hidden pt-4 text-white">
       {/* Overlay: Group name title and MeetingGoalsBar */}
-      <div className="absolute top-0 left-0 w-full flex flex-col items-center z-20 p-6 pointer-events-none">
-        <div className="backdrop-blur-sm rounded-xl p-6 shadow-md pointer-events-auto rounded-[8px]">
-          <h1 className="text-4xl font-semibold text-[#19232d] mb-[3rem] text-center">
+      <div className="absolute top-0 left-0 w-full flex flex-col items-center z-20 p-3 sm:p-6 pointer-events-none">
+        <div className="backdrop-blur-sm rounded-xl p-3 sm:p-6 shadow-md pointer-events-auto rounded-[8px]">
+          <h1 className="text-2xl sm:text-4xl font-semibold text-[#19232d] mb-[1.5rem] sm:mb-[3rem] text-center">
             Group Name: {groupName}
           </h1>
           <MeetingGoalsBar completedGoals={completedGoals} />
         </div>
       </div>
       
-      {/* Vertical Study Progress Widget - Right Side */}
-      <div className="absolute left-[-15px] top-1/2 -translate-y-1/2 z-30 pointer-events-none">
+      {/* Vertical Study Progress Widget - Right Side (Desktop Only) */}
+      <div className="absolute left-[-15px] top-1/2 -translate-y-1/2 z-30 pointer-events-none hidden 2xl:block">
         <StudyTimeProgress 
           dailyHours={dailyHours} 
           isTracking={isTracking}
@@ -309,6 +305,15 @@ const MeetingRoom = () => {
           <CallParticipantsList onClose={() => setShowParticipants(false)} />
         </div>
       </div>
+      
+      {/* Mobile Study Progress Widget - Below Call Layout (Small Screens and Tablets) */}
+      <div className="block 2xl:hidden absolute bottom-[190px] left-1/2 transform -translate-x-1/2 z-30 pointer-events-none">
+        <MobileStudyTimeProgress 
+          dailyHours={dailyHours} 
+          isTracking={isTracking}
+          className="w-80 sm:w-96 md:w-[90vw]"
+        />
+      </div>
       {/* video layout and call controls */}
       <div className="fixed bottom-0 left-0 right-0 rounded-t-xl flex w-full items-center justify-center gap-5 flex-wrap p-4 bg-black/20 backdrop-blur-sm">
          <StudyCallControls
@@ -318,28 +323,10 @@ const MeetingRoom = () => {
           }}
           showMic={roomSettings?.mic === 'flexible'}
           showCamera={roomSettings?.camera === 'flexible'}
+          roomSettings={roomSettings}
         />
 
-        <DropdownMenu>
-          <div className="flex items-center">
-            <DropdownMenuTrigger className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]  ">
-              <LayoutList size={20} className="text-white" />
-            </DropdownMenuTrigger>
-          </div>
-          <DropdownMenuContent className="border-thanodi-peach bg-thanodi-peach text-white">
-            {['Grid', 'Speaker-Left', 'Speaker-Right'].map((item, index) => (
-              <div key={index}>
-                <DropdownMenuItem
-                  onClick={() =>
-                    setLayout(item.toLowerCase() as CallLayoutType)
-                  }
-                >
-                  {item}
-                </DropdownMenuItem>
-              </div>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+
         <CallStatsButton />
         <button onClick={() => setShowParticipants((prev) => !prev)}>
           <div className=" cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]  ">

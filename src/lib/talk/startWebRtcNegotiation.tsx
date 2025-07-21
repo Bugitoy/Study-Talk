@@ -23,7 +23,7 @@ export default function startWebRtcNegotiation(
     if (strangerdata) {
       signalingRef.current = webrtcSignaling(socket, pc, strangerdata);
       const { sendOffer, sendCandidate, handleNegotiation } = signalingRef.current;
-      console.log("current strangerdata", strangerdata);
+
 
       try {
         for (const track of stream.getTracks()) {

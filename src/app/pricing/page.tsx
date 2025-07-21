@@ -46,7 +46,7 @@ const pricingList: PricingProps[] = [
     popular: 1,
     price: 10,
     description:
-      "Unlock the full power of Lets Study with unlimited access and premium features.",
+                      "Unlock the full power of Study-Talk with unlimited access and premium features.",
     buttonText: "Buy Now",
     benefitList: [
       "Unlimited meetup access",

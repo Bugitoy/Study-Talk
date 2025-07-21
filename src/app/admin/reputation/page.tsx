@@ -295,71 +295,71 @@ export default function ReputationAdminPage() {
 
   return (
     <NextLayout>
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Reputation Management</h1>
-          <p className="text-gray-600">Monitor user reputation and bot detection</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Reputation Management</h1>
+          <p className="text-sm sm:text-base text-gray-600">Monitor user reputation and bot detection</p>
         </div>
-        <div className="flex items-center gap-5">
-          <Button onClick={handleRefreshAll} disabled={loading} className="bg-orange-300 text-white hover:bg-orange-400">
+        <div className="flex flex-row items-center gap-2 sm:gap-5">
+          <Button onClick={handleRefreshAll} disabled={loading} className="bg-orange-300 text-white hover:bg-orange-400 w-full sm:w-auto text-xs sm:text-sm">
             Refresh Data
           </Button>
-          <Button onClick={() => router.push("/admin/reports")} className="bg-thanodi-blue text-white hover:bg-blue-300">
+          <Button onClick={() => router.push("/admin/reports")} className="bg-thanodi-blue text-white hover:bg-blue-300 w-full sm:w-auto text-xs sm:text-sm">
             Back to Reports
           </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xs sm:text-sm font-medium">Total Users</CardTitle>
+            <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalUsers}</div>
+            <div className="text-lg sm:text-2xl font-bold">{stats.totalUsers}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Flagged Users</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xs sm:text-sm font-medium">Flagged Users</CardTitle>
+            <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{stats.flaggedUsers}</div>
+            <div className="text-lg sm:text-2xl font-bold text-orange-600">{stats.flaggedUsers}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Suspicious Users</CardTitle>
-            <Bot className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xs sm:text-sm font-medium">Suspicious Users</CardTitle>
+            <Bot className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.suspiciousUsers}</div>
+            <div className="text-lg sm:text-2xl font-bold text-red-600">{stats.suspiciousUsers}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Reputation</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xs sm:text-sm font-medium">Avg Reputation</CardTitle>
+            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{Math.round(stats.averageReputation)}</div>
+            <div className="text-lg sm:text-2xl font-bold">{Math.round(stats.averageReputation)}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bot Detection Rate</CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xs sm:text-sm font-medium">Bot Detection Rate</CardTitle>
+            <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.botDetectionRate}%</div>
+            <div className="text-lg sm:text-2xl font-bold">{stats.botDetectionRate}%</div>
           </CardContent>
         </Card>
       </div>
@@ -368,26 +368,28 @@ export default function ReputationAdminPage() {
       <BotDetectionPanel onRefresh={handleRefreshAll} />
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <Select value={filter} onValueChange={setFilter}>
-          <SelectTrigger className="w-full sm:w-[200px]">
-            <SelectValue placeholder="Filter users" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Users</SelectItem>
-            <SelectItem value="flagged">Flagged Users</SelectItem>
-            <SelectItem value="blocked">Blocked Users</SelectItem>
-            <SelectItem value="suspicious">Suspicious Users</SelectItem>
-            <SelectItem value="trusted">Trusted Users</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+          <Select value={filter} onValueChange={setFilter}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="Filter users" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Users</SelectItem>
+              <SelectItem value="flagged">Flagged Users</SelectItem>
+              <SelectItem value="blocked">Blocked Users</SelectItem>
+              <SelectItem value="suspicious">Suspicious Users</SelectItem>
+              <SelectItem value="trusted">Trusted Users</SelectItem>
+            </SelectContent>
+          </Select>
 
-        <Input
-          placeholder="Search users..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1"
-        />
+          <Input
+            placeholder="Search users..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1"
+          />
+        </div>
       </div>
 
       {/* Users Table */}
@@ -402,42 +404,150 @@ export default function ReputationAdminPage() {
           {loading ? (
             <div className="text-center py-8">Loading...</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Reputation</TableHead>
-                  <TableHead>Bot Probability</TableHead>
-                  <TableHead>Activity</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <div className="space-y-4">
+              {/* Desktop Table */}
+              <div className="hidden lg:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Reputation</TableHead>
+                      <TableHead>Bot Probability</TableHead>
+                      <TableHead>Activity</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{user.name}</div>
+                            <div className="text-sm text-gray-500">{user.email}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Badge className={getReputationColor(user.reputationLevel)}>
+                                {user.reputationLevel}
+                              </Badge>
+                              <span className="text-sm font-medium">
+                                {user.reputationScore}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              A: {user.activityScore} | Q: {user.qualityScore} | T: {user.trustScore}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 bg-gray-200 rounded-full h-2">
+                              <div 
+                                className={`h-2 rounded-full ${
+                                  user.botProbability > 70 ? 'bg-red-500' :
+                                  user.botProbability > 50 ? 'bg-yellow-500' : 'bg-green-500'
+                                }`}
+                                style={{ width: `${user.botProbability}%` }}
+                              />
+                            </div>
+                            <span className="text-sm">{user.botProbability}%</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm space-y-1">
+                            <div>Posts: {user.confessionCount}</div>
+                            <div>Votes: {user.voteCount}</div>
+                            <div>Comments: {user.commentCount}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap gap-1">
+                              <Badge variant={user.isFlagged ? "destructive" : "secondary"}>
+                                {user.isFlagged ? "Flagged" : "Active"}
+                              </Badge>
+                              {user.isBlocked && (
+                                <Badge variant="destructive">
+                                  Blocked
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {user.verificationLevel}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-row gap-2">
+                            <Button
+                              size="sm"
+                              variant={user.isFlagged ? "outline" : "destructive"}
+                              onClick={() => handleFlagUser(user.id, user.isFlagged ? 'unflag' : 'flag')}
+                            >
+                              {user.isFlagged ? "Unflag" : "Flag"}
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant={user.isBlocked ? "outline" : "destructive"}
+                              onClick={() => handleBlockUser(user.id, user.isBlocked ? 'unblock' : 'block')}
+                            >
+                              {user.isBlocked ? "Unblock" : "Block"}
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleViewDetails(user)}
+                            >
+                              View Details
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile/Tablet Cards */}
+              <div className="lg:hidden space-y-4">
                 {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{user.name}</div>
-                        <div className="text-sm text-gray-500">{user.email}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Badge className={getReputationColor(user.reputationLevel)}>
-                            {user.reputationLevel}
+                  <Card key={user.id} className="p-4">
+                    <div className="space-y-3">
+                      {/* User Info */}
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-medium text-sm sm:text-base">{user.name}</div>
+                          <div className="text-xs sm:text-sm text-gray-500">{user.email}</div>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          <Badge variant={user.isFlagged ? "destructive" : "secondary"} className="text-xs">
+                            {user.isFlagged ? "Flagged" : "Active"}
                           </Badge>
-                          <span className="text-sm font-medium">
-                            {user.reputationScore}
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          A: {user.activityScore} | Q: {user.qualityScore} | T: {user.trustScore}
+                          {user.isBlocked && (
+                            <Badge variant="destructive" className="text-xs">
+                              Blocked
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell>
+
+                      {/* Reputation */}
+                      <div className="flex items-center gap-2">
+                        <Badge className={`${getReputationColor(user.reputationLevel)} text-xs`}>
+                          {user.reputationLevel}
+                        </Badge>
+                        <span className="text-sm font-medium">
+                          {user.reputationScore}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        A: {user.activityScore} | Q: {user.qualityScore} | T: {user.trustScore}
+                      </div>
+
+                      {/* Bot Probability */}
                       <div className="flex items-center gap-2">
                         <div className="w-16 bg-gray-200 rounded-full h-2">
                           <div 
@@ -448,39 +558,23 @@ export default function ReputationAdminPage() {
                             style={{ width: `${user.botProbability}%` }}
                           />
                         </div>
-                        <span className="text-sm">{user.botProbability}%</span>
+                        <span className="text-xs">{user.botProbability}%</span>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm space-y-1">
+
+                      {/* Activity */}
+                      <div className="text-xs space-y-1">
                         <div>Posts: {user.confessionCount}</div>
                         <div>Votes: {user.voteCount}</div>
                         <div>Comments: {user.commentCount}</div>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex flex-wrap gap-1">
-                          <Badge variant={user.isFlagged ? "destructive" : "secondary"}>
-                            {user.isFlagged ? "Flagged" : "Active"}
-                          </Badge>
-                          {user.isBlocked && (
-                            <Badge variant="destructive">
-                              Blocked
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {user.verificationLevel}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-row gap-2">
+
+                      {/* Actions */}
+                      <div className="flex flex-col sm:flex-row gap-2 pt-2">
                         <Button
                           size="sm"
                           variant={user.isFlagged ? "outline" : "destructive"}
                           onClick={() => handleFlagUser(user.id, user.isFlagged ? 'unflag' : 'flag')}
+                          className="w-full sm:w-auto text-xs"
                         >
                           {user.isFlagged ? "Unflag" : "Flag"}
                         </Button>
@@ -488,6 +582,7 @@ export default function ReputationAdminPage() {
                           size="sm" 
                           variant={user.isBlocked ? "outline" : "destructive"}
                           onClick={() => handleBlockUser(user.id, user.isBlocked ? 'unblock' : 'block')}
+                          className="w-full sm:w-auto text-xs"
                         >
                           {user.isBlocked ? "Unblock" : "Block"}
                         </Button>
@@ -495,15 +590,16 @@ export default function ReputationAdminPage() {
                           size="sm" 
                           variant="outline"
                           onClick={() => handleViewDetails(user)}
+                          className="w-full sm:w-auto text-xs"
                         >
                           View Details
                         </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                  </Card>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

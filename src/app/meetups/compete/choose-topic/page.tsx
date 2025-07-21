@@ -357,35 +357,35 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
     <NextLayout>
     <div className="p-6 max-w-7xl mx-auto">
 
-        <div className="flex items-center justify-center mb-20">
+        <div className="flex items-center justify-center mb-10 sm:mb-16 md:mb-20">
           <div className="flex-grow border-t border-blue-200"></div>
-             <h1 className="text-5xl font-bold mx-[5rem]">Choose a Topic</h1>
+             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mx-4 sm:mx-8 md:mx-[5rem] text-center">Choose a Topic</h1>
           <div className="flex-grow border-t border-blue-200"></div>
         </div>
         
         {!selectedTopic && !selectedUserQuiz ? (
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center px-4 py-2 bg-blue-100 border border-blue-300 rounded-lg">
-              <svg className="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+          <div className="text-center mb-6 sm:mb-8">
+            <div className="inline-flex items-center px-3 py-2 sm:px-4 sm:py-2 bg-blue-100 border border-blue-300 rounded-lg">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
               </svg>
-              <span className="text-blue-800 font-medium">Please select a topic or your own quiz to continue</span>
+              <span className="text-sm sm:text-base text-blue-800 font-medium">Please select a topic or your own quiz to continue</span>
             </div>
           </div>
         ) : (
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center px-4 py-2 bg-green-100 border border-green-300 rounded-lg">
-              <svg className="w-5 h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+          <div className="text-center mb-6 sm:mb-8">
+            <div className="inline-flex items-center px-3 py-2 sm:px-4 sm:py-2 bg-green-100 border border-green-300 rounded-lg">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
-              <span className="text-green-800 font-medium">
+              <span className="text-sm sm:text-base text-green-800 font-medium">
                 {selectedTopic ? `Topic selected: ${selectedTopic.title}` : `Quiz selected: ${selectedUserQuiz?.title}`}
               </span>
             </div>
           </div>
         )}
         
-        <div className="grid grid-cols-4 gap-10 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 xl:gap-10 mb-6 sm:mb-8">
             {topicsData.map((topic, idx) => (
               <TopicCard
                 key={idx}
@@ -399,9 +399,9 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
             ))}
         </div>
         
-        <div className="grid grid-cols-2 gap-7">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 lg:gap-7">
             <div
-              className={`button h-[50px] rounded-lg select-none transition-all duration-150 border-b-[1px] shadow ${
+              className={`button h-[45px] sm:h-[50px] rounded-lg select-none transition-all duration-150 border-b-[1px] shadow ${
                 (selectedTopic || selectedUserQuiz) && !isCreatingMeeting
                   ? "bg-orange-300 cursor-pointer active:translate-y-2 active:[box-shadow:0_0px_0_0_#f5c782,0_0px_0_0_#f5c78241] active:border-b-[0px] [box-shadow:0_10px_0_0_#f5c782,0_15px_0_0_#f5c78241] border-orange-300" 
                   : "bg-gray-300 cursor-not-allowed border-gray-300"
@@ -414,7 +414,7 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
                 }
               }}
             >
-              <span className={`flex flex-col justify-center items-center h-full font-bold text-lg ${
+              <span className={`flex flex-col justify-center items-center h-full font-bold text-sm sm:text-base lg:text-lg ${
                 (selectedTopic || selectedUserQuiz) && !isCreatingMeeting ? "text-gray-800" : "text-gray-500"
               }`}>
                 {isCreatingMeeting ? "Creating..." : (selectedTopic || selectedUserQuiz) ? "Next" : "Select a topic first"}
@@ -422,7 +422,7 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
             </div>
 
             <div
-              className="button h-[50px] bg-pink-300 rounded-lg cursor-pointer select-none
+              className="button h-[45px] sm:h-[50px] bg-pink-300 rounded-lg cursor-pointer select-none
                 active:translate-y-2 active:[box-shadow:0_0px_0_0_#f582ed,0_0px_0_0_#f582ed41]
                 active:border-b-[0px]
                 transition-all duration-150 [box-shadow:0_10px_0_0_#f582ed,0_15px_0_0_#f582ed41]
@@ -431,7 +431,7 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
               role="button"
               onClick={handleNext}
             >
-              <span className="flex flex-col justify-center items-center h-full text-gray-800 font-bold text-lg">
+              <span className="flex flex-col justify-center items-center h-full text-gray-800 font-bold text-sm sm:text-base lg:text-lg">
                 Create your own quiz
               </span>
             </div>

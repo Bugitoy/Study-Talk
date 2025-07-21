@@ -199,7 +199,7 @@ export default function AccountPage() {
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Account</h1>
             <p className="text-gray-600">
-              Manage your Lets Study account and subscription
+              Manage your Study-Talk account and subscription
             </p>
           </div>
           <div className="flex justify-center items-center py-12">
@@ -219,7 +219,7 @@ export default function AccountPage() {
         <div className={`mb-8 ${!isAuthenticated ? 'text-center' : ''}`}>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Account</h1>
           <p className="text-gray-600">
-            Manage your Lets Study account and subscription
+            Manage your Study-Talk account and subscription
           </p>
         </div>
 

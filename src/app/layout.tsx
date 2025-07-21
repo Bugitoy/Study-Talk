@@ -12,7 +12,7 @@ import '@stream-io/video-react-sdk/dist/css/styles.css';
 import { SocketProvider } from "./SocketProvider";
 
 export const metadata: Metadata = {
-  title: "Lets Study - Language Learning Platform",
+      title: "Study-Talk - Language Learning Platform",
   description: "Your bridge between Setswana and English languages",
   icons: {
     icon: '/favicon.ico',

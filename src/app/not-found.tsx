@@ -25,7 +25,7 @@ export default function NotFound() {
             </Link>
             <Link href="/about">
               <Button variant="outline" size="lg" className="rounded-full">
-                About Lets Study
+                About Study-Talk
               </Button>
             </Link>
           </div>

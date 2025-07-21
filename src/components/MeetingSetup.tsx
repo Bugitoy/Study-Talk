@@ -10,6 +10,7 @@ import Alert from './Alert';
 import { Button } from './ui/button';
 import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs';
 import { useRoomSettingByCallId } from '@/hooks/useRoomSettings';
+import NextLayout from './NextLayout';
 
 const MeetingSetup = ({
   setIsSetupComplete,
@@ -78,57 +79,61 @@ const MeetingSetup = ({
     );
 
   return (
-    <div className="flex h-screen w-full flex-col items-center justify-center gap-3 text-white">
-      <h1 className="text-center text-6xl font-bold mb-10 text-blue-400">Setup</h1>
-      <VideoPreview />
-      <div className="flex h-16 items-center justify-center gap-3">
-      {roomSettings?.mic === 'flexible' && (
-          <Button
-            className={`px-4 py-2 rounded-md ${
-              isMicOff ? 'bg-[#19232d] hover:bg-[#4c535b] text-white' : 'bg-blue-400 hover:bg-blue-500 text-white'
-            }`}
-            onClick={() => setIsMicOff(!isMicOff)}
-          >
-            {isMicOff ? 'Mic Off' : 'Mic On'}
-          </Button>
-        )}
-        {roomSettings?.camera === 'flexible' && (
-          <Button
-            className={`px-4 py-2 rounded-md ${
-              isCameraOff ? 'bg-[#19232d] hover:bg-[#4c535b] text-white' : 'bg-blue-400 hover:bg-blue-500 text-white'
-            }`}
-            onClick={() => setIsCameraOff(!isCameraOff)}
-          >
-            {isCameraOff ? 'Camera Off' : 'Camera On'}
-          </Button>
-        )}
-        <DeviceSettings />
-      </div>
-      <Button
-        className="rounded-md bg-blue-300 hover:bg-blue-400 px-12 py-7 text-xl"
-        onClick={async () => {
-          await call.join();
-          // Add as member so avatar is queryable later
-          try {
-            if (authUser) {
-              await call.updateCallMembers({
-                update_members: [
-                  {
-                    user_id: authUser.id,
-                  },
-                ],
-              } as any);
-            }
-          } catch (err) {
-            console.error('Failed to add user as call member', err);
-          }
+    <NextLayout>
+      <div className="flex h-screen w-full flex-col items-center justify-center gap-3 text-white">
 
-          setIsSetupComplete(true);
-        }}
-      >
-        Join
-      </Button>
-    </div>
+        <h1 className="text-center text-6xl font-bold mb-10 text-blue-400">Setup</h1>
+        <VideoPreview />
+        
+        <div className="flex h-16 items-center justify-center gap-3">
+          {roomSettings?.mic === 'flexible' && (
+              <Button
+                className={`px-4 py-2 rounded-md ${
+                  isMicOff ? 'bg-[#19232d] hover:bg-[#4c535b] text-white' : 'bg-blue-400 hover:bg-blue-500 text-white'
+                }`}
+                onClick={() => setIsMicOff(!isMicOff)}
+              >
+                {isMicOff ? 'Mic Off' : 'Mic On'}
+              </Button>
+            )}
+            {roomSettings?.camera === 'flexible' && (
+              <Button
+                className={`px-4 py-2 rounded-md ${
+                  isCameraOff ? 'bg-[#19232d] hover:bg-[#4c535b] text-white' : 'bg-blue-400 hover:bg-blue-500 text-white'
+                }`}
+                onClick={() => setIsCameraOff(!isCameraOff)}
+              >
+                {isCameraOff ? 'Camera Off' : 'Camera On'}
+              </Button>
+            )}
+            <DeviceSettings />
+            <Button
+            className="rounded-md bg-blue-300 hover:bg-blue-400 px-12 py-7 text-xl"
+            onClick={async () => {
+              await call.join();
+              // Add as member so avatar is queryable later
+              try {
+                if (authUser) {
+                  await call.updateCallMembers({
+                    update_members: [
+                      {
+                        user_id: authUser.id,
+                      },
+                    ],
+                  } as any);
+                }
+              } catch (err) {
+                console.error('Failed to add user as call member', err);
+              }
+
+              setIsSetupComplete(true);
+            }}
+          >
+            Join
+          </Button>
+        </div>
+      </div>
+    </NextLayout>
   );
 };
 

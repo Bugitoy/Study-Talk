@@ -36,7 +36,7 @@ export default function InputBox(
             }]);
             setMessageInputValue("");
         } else {
-            console.log("Socket is not connected.");
+
         }
     }
 

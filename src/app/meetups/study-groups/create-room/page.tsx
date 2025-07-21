@@ -64,7 +64,6 @@ export default function CreateRoom() {
       numQuestions: 0,
       timePerQuestion: null,
       participants: 50,
-      allowReview: false,
     };
 
     const res = await fetch('/api/room-settings', {
