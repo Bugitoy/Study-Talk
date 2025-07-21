@@ -146,8 +146,7 @@ const CallSetup = ({
           </Button>
         )}
         <DeviceSettings />
-      </div>
-      <Button
+        <Button
         className="rounded-md bg-blue-300 hover:bg-blue-400 px-12 py-7 text-xl"
         onClick={async () => {
           await call.join();
@@ -186,6 +185,8 @@ const CallSetup = ({
       >
         Join
       </Button>
+      </div>
+
     </div>
   );
 };

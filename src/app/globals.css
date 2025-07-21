@@ -101,6 +101,97 @@
     width: 25%;
   }
 
+  /* Small screens (mobile) */
+  @media (max-width: 767px) {
+    .show-block {
+      width: 90%;
+      max-width: 400px;
+      margin: 10px auto;
+      padding: 20px;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1000;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+  }
+
+  /* Medium tablets and iPad screens */
+  @media (min-width: 768px) and (max-width: 1024px) {
+    .show-block {
+      width: 90%;
+      max-width: 1000px;
+      margin: 10px auto;
+      padding: 20px;
+      position: fixed;
+      top: 48%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1000;
+      max-height: 50vh;
+      overflow-y: auto;
+    }
+  }
+
+  /* Medium tablets and iPad screens */
+  @media (min-width: 768px) and (max-width: 1024px) {
+    .show-block {
+      width: 90%;
+      max-width: 1000px;
+      margin: 10px auto;
+      padding: 20px;
+      position: fixed;
+      top: 45%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1000;
+      max-height: 50vh;
+      overflow-y: auto;
+    }
+  }
+
+   /* iPad Air landscape and portrait */
+   @media only screen 
+   and (min-width: 820px) 
+   and (max-width: 1180px) {
+   .show-block {
+     width: 95%;
+     max-width: 1050px;
+     margin: 10px auto;
+     padding: 20px;
+     position: fixed;
+     top: 45%;
+     left: 50%;
+     transform: translate(-50%, -50%);
+     z-index: 1000;
+     max-height: 55vh;
+     overflow-y: auto;
+   }
+ }
+
+    /* iPad Pro and larger tablets */
+  @media only screen 
+    and (min-device-width: 1024px) 
+    and (max-device-width: 1366px) 
+    and (-webkit-min-device-pixel-ratio: 2) {
+    .show-block {
+      width: 90%;
+      max-width: 1000px;
+      margin: 10px auto;
+      padding: 20px;
+      position: fixed;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1000;
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+  }
+
+
   /* Hide Stream SDK messages that cause delays */
   [data-testid*="video"] > div:not([data-testid*="preview"]),
   [data-testid*="camera"] > div:not([data-testid*="preview"]),
@@ -122,6 +213,28 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* CallParticipantsList slide-up animation */
+@keyframes slideUpModal {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -30%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* Background overlay animation */
+@keyframes fadeInOverlay {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 

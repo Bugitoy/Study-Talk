@@ -182,11 +182,11 @@ const MeetingRoom = () => {
         });
         router.push('/meetups/study-groups');
       } else {
-        // Another participant was removed - could be due to ban
+        // Another participant left the call
         if (isHost) {
           toast({
-            title: 'User removed',
-            description: `User has been removed from the call.`,
+            title: 'Participant left',
+            description: `A participant has left the call.`,
           });
         }
       }
@@ -293,10 +293,18 @@ const MeetingRoom = () => {
         />
       </div>
       
-      <div className="relative flex size-full items-center justify-center">
-        <div className=" flex size-full max-w-[1000px] items-center">
+      <div className="relative flex size-full items-center justify-center pb-60 sm:pb-56 md:pb-52">
+        <div className="flex size-full max-w-[1000px] items-center">
           <CallLayout />
         </div>
+        {/* Background overlay for small screens and tablets */}
+        {showParticipants && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => setShowParticipants(false)}
+          />
+        )}
+        
         <div
           className={cn('h-[calc(100vh-86px)] hidden ml-2', {
             'show-block': showParticipants,
@@ -306,8 +314,8 @@ const MeetingRoom = () => {
         </div>
       </div>
       
-      {/* Mobile Study Progress Widget - Below Call Layout (Small Screens and Tablets) */}
-      <div className="block 2xl:hidden absolute bottom-[190px] left-1/2 transform -translate-x-1/2 z-30 pointer-events-none">
+      {/* Mobile Study Progress Widget - Above Call Controls (Small Screens and Tablets) */}
+      <div className="block 2xl:hidden absolute bottom-52 sm:bottom-48 md:bottom-44 left-1/2 transform -translate-x-1/2 z-30 pointer-events-none">
         <MobileStudyTimeProgress 
           dailyHours={dailyHours} 
           isTracking={isTracking}
@@ -327,7 +335,9 @@ const MeetingRoom = () => {
         />
 
 
-        <CallStatsButton />
+        <div className="hidden sm:block">
+          <CallStatsButton />
+        </div>
         <button onClick={() => setShowParticipants((prev) => !prev)}>
           <div className=" cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]  ">
             <Users size={20} className="text-white" />
