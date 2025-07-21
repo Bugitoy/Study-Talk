@@ -4,9 +4,10 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { User, Shield } from "lucide-react";
+import { User, Shield, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useState } from "react";
 
 interface LayoutProps {
   children: ReactNode;
@@ -15,6 +16,7 @@ interface LayoutProps {
 export default function NextLayout({ children }: LayoutProps) {
   const pathname = usePathname();
   const { user } = useCurrentUser();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const isActive = (path: string) => {
     return pathname === path;
@@ -54,9 +56,9 @@ export default function NextLayout({ children }: LayoutProps) {
                 </span>
               </Link>
 
-              {/* Navigation */}
-              <nav className="hidden md:flex items-center space-x-8">
-              <Link
+              {/* Desktop Navigation */}
+              <nav className="hidden lg:flex items-center space-x-8">
+                <Link
                   href="/meetups"
                   className={cn(
                     "text-lg font-medium transition-colors hover:text-orange-600",
@@ -99,8 +101,35 @@ export default function NextLayout({ children }: LayoutProps) {
                 )}
               </nav>
 
-              {/* User Icon */}
-              <Link href="/account">
+              {/* Mobile Menu Button */}
+              <div className="lg:hidden flex items-center space-x-2">
+                <Link href="/account" className="mr-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="w-8 h-8 rounded-full hover:bg-gray-100"
+                  >
+                    <User className="w-4 h-4" />
+                    <span className="sr-only">Account</span>
+                  </Button>
+                </Link>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-8 h-8"
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                >
+                  {isMobileMenuOpen ? (
+                    <X className="w-5 h-5" />
+                  ) : (
+                    <Menu className="w-5 h-5" />
+                  )}
+                  <span className="sr-only">Toggle menu</span>
+                </Button>
+              </div>
+
+              {/* Desktop User Icon */}
+              <Link href="/account" className="hidden lg:block">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -110,32 +139,61 @@ export default function NextLayout({ children }: LayoutProps) {
                   <span className="sr-only">Account</span>
                 </Button>
               </Link>
-              
             </div>
 
             {/* Mobile Navigation */}
-            <nav className="md:hidden flex items-center justify-center space-x-6 mt-4 pt-4 border-t border-gray-200">
-              <Link
-                href="/pricing"
-                className={cn(
-                  "text-sm font-medium transition-colors hover:text-orange-600",
-                  isActive("/pricing") ? "text-orange-600" : "text-gray-600",
-                )}
-                style={{ fontFamily: "Alata, sans-serif" }}
-              >
-                Pricing
-              </Link>
-              <Link
-                href="/about"
-                className={cn(
-                  "text-sm font-medium transition-colors hover:text-orange-600",
-                  isActive("/about") ? "text-orange-600" : "text-gray-600",
-                )}
-                style={{ fontFamily: "Alata, sans-serif" }}
-              >
-                About
-              </Link>
-            </nav>
+            {isMobileMenuOpen && (
+              <nav className="lg:hidden mt-4 pt-4 border-t border-gray-200">
+                <div className="flex flex-col space-y-3">
+                  <Link
+                    href="/meetups"
+                    className={cn(
+                      "text-base font-medium transition-colors hover:text-orange-600 py-2 px-3 rounded-lg hover:bg-gray-50",
+                      isActive("/meetups") ? "text-orange-600 bg-orange-50" : "text-gray-600",
+                    )}
+                    style={{ fontFamily: "Alata, sans-serif" }}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Meetups
+                  </Link>
+                  <Link
+                    href="/pricing"
+                    className={cn(
+                      "text-base font-medium transition-colors hover:text-orange-600 py-2 px-3 rounded-lg hover:bg-gray-50",
+                      isActive("/pricing") ? "text-orange-600 bg-orange-50" : "text-gray-600",
+                    )}
+                    style={{ fontFamily: "Alata, sans-serif" }}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Pricing
+                  </Link>
+                  <Link
+                    href="/about"
+                    className={cn(
+                      "text-base font-medium transition-colors hover:text-orange-600 py-2 px-3 rounded-lg hover:bg-gray-50",
+                      isActive("/about") ? "text-orange-600 bg-orange-50" : "text-gray-600",
+                    )}
+                    style={{ fontFamily: "Alata, sans-serif" }}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    About
+                  </Link>
+                  {user?.isAdmin && (
+                    <Link
+                      href="/admin/reports"
+                      className={cn(
+                        "text-base font-medium transition-colors hover:text-orange-600 py-2 px-3 rounded-lg hover:bg-gray-50",
+                        isActive("/admin/reports") ? "text-orange-600 bg-orange-50" : "text-orange-300",
+                      )}
+                      style={{ fontFamily: "Alata, sans-serif" }}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      Admin
+                    </Link>
+                  )}
+                </div>
+              </nav>
+            )}
           </div>
         </header>
       )}

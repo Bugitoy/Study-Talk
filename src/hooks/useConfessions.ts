@@ -240,7 +240,7 @@ export function useConfessions(options: UseConfessionsOptions = {}) {
       const requestBody = action === 'unvote' 
         ? { userId, confessionId, action: 'unvote' }
         : { userId, confessionId, voteType, action: 'vote' };
-      
+
       const response = await fetch('/api/confessions/vote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -124,21 +124,21 @@ export default function ChatPage() {
                 
             {/* navbar */}
             <header className="border-2 border-gray-300 bg-white/80 backdrop-blur-sm mb-[1%]">
-                <div className="container mx-auto px-4 py-4">
+                <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
                     <div className="flex items-center justify-between">
                         {/* Logo */}
                         <Link href="/" className="flex items-center space-x-2">
                             <div
-                                className="w-10 h-10 rounded-full flex items-center justify-center"
+                                className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center"
                                 style={{
                                     backgroundImage:
                                         "linear-gradient(to bottom right, #F7D379, #F9B288)",
                                 }}
                             >
-                                <span className="text-white font-bold text-lg">T</span>
+                                <span className="text-white font-bold text-sm sm:text-lg">T</span>
                             </div>
                             <span
-                                className="text-xl font-bold text-gray-900"
+                                className="text-lg sm:text-xl font-bold text-gray-900"
                                 style={{ fontFamily: "Alata, sans-serif" }}
                             >
                                 Lets Study
@@ -146,11 +146,11 @@ export default function ChatPage() {
                         </Link>
 
                         {/* Navigation */}
-                        <nav className="hidden md:flex items-center space-x-8">
+                        <nav className="hidden md:flex items-center space-x-6 lg:space-x-8">
                             <Link
                                 href="/meetups"
                                 className={cn(
-                                    "text-lg font-medium transition-colors hover:text-orange-600",
+                                    "text-base lg:text-lg font-medium transition-colors hover:text-orange-600",
                                     isActive("/meetups") ? "text-orange-600" : "text-gray-600"
                                 )}
                                 style={{ fontFamily: "Alata, sans-serif" }}
@@ -160,7 +160,7 @@ export default function ChatPage() {
                             <Link
                                 href="/pricing"
                                 className={cn(
-                                    "text-lg font-medium transition-colors hover:text-orange-600",
+                                    "text-base lg:text-lg font-medium transition-colors hover:text-orange-600",
                                     isActive("/pricing") ? "text-orange-600" : "text-gray-600"
                                 )}
                                 style={{ fontFamily: "Alata, sans-serif" }}
@@ -170,7 +170,7 @@ export default function ChatPage() {
                             <Link
                                 href="/about"
                                 className={cn(
-                                    "text-lg font-medium transition-colors hover:text-orange-600",
+                                    "text-base lg:text-lg font-medium transition-colors hover:text-orange-600",
                                     isActive("/about") ? "text-orange-600" : "text-gray-600"
                                 )}
                                 style={{ fontFamily: "Alata, sans-serif" }}
@@ -181,7 +181,7 @@ export default function ChatPage() {
                                 <Link
                                     href="/admin/reports"
                                     className={cn(
-                                        "text-lg font-medium transition-colors hover:text-orange-600",
+                                        "text-base lg:text-lg font-medium transition-colors hover:text-orange-600",
                                         isActive("/admin/reports") ? "text-orange-600" : "text-orange-300"
                                     )}
                                     style={{ fontFamily: "Alata, sans-serif" }}
@@ -196,20 +196,20 @@ export default function ChatPage() {
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="w-10 h-10 rounded-full hover:bg-gray-100"
+                                className="w-8 h-8 sm:w-10 sm:h-10 rounded-full hover:bg-gray-100"
                             >
-                                <User className="w-5 h-5" />
+                                <User className="w-4 h-4 sm:w-5 sm:h-5" />
                                 <span className="sr-only">Account</span>
                             </Button>
                         </Link>
                     </div>
 
                     {/* Mobile Navigation */}
-                    <nav className="md:hidden flex items-center justify-center space-x-6 mt-4 pt-4 border-t border-gray-200">
+                    <nav className="md:hidden flex items-center justify-center space-x-4 sm:space-x-6 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200">
                         <Link
                             href="/pricing"
                             className={cn(
-                                "text-sm font-medium transition-colors hover:text-orange-600",
+                                "text-xs sm:text-sm font-medium transition-colors hover:text-orange-600",
                                 isActive("/pricing") ? "text-orange-600" : "text-gray-600"
                             )}
                             style={{ fontFamily: "Alata, sans-serif" }}
@@ -219,7 +219,7 @@ export default function ChatPage() {
                         <Link
                             href="/about"
                             className={cn(
-                                "text-sm font-medium transition-colors hover:text-orange-600",
+                                "text-xs sm:text-sm font-medium transition-colors hover:text-orange-600",
                                 isActive("/about") ? "text-orange-600" : "text-gray-600"
                             )}
                             style={{ fontFamily: "Alata, sans-serif" }}
@@ -230,7 +230,7 @@ export default function ChatPage() {
                             <Link
                                 href="/admin/reports"
                                 className={cn(
-                                    "text-sm font-medium transition-colors hover:text-orange-600",
+                                    "text-xs sm:text-sm font-medium transition-colors hover:text-orange-600",
                                     isActive("/admin/reports") ? "text-orange-600" : "text-orange-300"
                                 )}
                                 style={{ fontFamily: "Alata, sans-serif" }}
@@ -243,12 +243,12 @@ export default function ChatPage() {
             </header>
 
             {/* video and chat */}
-            <div className='flex justify-around w-full max-h-[97.1vh] p-[2px]'>
+            <div className='flex flex-col lg:flex-row justify-around w-full max-h-[97.1vh] p-[2px]'>
                 {user === undefined || user === null ? (
                     <div>Loading...</div>
                 ) : (
                     <>
-                        <div id='flex flex-col w-[40%] max-w-[780px] max-h-[100vh] items-center pl-[1%]'>
+                        <div id='flex flex-col w-full lg:w-[40%] max-w-[780px] max-h-[50vh] lg:max-h-[100vh] items-center pl-[1%]'>
                             <ChangeLocalMediaStream
                                 peerConnection={peerConnection}
                                 localVideo={localVideo.current!}
@@ -272,16 +272,16 @@ export default function ChatPage() {
                                 setChangeCamOverly={setChangeCamOverly}
                             />
                         </div>
-                        <div className='w-[60%] max-w-[2000px] max-h-[100vh] flex flex-col 
-                            justify-between rounded-[10px] p-[10px] m-[1%]'>
+                        <div className='w-full lg:w-[60%] max-w-[2000px] max-h-[50vh] lg:max-h-[100vh] flex flex-col 
+                            justify-between rounded-[10px] p-[5px] sm:p-[10px] m-[1%]'>
                             <div className="flex items-center justify-between mb-2">
                                 <ConnectionStatusBar strangerUsername={strangerUsername || 'Unknown'} />
                                 {strangerUserId && (
                                     <button 
                                         onClick={() => setShowReportDialog(true)}
-                                        className="flex items-center gap-2 px-3 py-1 bg-red-300 hover:bg-red-600 text-white rounded-[8px] text-sm transition-colors"
+                                        className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 bg-red-300 hover:bg-red-600 text-white rounded-[8px] text-xs sm:text-sm transition-colors"
                                     >
-                                        <Flag className="w-4 h-4" />
+                                        <Flag className="w-3 h-3 sm:w-4 sm:h-4" />
                                         Report
                                     </button>
                                 )}
@@ -311,18 +311,18 @@ export default function ChatPage() {
 
             {/* Report Dialog */}
             {showReportDialog && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
-                        <h2 className="text-xl font-semibold mb-4 text-gray-800">Report User</h2>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+                    <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md shadow-lg">
+                        <h2 className="text-lg sm:text-xl font-semibold mb-4 text-gray-800">Report User</h2>
                         <div className="mb-4">
-                            <p className="text-sm text-gray-600 mb-2">
+                            <p className="text-xs sm:text-sm text-gray-600 mb-2">
                                 Reporting: <span className="font-medium">{strangerUsername || 'Unknown User'}</span>
                             </p>
                         </div>
                         <div className="mb-4">
-                            <label className="block mb-2 text-gray-800 font-medium">Type of Report</label>
+                            <label className="block mb-2 text-gray-800 font-medium text-sm sm:text-base">Type of Report</label>
                             <select
-                                className="w-full border border-gray-300 rounded p-2 text-black"
+                                className="w-full border border-gray-300 rounded p-2 text-black text-sm sm:text-base"
                                 value={reportType}
                                 onChange={e => setReportType(e.target.value)}
                             >
@@ -332,15 +332,15 @@ export default function ChatPage() {
                             </select>
                         </div>
                         <textarea
-                            className="w-full border border-gray-300 rounded p-2 mb-4 text-black"
+                            className="w-full border border-gray-300 rounded p-2 mb-4 text-black text-sm sm:text-base"
                             rows={4}
                             placeholder="Describe the issue..."
                             value={reportReason}
                             onChange={e => setReportReason(e.target.value)}
                         />
-                        <div className="flex justify-end gap-2">
+                        <div className="flex flex-col sm:flex-row justify-end gap-2">
                             <button
-                                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-black"
+                                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-black w-full sm:w-auto text-sm sm:text-base"
                                 onClick={() => {
                                     setShowReportDialog(false);
                                     setReportReason('');
@@ -350,7 +350,7 @@ export default function ChatPage() {
                                 Cancel
                             </button>
                             <button
-                                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 w-full sm:w-auto text-sm sm:text-base"
                                 onClick={handleReport}
                                 disabled={!reportReason.trim()}
                             >

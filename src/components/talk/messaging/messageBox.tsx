@@ -39,7 +39,7 @@ export default function MessageBox({ message, userId, username, socket, setMessa
             <div className='grow overflow-y-auto p-[10px] bg-slate-400 rounded-[10px] mb-[10px]
                             max-w-[100%] relative flex flex-col'>
                 {(connectionStatus !== null && message.length === 0) && (
-                    <div className='absolute top-0 left-0 w-[100%] h-[100%] bg-slate-400
+                    <div className='absolute top-0 left-0 w-[100%] h-[100%] bg-slate-400 
                                     text-white flex items-center justify-center rounded-[10px] z-1'>
                         {connectionStatus ? (
                             <p>{username} is connected with {strangerUsername}</p>

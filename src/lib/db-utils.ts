@@ -744,7 +744,7 @@ export async function createConfession(data: {
             id: true,
             name: true,
             image: true,
-            university: true,
+        university: true,
           },
         },
         university: {
@@ -1152,8 +1152,8 @@ export async function createConfessionComment(data: {
         confessionId: data.confessionId,
         parentId: data.parentId,
       },
-      include: {
-        author: {
+          include: {
+            author: {
           select: {
             id: true,
             name: true,
@@ -1920,7 +1920,7 @@ export async function getUserReputation(userId: string) {
         isFlagged: true,
       },
     });
-
+    
     if (!user) return null;
 
     return {

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import NextLayout from "@/components/NextLayout";
-import { User as UserIcon, ThumbsUp, ThumbsDown, MessageCircle, Share2, Bookmark, Plus, Flag } from "lucide-react";
+import { User as UserIcon, ThumbsUp, ThumbsDown, MessageCircle, Bookmark, Plus, Flag } from "lucide-react";
 import Image from "next/image";
 import clsx from "clsx";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -20,12 +20,10 @@ import { CommentSection } from "@/components/CommentSection";
 import { useToast } from '@/hooks/use-toast';
 import ShareButton from "@/components/ShareButton";
 import { UserReputationBadge } from '@/components/UserReputationBadge';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { formatDistanceToNow } from "date-fns";
 
 const tabs = [
   { key: "posts", label: "Posts" },
-  { key: "hottest", label: "Hottest Confessions" },
+  { key: "hottest", label: "Hottest" },
   { key: "universities", label: "Universities" },
   { key: "saved", label: "Saved" },
 ];
@@ -213,18 +211,18 @@ export default function ConfessionsPage() {
   };
 
   const renderPosts = (posts: Confession[]) => (
-    <div className="flex flex-col gap-6 mt-6">
+    <div className="flex flex-col gap-4 sm:gap-6 mt-4 sm:mt-6">
       {posts.map((post, index) => (
           <div
             key={post.id}
-            className="rounded-[12px] border border-gray-300 bg-white p-4 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out transform hover:scale-[1.01] lg:p-6 relative"
+            className="rounded-[12px] border border-gray-300 bg-white p-3 sm:p-4 lg:p-6 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out transform hover:scale-[1.01] relative"
             style={{ 
               animation: `fadeInUp 0.5s ease-out ${index * 0.1}s both`,
             }}
           >
             {/* Shield Badge - Top Right Corner */}
             {!post.isAnonymous && (
-              <div className="absolute top-3 right-3 z-10">
+              <div className="absolute top-2 sm:top-3 right-2 sm:right-3 z-10">
                 <UserReputationBadge 
                   userId={post.authorId} 
                   variant="shield"
@@ -234,30 +232,30 @@ export default function ConfessionsPage() {
             )}
 
             {/* Header */}
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
               {post.author?.image && !post.isAnonymous ? (
                 <Image
                   src={post.author.image}
                   alt={post.author.name || "User"}
                   width={40}
                   height={40}
-                  className="rounded-[8px] object-cover"
+                  className="rounded-[8px] object-cover w-8 h-8 sm:w-10 sm:h-10"
                 />
               ) : (
-                <span className="w-10 h-10 flex items-center justify-center bg-gray-200 rounded-[8px]">
-                  <UserIcon className="w-6 h-6 text-gray-500" />
+                <span className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-gray-200 rounded-[8px]">
+                  <UserIcon className="w-4 h-4 sm:w-6 sm:h-6 text-gray-500" />
                 </span>
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="font-semibold text-gray-800">
+                  <p className="font-semibold text-gray-800 text-sm sm:text-base">
                     {post.isAnonymous ? "Anonymous" : (post.author?.name || "Unknown")}
                   </p>
                   {!post.isAnonymous && (
                     <UserReputationBadge userId={post.authorId} />
                   )}
                 </div>
-                <p className="text-gray-500">
+                <p className="text-gray-500 text-xs sm:text-sm">
                   {post.university?.name || (post.author as any)?.university || "Unknown University"}
                 </p>
               </div>
@@ -265,19 +263,19 @@ export default function ConfessionsPage() {
             
             {/* Title */}
             <h3 
-              className="font-semibold text-lg text-gray-900 mb-2 cursor-pointer hover:text-blue-600 transition-colors"
+              className="font-semibold text-base sm:text-lg text-gray-900 mb-2 cursor-pointer hover:text-blue-600 transition-colors"
               onClick={() => router.push(`/meetups/confessions/post/${post.id}`)}
             >
               {post.title}
             </h3>
             
             {/* Content */}
-            <p className="text-gray-700 whitespace-pre-line mb-4 line-clamp-3 lg:line-clamp-none">
+            <p className="text-gray-700 whitespace-pre-line mb-3 sm:mb-4 line-clamp-3 lg:line-clamp-none text-sm sm:text-base">
               {post.content}
             </p>
             
             {/* Combined Stats & Actions */}
-            <div className="flex items-center flex-wrap gap-6 text-sm text-gray-600 mt-4">
+            <div className="flex items-center flex-wrap gap-3 sm:gap-6 text-xs sm:text-sm text-gray-600 mt-3 sm:mt-4">
               <div className="flex items-center gap-1">
                 <button 
                   onClick={(e) => {
@@ -290,7 +288,7 @@ export default function ConfessionsPage() {
                       : 'text-gray-600 hover:text-green-600'
                   }`}
                 >
-                  <ThumbsUp className={`w-4 h-4 ${post.userVote === 'BELIEVE' ? 'fill-current' : ''}`} />
+                  <ThumbsUp className={`w-3 h-3 sm:w-4 sm:h-4 ${post.userVote === 'BELIEVE' ? 'fill-current' : ''}`} />
                   {post.believeCount} Believers
                 </button>
               </div>
@@ -306,7 +304,7 @@ export default function ConfessionsPage() {
                       : 'text-gray-600 hover:text-red-600'
                   }`}
                 >
-                  <ThumbsDown className={`w-4 h-4 ${post.userVote === 'DOUBT' ? 'fill-current' : ''}`} />
+                  <ThumbsDown className={`w-3 h-3 sm:w-4 sm:h-4 ${post.userVote === 'DOUBT' ? 'fill-current' : ''}`} />
                   {post.doubtCount} Non Believers
                 </button>
               </div>
@@ -322,7 +320,7 @@ export default function ConfessionsPage() {
                       : 'text-gray-600 hover:text-blue-600'
                   }`}
                 >
-                  <MessageCircle className="w-4 h-4" /> {post.commentCount} Comments
+                  <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" /> {post.commentCount} Comments
                 </button>
               </div>
               <ShareButton 
@@ -340,7 +338,7 @@ export default function ConfessionsPage() {
                 }}
               >
                 <Bookmark
-                  className={`w-4 h-4 ${isConfessionSaved(post.id) ? 'text-yellow-400' : ''}`}
+                  className={`w-3 h-3 sm:w-4 sm:h-4 ${isConfessionSaved(post.id) ? 'text-yellow-400' : ''}`}
                   fill={isConfessionSaved(post.id) ? '#FACC15' : 'none'}
                 />
                 {isConfessionSaved(post.id) ? 'Saved' : 'Save'}
@@ -353,9 +351,9 @@ export default function ConfessionsPage() {
                   setShowReportDialog(true);
                 }}
               >
-                <Flag className="w-4 h-4" /> Report
+                <Flag className="w-3 h-3 sm:w-4 sm:h-4" /> Report
               </div>
-              <div className="ml-auto text-gray-500">
+              <div className="ml-auto text-gray-500 text-xs sm:text-sm">
                 {formatTimeAgo(post.createdAt)}
               </div>
             </div>
@@ -419,27 +417,25 @@ export default function ConfessionsPage() {
         );
         
         return (
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="mt-4 sm:mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredUniversities.map((uni) => (
               <div
                 key={uni.id}
-                className="rounded-[12px] border border-gray-300 bg-white p-8 shadow-sm hover:shadow-md h-72 flex flex-col cursor-pointer"
+                className="rounded-[12px] border border-gray-300 bg-white p-4 sm:p-6 lg:p-8 shadow-sm hover:shadow-md h-48 sm:h-64 lg:h-72 flex flex-col cursor-pointer"
                 onClick={() => router.push(`/meetups/confessions/university/${uni.id}?name=${encodeURIComponent(uni.name)}`)}
               >
-                <div className="mb-[3rem]">
-                  <h3 className="font-semibold text-gray-800 text-lg lg:text-xl">
+                <div className="mb-[2rem] sm:mb-[3rem]">
+                  <h3 className="font-semibold text-gray-800 text-base sm:text-lg lg:text-xl">
                     {uni.name}
                   </h3>
                 </div>
-                <div className="space-y-4 text-gray-600 text-sm">
-                  <p>
-                    {uni.confessionCount} confession{uni.confessionCount !== 1 ? "s" : ""}
-                  </p>
-                  <div className="text-sm text-gray-600">
-                    {formatNumber(uni.confessionCount)} confessions • {formatNumber(uni.studentCount)} students • {formatNumber(uni.totalVotes)} votes
+                
+                <div className="space-y-1 text-xs sm:text-sm text-gray-600">
+                    <div>{formatNumber(uni.confessionCount)} confessions</div>
+                    <div>{formatNumber(uni.studentCount)} students</div>
+                    <div>{formatNumber(uni.totalVotes)} votes</div>
                   </div>
                 </div>
-              </div>
             ))}
           </div>
         );
@@ -459,9 +455,9 @@ export default function ConfessionsPage() {
 
   return (
     <NextLayout>
-      <div className="max-w-5xl mx-auto w-full py-8 px-4">
+      <div className="max-w-5xl mx-auto w-full py-4 sm:py-6 lg:py-8 px-4 sm:px-6 lg:px-8">
         <div className="relative">
-          <h1 className="text-8xl font-extrabold text-gray-800 mb-6 text-center">
+          <h1 className="text-4xl sm:text-6xl lg:text-8xl font-extrabold text-gray-800 mb-4 sm:mb-6 text-center">
             Confessions
           </h1>
           {/* New posts banner - DISABLED */}
@@ -473,13 +469,13 @@ export default function ConfessionsPage() {
           )} */}
         </div>
         {/* Tab Bar */}
-        <div className="flex gap-[4rem] border-b border-gray-300 mb-4 overflow-x-auto justify-center items-center">
+        <div className="flex gap-6 sm:gap-6 lg:gap-[4rem] border-b border-gray-300 mb-4 overflow-x-auto justify-center items-center">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={clsx(
-                "py-2 text-lg font-medium whitespace-nowrap transition-colors",
+                "py-2 text-sm sm:text-base lg:text-lg font-medium whitespace-nowrap transition-colors",
                 activeTab === tab.key ? "border-b-4 border-black text-gray-900" : "text-gray-500 hover:text-gray-800"
               )}
             >
@@ -488,7 +484,7 @@ export default function ConfessionsPage() {
           ))}
         </div>
         {/* Search Bar + Make Post Button */}
-        <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-4">
           <input
             type="text"
             value={searchQuery}
@@ -498,14 +494,14 @@ export default function ConfessionsPage() {
                 ? "Search for a university"
                 : "Search for a post"
             }
-            className="flex-1 min-w-[200px] px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none text-lg shadow-sm transition-colors"
+            className="w-full sm:flex-1 min-w-[200px] px-3 sm:px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none text-base sm:text-lg shadow-sm transition-colors"
           />
           {user && (
             <button
-            className="flex items-center gap-2 bg-yellow-300 rounded-[12px] px-4 py-2 font-semibold text-gray-800 hover:bg-yellow-400 transition-colors"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-yellow-300 rounded-[12px] px-3 sm:px-4 py-2 font-semibold text-gray-800 hover:bg-yellow-400 transition-colors text-sm sm:text-base"
             onClick={() => setIsPostModalOpen(true)}
           >
-            <Plus className="w-4 h-8" />
+            <Plus className="w-4 h-4 sm:h-8" />
             Make a post
           </button>
           )}
@@ -515,9 +511,9 @@ export default function ConfessionsPage() {
 
         {/* Post Creation Modal */}
         <Dialog open={isPostModalOpen} onOpenChange={setIsPostModalOpen}>
-          <DialogContent className="backdrop-blur-md bg-white/90 rounded-[12px] max-w-2xl">
+          <DialogContent className="backdrop-blur-md bg-white/90 rounded-[12px] max-w-2xl mx-4">
             <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-center">Create a confession</DialogTitle>
+              <DialogTitle className="text-xl sm:text-2xl font-bold text-center">Create a confession</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 mt-4">
               <Input
@@ -546,16 +542,16 @@ export default function ConfessionsPage() {
                 </label>
               </div>
             </div>
-            <DialogFooter className="mt-6 flex justify-end gap-4">
+            <DialogFooter className="mt-6 flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
               <Button
                 variant="outline"
-                className="rounded-[8px]"
+                className="rounded-[8px] w-full sm:w-auto"
                 onClick={() => setIsPostModalOpen(false)}
               >
                 Cancel
               </Button>
               <Button
-                className="bg-yellow-300 hover:bg-yellow-400 text-gray-800 rounded-[8px]"
+                className="bg-yellow-300 hover:bg-yellow-400 text-gray-800 rounded-[8px] w-full sm:w-auto"
                 onClick={handleCreatePost}
                 disabled={!newTitle.trim() || !newBody.trim()}
               >
@@ -567,9 +563,9 @@ export default function ConfessionsPage() {
 
         {/* Report Dialog */}
         {showReportDialog && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
-              <h2 className="text-xl font-semibold mb-4 text-gray-800">Report Confession</h2>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+            <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md shadow-lg">
+              <h2 className="text-lg sm:text-xl font-semibold mb-4 text-gray-800">Report Confession</h2>
               <div className="mb-4">
                 <label className="block mb-2 text-gray-800 font-medium">Type of Report</label>
                 <select
@@ -589,9 +585,9 @@ export default function ConfessionsPage() {
                 value={reportReason}
                 onChange={e => setReportReason(e.target.value)}
               />
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-col sm:flex-row justify-end gap-2">
                 <button
-                  className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-black"
+                  className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-black w-full sm:w-auto"
                   onClick={() => {
                     setShowReportDialog(false);
                     setReportReason('');
@@ -602,7 +598,7 @@ export default function ConfessionsPage() {
                   Cancel
                 </button>
                 <button
-                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 w-full sm:w-auto"
                   onClick={handleReport}
                   disabled={!reportReason.trim()}
                 >

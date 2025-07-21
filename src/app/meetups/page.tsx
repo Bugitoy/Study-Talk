@@ -9,27 +9,27 @@ const Meetups = () => {
 
   return (
     <NextLayout>
-      <section className="flex size-full flex-col gap-12 text-white">
-        <div className="h-[303px] w-full rounded-[20px] bg-blue-200 shadow-[0_8px_32px_rgba(0,0,0,0.12)] transform transition-all duration-300 hover:shadow-[0_12px_40px_rgba(0,0,0,0.15)] hover:-translate-y-1">
-          <div className="flex h-full justify-between max-md:px-5 max-md:py-8 lg:p-11">
+      <section className="flex size-full flex-col gap-6 sm:gap-8 lg:gap-12 text-white px-4 sm:px-6 lg:px-8">
+        <div className="h-[200px] sm:h-[250px] lg:h-[303px] w-full rounded-[16px] sm:rounded-[20px] bg-blue-200 shadow-[0_8px_32px_rgba(0,0,0,0.12)] transform transition-all duration-300 hover:shadow-[0_12px_40px_rgba(0,0,0,0.15)] hover:-translate-y-1">
+          <div className="flex h-full justify-between p-4 sm:p-6 lg:p-11">
             <div className="flex flex-col justify-between">
-              <h2 className="glassmorphism max-w-[300px] rounded py-2 text-4xl text-left">
+              <h2 className="glassmorphism max-w-[200px] sm:max-w-[250px] lg:max-w-[300px] rounded py-2 text-2xl sm:text-3xl lg:text-4xl text-left">
                 Hi there!
               </h2>
-          <div className="flex flex-col gap-2">
-            <h1 className="text-4xl font-extrabold lg:text-7xl">{time}</h1>
-            <p className="text-lg font-medium text-sky-1 lg:text-2xl">{date}</p>
+              <div className="flex flex-col gap-1 sm:gap-2">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-7xl font-extrabold">{time}</h1>
+                <p className="text-sm sm:text-lg lg:text-2xl font-medium text-sky-1">{date}</p>
               </div>
             </div>
-            <div className="flex items-center justify-center max-md:hidden">
-              <h2 className="text-3xl lg:text-6xl font-bold text-center leading-tight max-w-md">
+            <div className="hidden sm:flex items-center justify-center">
+              <h2 className="text-lg sm:text-2xl lg:text-3xl xl:text-6xl font-bold text-center leading-tight max-w-[200px] sm:max-w-[300px] lg:max-w-md">
                 Your place to meet, compete, post and STUDY online . . .
               </h2>
+            </div>
           </div>
         </div>
-      </div>
-      <MeetingTypeList />
-    </section>
+        <MeetingTypeList />
+      </section>
     </NextLayout>
   );
 };
