@@ -27,12 +27,12 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             auth: { username: user.given_name }
         }); 
         socketInstance.on("connect", () => {
-            console.log("✅ React App Connected:", socketInstance.id);
-          });
+          // Socket connected successfully
+        });
       
-          socketInstance.on("connect_error", (err) => {
-            console.error("❌ React App Error:", err.message);
-          });
+        socketInstance.on("connect_error", (err) => {
+          console.error("❌ React App Error:", err.message);
+        });
         setSocket(socketInstance);
 
         return () => {

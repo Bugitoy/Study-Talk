@@ -24,17 +24,12 @@ export function useStreamStudyTimeTracker(callId?: string) {
     currentIsLoadingRef.current = isLoading;
   }, [user, isAuthenticated, isLoading]);
 
-  // Debug authentication state
+  // Mark auth as stable when we have a user and are not loading
   useEffect(() => {
-    console.log('🔐 Auth state:', { isAuthenticated, isLoading, userId: user?.id });
-    
-    // Mark auth as stable when we have a user and are not loading
     if (isAuthenticated && !isLoading && user?.id) {
       authStableRef.current = true;
-      console.log('✅ Authentication is now stable');
     } else if (isLoading) {
       authStableRef.current = false;
-      console.log('⏳ Authentication is loading...');
     }
   }, [isAuthenticated, isLoading, user]);
 
@@ -45,46 +40,19 @@ export function useStreamStudyTimeTracker(callId?: string) {
     const currentIsAuthenticated = currentIsAuthenticatedRef.current;
     const currentIsLoading = currentIsLoadingRef.current;
     
-    console.log('🔍 startTracking called with:', { 
-      userId: currentUser?.id, 
-      callId, 
-      sessionStartedRef: sessionStartedRef.current,
-      isAuthenticated: currentIsAuthenticated,
-      isLoading: currentIsLoading,
-      authStable: authStableRef.current,
-      retryCount: retryCountRef.current
-    });
-    
     // Wait for authentication to be stable
     if (!authStableRef.current || !currentUser?.id || !callId || sessionStartedRef.current) {
-      console.log('❌ startTracking early return:', { 
-        hasUser: !!currentUser?.id, 
-        hasCallId: !!callId, 
-        sessionStarted: sessionStartedRef.current,
-        isAuthenticated: currentIsAuthenticated,
-        isLoading: currentIsLoading,
-        authStable: authStableRef.current
-      });
-      
       // If auth is not stable yet and we haven't exceeded max retries, retry after a short delay
       if (!authStableRef.current && callId && !sessionStartedRef.current && retryCountRef.current < maxRetries) {
         retryCountRef.current++;
-        console.log(`⏳ Authentication not stable yet, retrying in 1 second... (attempt ${retryCountRef.current}/${maxRetries})`);
         if (retryTimeoutRef.current) {
           clearTimeout(retryTimeoutRef.current);
         }
         retryTimeoutRef.current = setTimeout(() => {
-          console.log('🔄 Retrying startTracking...');
           startTracking();
         }, 1000);
       } else if (retryCountRef.current >= maxRetries) {
-        console.error('❌ Max retries exceeded. Authentication failed to stabilize.');
-        console.error('🔍 Final auth state:', {
-          isAuthenticated: currentIsAuthenticated,
-          isLoading: currentIsLoading,
-          userId: currentUser?.id,
-          authStable: authStableRef.current
-        });
+        console.error('Max retries exceeded. Authentication failed to stabilize.');
       }
       return;
     }
@@ -93,7 +61,6 @@ export function useStreamStudyTimeTracker(callId?: string) {
     retryCountRef.current = 0;
     
     try {
-      console.log('📞 Making API call to start study session...');
       const response = await fetch('/api/study-sessions/stream-duration', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -104,41 +71,25 @@ export function useStreamStudyTimeTracker(callId?: string) {
         }),
       });
       
-      console.log('📡 API response status:', response.status);
-      
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Study session started successfully:', data);
         setIsTracking(true);
         sessionStartedRef.current = true;
-        console.log('Study session started with Stream.io duration tracking');
       } else {
-        console.error('❌ Failed to start study session:', response.status, response.statusText);
+        console.error('Failed to start study session:', response.status, response.statusText);
       }
     } catch (error) {
-      console.error('❌ Failed to start study session with Stream duration:', error);
+      console.error('Failed to start study session with Stream duration:', error);
     }
   };
 
   // End tracking when leaving a call
   const endTracking = async () => {
-    console.log('🔍 endTracking called with:', { 
-      userId: user?.id, 
-      callId, 
-      sessionStartedRef: sessionStartedRef.current 
-    });
-    
     if (!user?.id || !callId || !sessionStartedRef.current) {
-      console.log('❌ endTracking early return:', { 
-        hasUser: !!user?.id, 
-        hasCallId: !!callId, 
-        sessionStarted: sessionStartedRef.current 
-      });
       return;
     }
     
     try {
-      console.log('📞 Making API call to end study session...');
       const response = await fetch('/api/study-sessions/stream-duration', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -149,21 +100,17 @@ export function useStreamStudyTimeTracker(callId?: string) {
         }),
       });
       
-      console.log('📡 API response status:', response.status);
-      
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Study session ended successfully:', data);
         setIsTracking(false);
         sessionStartedRef.current = false;
-        console.log('Study session ended with Stream.io duration');
         // Refresh daily hours after ending session
         await fetchDailyHours();
       } else {
-        console.error('❌ Failed to end study session:', response.status, response.statusText);
+        console.error('Failed to end study session:', response.status, response.statusText);
       }
     } catch (error) {
-      console.error('❌ Failed to end study session with Stream duration:', error);
+      console.error('Failed to end study session with Stream duration:', error);
     }
   };
 

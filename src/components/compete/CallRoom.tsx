@@ -90,16 +90,8 @@ const CallRoom = () => {
   const { startTracking, endTracking, isTracking } = useStreamStudyTimeTracker(call?.id);
   const [showTopicModal, setShowTopicModal] = useState(false);
 
-  // Debug logging for quiz room data
-  useEffect(() => {
-    console.log('CallRoom Debug - Room ID:', id);
-    console.log('CallRoom Debug - Quiz Room Data:', quizRoom);
-    console.log('CallRoom Debug - Room Settings:', roomSettings);
-  }, [id, quizRoom, roomSettings]);
-
   useEffect(() => {
     if (quizRoom) {
-      console.log('CallRoom Debug - Setting current room:', quizRoom);
       setCurrentRoom(quizRoom);
     }
   }, [quizRoom]);
@@ -154,7 +146,6 @@ useEffect(() => {
         }
       } else {
         // Another participant was removed - could be due to ban
-        console.log('Another participant left:', leftId);
         // Show a toast to the host that the user was removed
         if (isHost) {
           toast({
@@ -175,9 +166,7 @@ useEffect(() => {
     if (!call) return;
 
     const handleCallCustomChanged = (custom: any) => {
-      console.log('Call custom state changed:', custom);
       if (custom.forceUserDisconnect && custom.forceUserDisconnect === localParticipant?.userId) {
-        console.log('Forced to disconnect from call due to ban');
         toast({
           title: 'Banned from call',
           description: 'You have been banned from this room by the host.',
@@ -1002,7 +991,6 @@ useEffect(() => {
                         
                         if (forceRemoveRes.ok) {
                           const forceRemoveData = await forceRemoveRes.json();
-                          console.log('Force remove response:', forceRemoveData);
                           // Don't show call ended toast as we're not ending the call anymore
                         }
                       } catch (forceRemoveError) {
@@ -1013,7 +1001,6 @@ useEffect(() => {
                       if (call) {
                         try {
                           // Try to force the user to leave by updating call state
-                          console.log('Attempting to force user removal via call state update');
                           
                           // Update call with a custom property that might trigger removal
                           await call.update({
@@ -1024,8 +1011,6 @@ useEffect(() => {
                             }
                           });
                           
-                          console.log('Forced call update after ban');
-                          
                           // Also try to remove the user directly from the call state
                           const participants = call.state.participants || [];
                           const targetParticipant = participants.find((p: any) => 
@@ -1033,7 +1018,6 @@ useEffect(() => {
                           );
                           
                           if (targetParticipant) {
-                            console.log('Found target participant, attempting direct removal');
                             // Try to force a participant list refresh
                             setTimeout(() => {
                               call.update({ 
@@ -1048,7 +1032,6 @@ useEffect(() => {
                           
                           // Note: We don't end the call as it would remove all users
                           // Instead, we rely on the webhook to prevent banned users from rejoining
-                          console.log('User ban applied - webhook will prevent rejoining');
                           
                           // Set up continuous monitoring to ensure user is removed
                           const monitorInterval = setInterval(async () => {
@@ -1059,7 +1042,6 @@ useEffect(() => {
                               );
                               
                               if (bannedUserStillInCall) {
-                                console.log('Banned user still in call, continuing to force removal');
                                 // Call force remove endpoint
                                 const forceRemoveRes = await fetch('/api/room/force-remove', {
                                   method: 'POST',
@@ -1069,10 +1051,8 @@ useEffect(() => {
                                 
                                 if (forceRemoveRes.ok) {
                                   const forceRemoveData = await forceRemoveRes.json();
-                                  console.log('Continuous force remove response:', forceRemoveData);
                                 }
                               } else {
-                                console.log('Banned user successfully removed, stopping monitoring');
                                 clearInterval(monitorInterval);
                               }
                             } catch (monitorError) {
@@ -1083,7 +1063,6 @@ useEffect(() => {
                           // Stop monitoring after 30 seconds
                           setTimeout(() => {
                             clearInterval(monitorInterval);
-                            console.log('Stopped monitoring user removal after 30 seconds');
                           }, 30000);
                           
                           // Check if the banned user is still in the call after 3 seconds
@@ -1095,7 +1074,6 @@ useEffect(() => {
                               );
                               
                               if (bannedUserStillInCall) {
-                                console.log('Banned user still in call after 3 seconds, forcing removal');
                                 // Call the force remove endpoint again
                                 const forceRemoveRes = await fetch('/api/room/force-remove', {
                                   method: 'POST',
@@ -1105,7 +1083,6 @@ useEffect(() => {
                                 
                                 if (forceRemoveRes.ok) {
                                   const forceRemoveData = await forceRemoveRes.json();
-                                  console.log('Second force remove response:', forceRemoveData);
                                 }
                                 
                                 // Additional attempt: try to force the user to leave by updating call state
@@ -1117,7 +1094,6 @@ useEffect(() => {
                                       forceLeaveTimestamp: Date.now()
                                     }
                                   });
-                                  console.log('Forced call update to remove user');
                                 } catch (updateError) {
                                   console.error('Failed to force call update:', updateError);
                                 }
