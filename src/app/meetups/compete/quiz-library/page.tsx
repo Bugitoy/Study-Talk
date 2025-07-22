@@ -101,8 +101,9 @@ export default function QuizLibraryPage() {
     <NextLayout>
       <div className="max-w-6xl mx-auto p-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
+        <div className="mb-8">
+          {/* Back button - above everything on small screens */}
+          <div className="mb-4 sm:mb-0">
             <button
               onClick={() => router.back()}
               className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
@@ -110,15 +111,19 @@ export default function QuizLibraryPage() {
               <ArrowLeft className="w-5 h-5" />
               Back
             </button>
-            <h1 className="text-3xl font-bold text-gray-900">Your Library</h1>
           </div>
-          <button
-            onClick={handleCreateNewQuiz}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            Create New Quiz
-          </button>
+          
+          {/* Title and New Quiz button - on same row */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Your Library</h1>
+            <button
+              onClick={handleCreateNewQuiz}
+              className="flex items-center gap-2 bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors w-full sm:w-auto justify-center"
+            >
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="text-sm sm:text-base">New Quiz</span>
+            </button>
+          </div>
         </div>
 
         {/* Content */}
@@ -136,29 +141,29 @@ export default function QuizLibraryPage() {
               </p>
               <button
                 onClick={handleCreateNewQuiz}
-                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                className="bg-blue-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
               >
                 Create Your First Quiz
               </button>
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {userQuizzes.map((quiz) => (
               <div
                 key={quiz.id}
                 onClick={() => handleQuizSelect(quiz)}
-                className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 hover:shadow-lg transition-shadow cursor-pointer"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
+                <div className="flex items-start justify-between mb-3 sm:mb-4">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 line-clamp-2 flex-1 mr-2">
                     {quiz.title}
                   </h3>
-                  <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                  <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded flex-shrink-0">
                     {quiz.questionCount} Q
                   </span>
                 </div>
-                <p className="text-gray-600 text-sm mb-4 line-clamp-3">
+                <p className="text-gray-600 text-xs sm:text-sm mb-3 sm:mb-4 line-clamp-3">
                   {quiz.description}
                 </p>
                 <div className="flex items-center justify-between text-xs text-gray-500">

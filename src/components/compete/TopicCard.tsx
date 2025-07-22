@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import { useState, useEffect } from 'react';
 
 interface TopicCardProps {
   className?: string;
@@ -11,16 +12,38 @@ interface TopicCardProps {
   isSelected?: boolean;
 }
 
-const TopicCard = ({ className, title, description, handleClick, backgroundImage, isSelected }: TopicCardProps) => {
+import React from 'react';
+
+const TopicCard = React.memo(({ className, title, description, handleClick, backgroundImage, isSelected }: TopicCardProps) => {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    if (backgroundImage) {
+      const img = new Image();
+      img.onload = () => setImageLoaded(true);
+      img.onerror = () => setImageError(true);
+      img.src = backgroundImage;
+    }
+  }, [backgroundImage]);
+
   return (
     <section
       className={
-        'relative flex flex-col justify-end w-full rounded-[14px] min-w-[250px] sm:min-w-[280px] xl:max-w-[280px] min-h-[280px] sm:min-h-[320px] md:min-h-[350px] cursor-pointer shadow-[0_6px_20px_rgba(0,0,0,0.1)] transform transition-all duration-300 hover:shadow-[0_10px_30px_rgba(0,0,0,0.15)] hover:-translate-y-2 hover:scale-[1.02] relative overflow-hidden group'}
+        'relative flex flex-col justify-end w-full rounded-[14px] min-w-[250px] sm:min-w-[280px] xl:max-w-[280px] min-h-[280px] sm:min-h-[320px] md:min-h-[350px] cursor-pointer shadow-[0_6px_20px_rgba(0,0,0,0.1)] transform transition-all duration-200 hover:shadow-[0_10px_30px_rgba(0,0,0,0.15)] hover:-translate-y-1 hover:scale-[1.01] relative overflow-hidden group'}
       onClick={handleClick}
     >
-      {backgroundImage ? (
+      {/* Loading skeleton */}
+      {!imageLoaded && !imageError && (
+        <div className="absolute inset-0 z-0 w-full h-40 bg-gray-200 animate-pulse" />
+      )}
+
+      {/* Background image with lazy loading */}
+      {backgroundImage && !imageError ? (
         <div 
-          className="absolute inset-0 z-0 w-full h-40 bg-cover bg-center bg-no-repeat opacity-60 group-hover:opacity-100 transition-opacity duration-300"
+          className={`absolute inset-0 z-0 w-full h-40 bg-cover bg-center bg-no-repeat transition-all duration-300 ${
+            imageLoaded ? 'opacity-60 group-hover:opacity-100' : 'opacity-0'
+          }`}
           style={{ backgroundImage: `url(${backgroundImage})` }}
         />
       ) : (
@@ -41,6 +64,8 @@ const TopicCard = ({ className, title, description, handleClick, backgroundImage
       </div>
     </section>
   );
-};
+});
+
+TopicCard.displayName = 'TopicCard';
 
 export default TopicCard;

@@ -22,6 +22,13 @@ import { useStreamStudyTimeTracker } from '@/hooks/useStreamStudyTimeTracker';
 import { StudyTimeProgress } from './StudyTimeProgress';
 import { MobileStudyTimeProgress } from './MobileStudyTimeProgress';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type CallLayoutType = 'grid' | 'speaker-left' | 'speaker-right';
 
@@ -306,7 +313,7 @@ const MeetingRoom = () => {
         )}
         
         <div
-          className={cn('h-[calc(100vh-86px)] hidden ml-2', {
+          className={cn('h-[calc(100vh-86px)] hidden', {
             'show-block': showParticipants,
           })}
         >
@@ -335,9 +342,7 @@ const MeetingRoom = () => {
         />
 
 
-        <div className="hidden sm:block">
-          <CallStatsButton />
-        </div>
+        <CallStatsButton />
         <button onClick={() => setShowParticipants((prev) => !prev)}>
           <div className=" cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]  ">
             <Users size={20} className="text-white" />
@@ -363,24 +368,36 @@ const MeetingRoom = () => {
       </div>
       {/* Report Dialog */}
       {showReportDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+          onClick={() => {
+            setShowReportDialog(false);
+            setReportReason('');
+            setSelectedReportedId('');
+            setOtherReportedName('');
+            setReportType('INAPPROPRIATE_BEHAVIOR');
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2 className="text-xl font-semibold mb-4 text-[#19232d]">Report Participant</h2>
             <div className="mb-4">
               <label className="block mb-2 text-[#19232d] font-medium">Who are you reporting?</label>
-              <select
-                className="w-full border border-gray-300 rounded p-2 text-black"
-                value={selectedReportedId}
-                onChange={e => setSelectedReportedId(e.target.value)}
-              >
-                <option value="">Select a participant</option>
-                {call?.state.participants?.map((p: any) => (
-                  <option key={p.userId} value={p.userId}>
-                    {p.name || p.user?.name || p.userId}
-                  </option>
-                ))}
-                <option value="other">Other (not in list)</option>
-              </select>
+              <Select value={selectedReportedId} onValueChange={setSelectedReportedId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a participant" />
+                </SelectTrigger>
+                <SelectContent>
+                  {call?.state.participants?.map((p: any) => (
+                    <SelectItem key={p.userId} value={p.userId}>
+                      {p.name || p.user?.name || p.userId}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="other">Other (not in list)</SelectItem>
+                </SelectContent>
+              </Select>
               {selectedReportedId === 'other' && (
                 <input
                   className="w-full border border-gray-300 rounded p-2 mt-2 text-black"
@@ -392,15 +409,18 @@ const MeetingRoom = () => {
             </div>
             <div className="mb-4">
               <label className="block mb-2 text-[#19232d] font-medium">Type of Report</label>
-              <select
-                className="w-full border border-gray-300 rounded p-2 text-black"
-                value={reportType}
-                onChange={e => setReportType(e.target.value)}
-              >
-                {reportTypes.map(rt => (
-                  <option key={rt.value} value={rt.value}>{rt.label}</option>
-                ))}
-              </select>
+              <Select value={reportType} onValueChange={setReportType}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select report type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {reportTypes.map(rt => (
+                    <SelectItem key={rt.value} value={rt.value}>
+                      {rt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <textarea
               className="w-full border border-gray-300 rounded p-2 mb-4 text-black"
@@ -478,23 +498,33 @@ const MeetingRoom = () => {
 
       {/* Ban User Dialog */}
       {showBanDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+          onClick={() => {
+            setShowBanDialog(false);
+            setSelectedBanUserId('');
+            setBanReason('');
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2 className="text-xl font-semibold mb-4 text-[#19232d]">Ban User from Room</h2>
             <div className="mb-4">
               <label className="block mb-2 text-[#19232d] font-medium">Who are you banning?</label>
-              <select
-                className="w-full border border-gray-300 rounded p-2 text-black"
-                value={selectedBanUserId}
-                onChange={e => setSelectedBanUserId(e.target.value)}
-              >
-                <option value="">Select a participant</option>
-                {call?.state.participants?.map((p: any) => (
-                  <option key={p.userId} value={p.userId}>
-                    {p.name || p.user?.name || p.userId}
-                  </option>
-                ))}
-              </select>
+              <Select value={selectedBanUserId} onValueChange={setSelectedBanUserId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a participant" />
+                </SelectTrigger>
+                <SelectContent>
+                  {call?.state.participants?.map((p: any) => (
+                    <SelectItem key={p.userId} value={p.userId}>
+                      {p.name || p.user?.name || p.userId}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="mb-4">
               <label className="block mb-2 text-[#19232d] font-medium">Reason (optional)</label>

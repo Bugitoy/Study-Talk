@@ -273,70 +273,75 @@ export default function CreateQuizPage() {
     <NextLayout>
       <div className="max-w-6xl mx-auto p-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
+        <div className="mb-6 sm:mb-8">
+          {/* Back button - above everything on small screens */}
+          <div className="mb-4 sm:mb-0">
             <button
               onClick={() => router.back()}
               className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
             >
-              <ArrowLeft className="w-5 h-5" />
-              Back
+              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="text-sm sm:text-base">Back</span>
             </button>
-            <h1 className="text-3xl font-bold text-gray-900">
+          </div>
+          
+          {/* Title and action buttons - on same row */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
               {quizId ? 'Edit Quiz' : 'Create Quiz'}
             </h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={saveQuiz}
-              disabled={saving}
-              className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-            >
-              {saving ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              {saving ? 'Saving...' : 'Save'}
-            </button>
-            <button
-              onClick={handleDone}
-              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Check className="w-4 h-4" />
-              Done
-            </button>
+            <div className="flex items-center gap-2 sm:gap-4">
+              <button
+                onClick={saveQuiz}
+                disabled={saving}
+                className="flex items-center justify-center gap-2 bg-green-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 text-sm sm:text-base flex-1 sm:flex-none"
+              >
+                {saving ? (
+                  <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-white"></div>
+                ) : (
+                  <Save className="w-3 h-3 sm:w-4 sm:h-4" />
+                )}
+                <span>{saving ? 'Saving...' : 'Save'}</span>
+              </button>
+              <button
+                onClick={handleDone}
+                className="flex items-center justify-center gap-2 bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base flex-1 sm:flex-none"
+              >
+                <Check className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span>Done</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {/* Quiz Details */}
           <div className="lg:col-span-1">
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
               <h2 className="text-xl font-semibold mb-4">Quiz Details</h2>
               
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                     Quiz Title
                   </label>
                   <input
                     type="text"
                     value={formData.title}
                     onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-lg px-2 sm:px-3 py-1 sm:py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                     placeholder="Enter quiz title"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                     Description
                   </label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-lg px-2 sm:px-3 py-1 sm:py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                     rows={3}
                     placeholder="Enter quiz description"
                   />
@@ -347,26 +352,26 @@ export default function CreateQuizPage() {
 
           {/* Question Editor */}
           <div className="lg:col-span-2">
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold">Question {currentQuestionIndex + 1}</h2>
+            <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
+              <div className="flex items-center justify-between gap-2 sm:gap-4 mb-6">
+                <h2 className="text-lg sm:text-xl font-semibold">Question {currentQuestionIndex + 1}</h2>
                 <button
                   onClick={addQuestion}
-                  className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex items-center justify-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
                 >
                   <Plus className="w-4 h-4" />
-                  Add Question
+                  <span>Add Question</span>
                 </button>
               </div>
 
               {/* Question Navigation */}
               {formData.questions.length > 1 && (
-                <div className="flex flex-wrap gap-2 mb-6">
+                <div className="flex flex-wrap gap-1 sm:gap-2 mb-4 sm:mb-6">
                   {formData.questions.map((_, index) => (
                     <button
                       key={index}
                       onClick={() => setCurrentQuestionIndex(index)}
-                      className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                      className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                         index === currentQuestionIndex
                           ? 'bg-blue-600 text-white'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -379,31 +384,31 @@ export default function CreateQuizPage() {
               )}
 
               {/* Question Form */}
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                     Question
                   </label>
                   <textarea
                     value={currentQuestion.question}
                     onChange={(e) => updateQuestion(currentQuestionIndex, 'question', e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-lg px-2 sm:px-3 py-1 sm:py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                     rows={3}
                     placeholder="Enter your question"
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   {['A', 'B', 'C', 'D'].map((option) => (
                     <div key={option}>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                         Option {option}
                       </label>
                       <input
                         type="text"
                         value={currentQuestion[`option${option}` as keyof QuizQuestion] as string}
                         onChange={(e) => updateQuestion(currentQuestionIndex, `option${option}` as keyof QuizQuestion, e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full border border-gray-300 rounded-lg px-2 sm:px-3 py-1 sm:py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                         placeholder={`Enter option ${option}`}
                       />
                     </div>
@@ -411,13 +416,13 @@ export default function CreateQuizPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
                     Correct Answer
                   </label>
                   <select
                     value={currentQuestion.correct}
                     onChange={(e) => updateQuestion(currentQuestionIndex, 'correct', e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-lg px-2 sm:px-3 py-1 sm:py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                   >
                     <option value="A">A</option>
                     <option value="B">B</option>
@@ -430,7 +435,7 @@ export default function CreateQuizPage() {
                   <div className="flex justify-end">
                     <button
                       onClick={() => removeQuestion(currentQuestionIndex)}
-                      className="text-red-600 hover:text-red-700 text-sm font-medium"
+                      className="text-red-600 hover:text-red-700 text-xs sm:text-sm font-medium"
                     >
                       Remove Question
                     </button>

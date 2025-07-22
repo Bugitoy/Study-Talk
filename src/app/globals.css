@@ -98,7 +98,7 @@
     border-radius: 10px;
     padding: 35px;
     margin:10px;
-    width: 25%;
+    width: 26%;
   }
 
   /* Small screens (mobile) */
@@ -112,25 +112,8 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      z-index: 1000;
+      z-index: 41;
       max-height: 80vh;
-      overflow-y: auto;
-    }
-  }
-
-  /* Medium tablets and iPad screens */
-  @media (min-width: 768px) and (max-width: 1024px) {
-    .show-block {
-      width: 90%;
-      max-width: 1000px;
-      margin: 10px auto;
-      padding: 20px;
-      position: fixed;
-      top: 48%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 1000;
-      max-height: 50vh;
       overflow-y: auto;
     }
   }
@@ -146,7 +129,7 @@
       top: 45%;
       left: 50%;
       transform: translate(-50%, -50%);
-      z-index: 1000;
+      z-index: 41;
       max-height: 50vh;
       overflow-y: auto;
     }
@@ -165,7 +148,7 @@
      top: 45%;
      left: 50%;
      transform: translate(-50%, -50%);
-     z-index: 1000;
+     z-index: 41;
      max-height: 55vh;
      overflow-y: auto;
    }
@@ -173,20 +156,38 @@
 
     /* iPad Pro and larger tablets */
   @media only screen 
-    and (min-device-width: 1024px) 
-    and (max-device-width: 1366px) 
-    and (-webkit-min-device-pixel-ratio: 2) {
+    and (min-width: 1024px) 
+    and (max-width: 1366px) {
     .show-block {
-      width: 90%;
-      max-width: 1000px;
+      width: 95%;
+      max-width: 1050px;
       margin: 10px auto;
       padding: 20px;
       position: fixed;
-      top: 40%;
+      top: 45%;
       left: 50%;
       transform: translate(-50%, -50%);
       z-index: 1000;
-      max-height: 60vh;
+      max-height: 55vh;
+      overflow-y: auto;
+    }
+  }
+
+  /* Additional iPad Pro targeting for different models */
+  @media only screen 
+    and (min-width: 1366px) 
+    and (max-width: 1668px) {
+    .show-block {
+      width: 95%;
+      max-width: 1050px;
+      margin: 10px auto;
+      padding: 20px;
+      position: fixed;
+      top: 45%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1000;
+      max-height: 55vh;
       overflow-y: auto;
     }
   }

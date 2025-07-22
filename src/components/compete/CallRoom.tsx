@@ -33,6 +33,13 @@ import {
   DialogPortal,
   DialogOverlay,
 } from "../ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 
 
@@ -100,6 +107,14 @@ const CallRoom = () => {
     title: string;
     description: string;
     backgroundImage: string;
+  }>
+>([]);
+const [userQuizzes, setUserQuizzes] = useState<
+  Array<{
+    id: string;
+    title: string;
+    description: string;
+    createdBy: string;
   }>
 >([]);
 const [searchQuery, setSearchQuery] = useState("");
@@ -203,6 +218,22 @@ useEffect(() => {
     fetchTopics();
   }, []);
 
+  useEffect(() => {
+    const fetchUserQuizzes = async () => {
+      if (!user?.id) return;
+      try {
+        const res = await fetch(`/api/user-quizzes?userId=${user.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setUserQuizzes(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch user quizzes", err);
+      }
+    };
+    fetchUserQuizzes();
+  }, [user?.id]);
+
 
   const handleStartQuiz = async () => {
     if (!isHost || !currentRoom) return;
@@ -288,6 +319,44 @@ useEffect(() => {
       }
     } catch (error) {
       console.error("Failed to load topic", error);
+    }
+    setShowTopicModal(false);
+  };
+
+  const handleSelectUserQuiz = async (quizId: string) => {
+    if (!currentRoom) return;
+    try {
+      const qRes = await fetch(`/api/user-quizzes/${quizId}`);
+      if (qRes.ok) {
+        const quizData = await qRes.json();
+        const updateRes = await fetch(
+          `/api/quiz-room/${currentRoom.id}/questions`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ questions: quizData.questions }),
+          },
+        );
+        if (updateRes.ok) {
+          const roomRes = await fetch(`/api/quiz-room/${currentRoom.id}`);
+          if (roomRes.ok) {
+            const updatedRoom = await roomRes.json();
+            setCurrentRoom(updatedRoom);
+          } else {
+            setCurrentRoom({ ...currentRoom, questions: quizData.questions });
+          }
+        }
+        setQuizStarted(false);
+        setQuizEnded(false);
+        setCurrentIdx(0);
+        setSelectedAnswer(null);
+        setSessionId(null);
+        await call?.update({
+          custom: { quizStarted: false, currentIdx: 0, quizEnded: false },
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load user quiz", error);
     }
     setShowTopicModal(false);
   };
@@ -618,13 +687,13 @@ useEffect(() => {
         {/* Background overlay for small screens and tablets */}
         {showParticipants && (
           <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+            className="fixed inset-0 bg-black bg-opacity-50 z-40"
             onClick={() => setShowParticipants(false)}
           />
         )}
         
         <div
-          className={cn("h-[calc(100vh-86px)] hidden ml-2", {
+          className={cn("h-[calc(100vh-86px)] hidden", {
             "show-block": showParticipants,
           })}
         >
@@ -633,7 +702,7 @@ useEffect(() => {
       </div>
 
       {/* call controls */}
-      <div className="fixed bottom-0 left-0 right-0 rounded-t-xl flex w-full items-center justify-center gap-2 sm:gap-5 flex-wrap p-2 sm:p-4 bg-black/20 backdrop-blur-sm">
+      <div className="fixed bottom-0 left-0 right-0 rounded-t-xl flex w-full items-center justify-center gap-1 sm:gap-5 flex-nowrap sm:flex-wrap p-2 sm:p-4 bg-black/20 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           {/* Custom call controls based on room settings */}
           {roomSettings?.mic === 'flexible' && call && (
@@ -738,29 +807,57 @@ useEffect(() => {
       <Dialog open={showTopicModal} onOpenChange={setShowTopicModal}>
         <DialogPortal>
           <DialogOverlay className="bg-black/50 backdrop-blur-md" />
-          <DialogContent className="bg-white max-w-6xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="bg-white max-w-6xl max-h-[80vh] overflow-y-auto rounded-2xl sm:rounded-none">
             <DialogHeader>
-              <DialogTitle>Choose a Topic</DialogTitle>
+              <DialogTitle>Choose a Topic or Quiz</DialogTitle>
             </DialogHeader>
             <Input
-              placeholder="Search topics..."
+              placeholder="Search topics and quizzes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="my-4"
             />
-            <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
-              {topics
-                .filter((t) =>
-                  t.title.toLowerCase().includes(searchQuery.toLowerCase()),
-                )
-                .map((topic) => (
-                  <TopicItem
-                    key={topic.title}
-                    title={topic.title}
-                    description={topic.description}
-                    handleClick={() => handleSelectTopic(topic.title)}
-                  />
-                ))}
+            
+            {/* User Quizzes Section */}
+            {userQuizzes.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-3 text-gray-700">Your Quizzes</h3>
+                <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+                  {userQuizzes
+                    .filter((quiz) =>
+                      quiz.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      quiz.description.toLowerCase().includes(searchQuery.toLowerCase())
+                    )
+                    .map((quiz) => (
+                      <div
+                        key={quiz.id}
+                        onClick={() => handleSelectUserQuiz(quiz.id)}
+                        className="cursor-pointer bg-gradient-to-br from-blue-50 to-purple-50 border border-gray-200 rounded-lg p-3 hover:shadow-md transition-all"
+                      >
+                        <h4 className="font-semibold text-sm text-gray-800">{quiz.title}</h4>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* Topics Section */}
+            <div>
+              <h3 className="text-lg font-semibold mb-3 text-gray-700">Topics</h3>
+              <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+                {topics
+                  .filter((t) =>
+                    t.title.toLowerCase().includes(searchQuery.toLowerCase()),
+                  )
+                  .map((topic) => (
+                    <TopicItem
+                      key={topic.title}
+                      title={topic.title}
+                      description={topic.description}
+                      handleClick={() => handleSelectTopic(topic.title)}
+                    />
+                  ))}
+              </div>
             </div>
           </DialogContent>
         </DialogPortal>
@@ -768,24 +865,36 @@ useEffect(() => {
 
       {/* Report Dialog */}
       {showReportDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+          onClick={() => {
+            setShowReportDialog(false);
+            setReportReason('');
+            setSelectedReportedId('');
+            setOtherReportedName('');
+            setReportType('INAPPROPRIATE_BEHAVIOR');
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2 className="text-xl font-semibold mb-4 text-[#19232d]">Report Participant</h2>
             <div className="mb-4">
               <label className="block mb-2 text-[#19232d] font-medium">Who are you reporting?</label>
-              <select
-                className="w-full border border-gray-300 rounded p-2 text-black"
-                value={selectedReportedId}
-                onChange={e => setSelectedReportedId(e.target.value)}
-              >
-                <option value="">Select a participant</option>
-                {call?.state.participants?.map((p: any) => (
-                  <option key={p.userId} value={p.userId}>
-                    {p.name || p.user?.name || p.userId}
-                  </option>
-                ))}
-                <option value="other">Other (not in list)</option>
-              </select>
+              <Select value={selectedReportedId} onValueChange={setSelectedReportedId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a participant" />
+                </SelectTrigger>
+                <SelectContent>
+                  {call?.state.participants?.map((p: any) => (
+                    <SelectItem key={p.userId} value={p.userId}>
+                      {p.name || p.user?.name || p.userId}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="other">Other (not in list)</SelectItem>
+                </SelectContent>
+              </Select>
               {selectedReportedId === 'other' && (
                 <input
                   className="w-full border border-gray-300 rounded p-2 mt-2 text-black"
@@ -797,15 +906,18 @@ useEffect(() => {
             </div>
             <div className="mb-4">
               <label className="block mb-2 text-[#19232d] font-medium">Type of Report</label>
-              <select
-                className="w-full border border-gray-300 rounded p-2 text-black"
-                value={reportType}
-                onChange={e => setReportType(e.target.value)}
-              >
-                {reportTypes.map(rt => (
-                  <option key={rt.value} value={rt.value}>{rt.label}</option>
-                ))}
-              </select>
+              <Select value={reportType} onValueChange={setReportType}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select report type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {reportTypes.map(rt => (
+                    <SelectItem key={rt.value} value={rt.value}>
+                      {rt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <textarea
               className="w-full border border-gray-300 rounded p-2 mb-4 text-black"
@@ -883,23 +995,33 @@ useEffect(() => {
 
       {/* Ban User Dialog */}
       {showBanDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+          onClick={() => {
+            setShowBanDialog(false);
+            setSelectedBanUserId('');
+            setBanReason('');
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2 className="text-xl font-semibold mb-4 text-[#19232d]">Ban User from Room</h2>
             <div className="mb-4">
               <label className="block mb-2 text-[#19232d] font-medium">Who are you banning?</label>
-              <select
-                className="w-full border border-gray-300 rounded p-2 text-black"
-                value={selectedBanUserId}
-                onChange={e => setSelectedBanUserId(e.target.value)}
-              >
-                <option value="">Select a participant</option>
-                {call?.state.participants?.map((p: any) => (
-                  <option key={p.userId} value={p.userId}>
-                    {p.name || p.user?.name || p.userId}
-                  </option>
-                ))}
-              </select>
+              <Select value={selectedBanUserId} onValueChange={setSelectedBanUserId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a participant" />
+                </SelectTrigger>
+                <SelectContent>
+                  {call?.state.participants?.map((p: any) => (
+                    <SelectItem key={p.userId} value={p.userId}>
+                      {p.name || p.user?.name || p.userId}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="mb-4">
               <label className="block mb-2 text-[#19232d] font-medium">Reason (optional)</label>

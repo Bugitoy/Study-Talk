@@ -261,17 +261,29 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
   };
 
   const [topicsData, setTopicsData] = useState<Topic[]>([]);
+  const [topicsLoading, setTopicsLoading] = useState(true);
 
   useEffect(() => {
     const fetchTopics = async () => {
+      setTopicsLoading(true);
       try {
         const res = await fetch('/api/topics');
         if (res.ok) {
           const data = await res.json();
           setTopicsData(data);
+          
+          // Preload images for better performance
+          data.forEach((topic: Topic) => {
+            if (topic.backgroundImage) {
+              const img = new Image();
+              img.src = topic.backgroundImage;
+            }
+          });
         }
       } catch (err) {
         console.error('Failed to fetch topics', err);
+      } finally {
+        setTopicsLoading(false);
       }
     };
     fetchTopics();
@@ -385,7 +397,22 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
           </div>
         )}
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 xl:gap-10 mb-6 sm:mb-8">
+        {topicsLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 xl:gap-10 mb-6 sm:mb-8">
+            {Array.from({ length: 8 }).map((_, idx) => (
+              <div
+                key={idx}
+                className="relative flex flex-col justify-end w-full rounded-[14px] min-w-[250px] sm:min-w-[280px] xl:max-w-[280px] min-h-[280px] sm:min-h-[320px] md:min-h-[350px] bg-gray-200 animate-pulse"
+              >
+                <div className="relative bg-white/90 backdrop-blur-md flex flex-col rounded-[14px] gap-2 p-4 sm:p-5 md:p-7 h-[10rem] sm:h-[11rem] md:h-[13rem]">
+                  <div className="h-6 bg-gray-300 rounded animate-pulse mb-2"></div>
+                  <div className="h-4 bg-gray-300 rounded animate-pulse"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 xl:gap-10 mb-6 sm:mb-8">
             {topicsData.map((topic, idx) => (
               <TopicCard
                 key={idx}
@@ -397,7 +424,8 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
                 isSelected={selectedTopic?.title === topic.title}
               />
             ))}
-        </div>
+          </div>
+        )}
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 lg:gap-7">
             <div
