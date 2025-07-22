@@ -7,6 +7,7 @@ import GroupCard from '@/components/group';
 import MeetingModal from '@/components/MeetingModal';
 import { useStudyGroups } from '@/hooks/useStudyGroups';
 import { useStreamStudyTimeTracker } from '@/hooks/useStreamStudyTimeTracker';
+import { useStreak } from '@/hooks/useStreak';
 import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs';
 import { useToast } from '@/hooks/use-toast';
 
@@ -27,6 +28,7 @@ const initialValues = {
 
 const StudyGroups = () => {
   const { dailyHours } = useStreamStudyTimeTracker();
+  const { streakData, loading: streakLoading } = useStreak();
   const hoursGoal = 10; // Daily goal in hours
   const percent = Math.min((dailyHours / hoursGoal) * 100, 100);
   
@@ -82,7 +84,7 @@ const StudyGroups = () => {
           />
         </div>
         {/* Custom Progress Bar and Leaderboard Button */}
-        <div className="max-w-5xl mx-auto w-full flex flex-col sm:flex-row items-center gap-3 sm:gap-4 mb-4">
+        <div className="max-w-5xl mx-auto w-full flex flex-col sm:flex-row items-center gap-3 sm:gap-4 mb-0">
           <div className="flex flex-row gap-2 sm:gap-3 w-full sm:w-auto justify-center sm:justify-start mb-3 sm:mb-0">
             <div className="flex-shrink-0">
               <div
@@ -142,6 +144,31 @@ const StudyGroups = () => {
               <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-700 font-semibold text-xs sm:text-sm lg:text-lg select-none pointer-events-none px-2 whitespace-nowrap">
                 {dailyHours.toFixed(1)}h / {hoursGoal}h studied today
               </span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Streak Counter */}
+        <div className="max-w-5xl mx-auto w-full flex justify-center mb-4">
+          <div className="bg-gradient-to-r from-thanodi-blue to-thanodi-peach rounded-lg p-3 sm:p-4 shadow-lg">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-[8px]">
+                <span className="text-yellow-600 font-bold text-sm sm:text-lg">⚡</span>
+              </div>
+              <div className="text-center">
+                {streakLoading ? (
+                  <div className="text-white font-semibold text-sm sm:text-base">Loading streak...</div>
+                ) : (
+                  <>
+                    <div className="text-white font-bold text-sm sm:text-base">
+                      {streakData.currentStreak} day{streakData.currentStreak !== 1 ? 's' : ''} streak
+                    </div>
+                    <div className="text-white/80 text-xs sm:text-sm">
+                      Best: {streakData.longestStreak} days • Total: {streakData.totalStudyDays} days
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>

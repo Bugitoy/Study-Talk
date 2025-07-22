@@ -111,9 +111,22 @@ const MeetingRoom = () => {
     if (callingState === CallingState.JOINED && call?.id) {
       startTracking();
       
+      // Update streak when user joins a meeting room
+      if (currentUserId) {
+        fetch('/api/user/streak', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId: currentUserId }),
+        }).catch(error => {
+          console.error('Failed to update streak:', error);
+        });
+      }
+      
       // Access is already checked before joining, so we just start tracking
     }
-  }, [callingState, call?.id, startTracking]);
+  }, [callingState, call?.id, startTracking, currentUserId]);
 
   // End tracking when component unmounts or call ends
   useEffect(() => {
@@ -330,7 +343,7 @@ const MeetingRoom = () => {
         />
       </div>
       {/* video layout and call controls */}
-      <div className="fixed bottom-0 left-0 right-0 rounded-t-xl flex w-full items-center justify-center gap-3 sm:gap-5 flex-nowrap sm:flex-wrap p-2 sm:p-4 bg-black/20 backdrop-blur-sm">
+      <div className="fixed bottom-0 left-0 right-0 rounded-t-xl flex w-full items-center justify-center gap-1 sm:gap-5 flex-nowrap sm:flex-wrap p-2 sm:p-4 bg-black/20 backdrop-blur-sm">
          <StudyCallControls
           onLeave={async () => {
             await endTracking();

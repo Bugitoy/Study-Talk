@@ -460,3 +460,15 @@ model UserQuizQuestion {
 
   @@index([quizId])
 }
+
+model UserStreak {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String   @unique
+  currentStreak   Int      @default(0)
+  longestStreak   Int      @default(0)
+  lastStudyDate   DateTime?
+  totalStudyDays  Int      @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
