@@ -330,7 +330,7 @@ const MeetingRoom = () => {
         />
       </div>
       {/* video layout and call controls */}
-      <div className="fixed bottom-0 left-0 right-0 rounded-t-xl flex w-full items-center justify-center gap-5 flex-wrap p-4 bg-black/20 backdrop-blur-sm">
+      <div className="fixed bottom-0 left-0 right-0 rounded-t-xl flex w-full items-center justify-center gap-3 sm:gap-5 flex-nowrap sm:flex-wrap p-2 sm:p-4 bg-black/20 backdrop-blur-sm">
          <StudyCallControls
           onLeave={async () => {
             await endTracking();
@@ -341,25 +341,26 @@ const MeetingRoom = () => {
           roomSettings={roomSettings}
         />
 
-
-        <CallStatsButton />
+        <div className="hidden sm:block">
+          <CallStatsButton />
+        </div>
         <button onClick={() => setShowParticipants((prev) => !prev)}>
-          <div className=" cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-[#4c535b]  ">
-            <Users size={20} className="text-white" />
+          <div className="cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-[#4c535b]">
+            <Users size={16} className="sm:w-5 text-white" />
           </div>
         </button>
         {/* Report Button */}
         <button onClick={() => setShowReportDialog(true)}>
-          <div className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-red-600 ml-2">
-            <Flag size={20} className="text-white" />
+          <div className="cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-red-600">
+            <Flag size={16} className="sm:w-5 text-white" />
           </div>
         </button>
         
         {/* Ban User Button (only for host) */}
         {isHost && (
           <button onClick={() => setShowBanDialog(true)}>
-            <div className="cursor-pointer rounded-2xl bg-[#19232d] px-4 py-2 hover:bg-red-600 ml-2">
-              <Shield size={20} className="text-white" />
+            <div className="cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-red-600">
+              <Shield size={16} className="sm:w-5 text-white" />
             </div>
           </button>
         )}
