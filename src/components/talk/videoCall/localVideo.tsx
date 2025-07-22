@@ -57,7 +57,7 @@ export default function LocalVideo({
         }
     }, [stream])
 
-    return <video className='w-[100%] h-[48vh] bg-slate-300 rounded-[10px] mb-[1.5%] object-cover'
+    return <video className='w-[100%] h-[36.5vh] sm:h-[40vh] lg:h-[48vh] bg-slate-300 rounded-[10px] mb-[1.5%] object-cover'
     ref={localVideo}
     onClick={() => setChangeCamOverly(true)}
     autoPlay

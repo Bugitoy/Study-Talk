@@ -32,7 +32,7 @@ export default function RemoteVideo({
         }
     }, [peerConnection])
 
-    return <video className='w-[100%] h-[48vh] bg-slate-300 rounded-[10px] object-cover'
+    return <video className='w-[100%] h-[36.5vh] sm:h-[40vh] lg:h-[48vh] bg-slate-300 rounded-[10px] object-cover'
     ref={remoteVideo}
     onClick={() => setChangeCamOverly(true)}
     autoPlay
