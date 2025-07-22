@@ -8,6 +8,7 @@ import { User, Shield, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useState } from "react";
+import Image from "next/image";
 
 interface LayoutProps {
   children: ReactNode;
@@ -39,15 +40,13 @@ export default function NextLayout({ children }: LayoutProps) {
             <div className="flex items-center justify-between">
               {/* Logo */}
               <Link href="/" className="flex items-center space-x-2">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center"
-                  style={{
-                    backgroundImage:
-                      "linear-gradient(to bottom right, #F7D379, #F9B288)",
-                  }}
-                >
-                  <span className="text-white font-bold text-lg">T</span>
-                </div>
+                <Image
+                  src="/Images/logo.svg"
+                  alt="Study-Talk Logo"
+                  width={50}
+                  height={50}
+                  className="w-15 h-15"
+                />
                 <span
                   className="text-xl font-bold text-gray-900"
                   style={{ fontFamily: "Alata, sans-serif" }}

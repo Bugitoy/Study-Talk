@@ -11,11 +11,7 @@ import {
   MessageSquare, 
   Brain, 
   Video, 
-  TrendingUp,
-  Target,
   Zap,
-  Heart,
-  Star,
   BookOpen,
   Sparkles
 } from "lucide-react";
@@ -61,7 +57,7 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-12 sm:py-16 bg-gradient-to-b from-white to-orange-50/30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+      <section className="py-12 sm:py-16 bg-gradient-to-b from-white to-orange-50/30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 rounded-t-[50px]">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
@@ -76,10 +72,12 @@ export default function HomePage() {
             {/* Study Groups */}
             <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md">
               <CardHeader className="pb-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-blue-200 transition-colors">
-                  <Users className="w-6 h-6 text-blue-600" />
+                <div className="flex items-center justify-between mb-4">
+                  <CardTitle className="text-xl font-bold">Study Groups</CardTitle>
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                    <Users className="w-6 h-6 text-blue-600" />
+                  </div>
                 </div>
-                <CardTitle className="text-xl font-bold">Study Groups</CardTitle>
                 <CardDescription>
                   Join live study sessions with students worldwide. Share knowledge, ask questions, and learn together in real-time.
                 </CardDescription>
@@ -105,10 +103,12 @@ export default function HomePage() {
             {/* Study Tracking */}
             <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md">
               <CardHeader className="pb-4">
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-green-200 transition-colors">
-                  <Clock className="w-6 h-6 text-green-600" />
+                <div className="flex items-center justify-between mb-4">
+                  <CardTitle className="text-xl font-bold">Study Tracking</CardTitle>
+                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
+                    <Clock className="w-6 h-6 text-green-600" />
+                  </div>
                 </div>
-                <CardTitle className="text-xl font-bold">Study Tracking</CardTitle>
                 <CardDescription>
                   Monitor your study sessions with detailed analytics. Track progress, set goals, and see your improvement over time.
                 </CardDescription>
@@ -134,10 +134,12 @@ export default function HomePage() {
             {/* Rankings & Leaderboards */}
             <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md">
               <CardHeader className="pb-4">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-purple-200 transition-colors">
-                  <Trophy className="w-6 h-6 text-purple-600" />
+                <div className="flex items-center justify-between mb-4">
+                  <CardTitle className="text-xl font-bold">Rankings & Leaderboards</CardTitle>
+                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                    <Trophy className="w-6 h-6 text-purple-600" />
+                  </div>
                 </div>
-                <CardTitle className="text-xl font-bold">Rankings & Leaderboards</CardTitle>
                 <CardDescription>
                   Compete with peers and climb the leaderboards. See how you rank against other students globally.
                 </CardDescription>
@@ -163,10 +165,12 @@ export default function HomePage() {
             {/* Student Confessions */}
             <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md">
               <CardHeader className="pb-4">
-                <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-pink-200 transition-colors">
-                  <MessageSquare className="w-6 h-6 text-pink-600" />
+                <div className="flex items-center justify-between mb-4">
+                  <CardTitle className="text-xl font-bold">Student Confessions</CardTitle>
+                  <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center group-hover:bg-pink-200 transition-colors">
+                    <MessageSquare className="w-6 h-6 text-pink-600" />
+                  </div>
                 </div>
-                <CardTitle className="text-xl font-bold">Student Confessions</CardTitle>
                 <CardDescription>
                   Read and share anonymous confessions from students worldwide. Connect through shared experiences.
                 </CardDescription>
@@ -192,10 +196,12 @@ export default function HomePage() {
             {/* Quiz Competitions */}
             <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md">
               <CardHeader className="pb-4">
-                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-red-200 transition-colors">
-                  <Brain className="w-6 h-6 text-red-600" />
+                <div className="flex items-center justify-between mb-4">
+                  <CardTitle className="text-xl font-bold">Quiz Competitions</CardTitle>
+                  <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition-colors">
+                    <Brain className="w-6 h-6 text-red-600" />
+                  </div>
                 </div>
-                <CardTitle className="text-xl font-bold">Quiz Competitions</CardTitle>
                 <CardDescription>
                   Test your knowledge in exciting quiz competitions. Challenge friends and compete for the top spot.
                 </CardDescription>
@@ -221,10 +227,12 @@ export default function HomePage() {
             {/* Random Chat */}
             <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md">
               <CardHeader className="pb-4">
-                <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-indigo-200 transition-colors">
-                  <Video className="w-6 h-6 text-indigo-600" />
+                <div className="flex items-center justify-between mb-4">
+                  <CardTitle className="text-xl font-bold">Random Chat</CardTitle>
+                  <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
+                    <Video className="w-6 h-6 text-indigo-600" />
+                  </div>
                 </div>
-                <CardTitle className="text-xl font-bold">Random Chat</CardTitle>
                 <CardDescription>
                   Connect with random students worldwide through video chat. Make new friends and practice languages.
                 </CardDescription>
@@ -290,7 +298,7 @@ export default function HomePage() {
                 Start Your Journey
               </Button>
             </Link>
-                          <Link href="/pricing">
+                <Link href="/pricing">
                 <Button size="lg" className="text-lg px-8 py-4 relative overflow-hidden group bg-gradient-to-r from-thanodi-yellow to-thanodi-peach hover:from-thanodi-peach hover:to-thanodi-yellow text-white border-0 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
                   <span className="relative z-10 flex items-center">
                     <Sparkles className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform duration-300" />

@@ -92,10 +92,12 @@ export default function AboutPage() {
             {/* Collaborative Learning */}
             <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md">
               <CardHeader className="pb-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-blue-200 transition-colors">
-                  <Users className="w-6 h-6 text-blue-600" />
+                <div className="flex items-center justify-between mb-4">
+                  <CardTitle className="text-xl font-bold">Collaborative Learning</CardTitle>
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                    <Users className="w-6 h-6 text-blue-600" />
+                  </div>
                 </div>
-                <CardTitle className="text-xl font-bold">Collaborative Learning</CardTitle>
                 <CardDescription>
                   Join live study sessions with students worldwide. Share knowledge, ask questions, and learn together in real-time.
                 </CardDescription>
@@ -121,10 +123,12 @@ export default function AboutPage() {
             {/* Progress Tracking */}
             <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md">
               <CardHeader className="pb-4">
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-green-200 transition-colors">
-                  <Clock className="w-6 h-6 text-green-600" />
+                <div className="flex items-center justify-between mb-4">
+                  <CardTitle className="text-xl font-bold">Progress Tracking</CardTitle>
+                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
+                    <Clock className="w-6 h-6 text-green-600" />
+                  </div>
                 </div>
-                <CardTitle className="text-xl font-bold">Progress Tracking</CardTitle>
                 <CardDescription>
                   Monitor your study sessions with detailed analytics. Track progress, set goals, and see your improvement over time.
                 </CardDescription>
@@ -150,10 +154,12 @@ export default function AboutPage() {
             {/* Gamified Learning */}
             <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md">
               <CardHeader className="pb-4">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-purple-200 transition-colors">
-                  <Trophy className="w-6 h-6 text-purple-600" />
+                <div className="flex items-center justify-between mb-4">
+                  <CardTitle className="text-xl font-bold">Gamified Learning</CardTitle>
+                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                    <Trophy className="w-6 h-6 text-purple-600" />
+                  </div>
                 </div>
-                <CardTitle className="text-xl font-bold">Gamified Learning</CardTitle>
                 <CardDescription>
                   Compete with peers and climb the leaderboards. See how you rank against other students globally.
                 </CardDescription>
@@ -179,10 +185,12 @@ export default function AboutPage() {
             {/* Student Community */}
             <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md">
               <CardHeader className="pb-4">
-                <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-pink-200 transition-colors">
-                  <MessageSquare className="w-6 h-6 text-pink-600" />
+                <div className="flex items-center justify-between mb-4">
+                  <CardTitle className="text-xl font-bold">Student Community</CardTitle>
+                  <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center group-hover:bg-pink-200 transition-colors">
+                    <MessageSquare className="w-6 h-6 text-pink-600" />
+                  </div>
                 </div>
-                <CardTitle className="text-xl font-bold">Student Community</CardTitle>
                 <CardDescription>
                   Read and share anonymous confessions from students worldwide. Connect through shared experiences.
                 </CardDescription>
@@ -208,10 +216,12 @@ export default function AboutPage() {
             {/* Knowledge Testing */}
             <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md">
               <CardHeader className="pb-4">
-                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-red-200 transition-colors">
-                  <Brain className="w-6 h-6 text-red-600" />
+                <div className="flex items-center justify-between mb-4">
+                  <CardTitle className="text-xl font-bold">Knowledge Testing</CardTitle>
+                  <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center group-hover:bg-red-200 transition-colors">
+                    <Brain className="w-6 h-6 text-red-600" />
+                  </div>
                 </div>
-                <CardTitle className="text-xl font-bold">Knowledge Testing</CardTitle>
                 <CardDescription>
                   Test your knowledge in exciting quiz competitions. Challenge friends and compete for the top spot.
                 </CardDescription>
@@ -237,10 +247,12 @@ export default function AboutPage() {
             {/* Global Connections */}
             <Card className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md">
               <CardHeader className="pb-4">
-                <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4 group-hover:bg-indigo-200 transition-colors">
-                  <Video className="w-6 h-6 text-indigo-600" />
+                <div className="flex items-center justify-between mb-4">
+                  <CardTitle className="text-xl font-bold">Global Connections</CardTitle>
+                  <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
+                    <Video className="w-6 h-6 text-indigo-600" />
+                  </div>
                 </div>
-                <CardTitle className="text-xl font-bold">Global Connections</CardTitle>
                 <CardDescription>
                   Connect with random students worldwide through video chat. Make new friends and practice languages.
                 </CardDescription>
