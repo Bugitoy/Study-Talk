@@ -543,7 +543,7 @@ useEffect(() => {
                     >
                       <div className="flex flex-col items-center justify-center p-4">
                         <h1 className="text-xl sm:text-3xl font-bold text-gray-600 mb-4 sm:mb-7">
-                          Question:
+                          Question {currentIdx + 1}/{roomSettings?.numQuestions || currentRoom?.questions?.length || 0}:
                         </h1>
                         <p className="text-gray-600 font-light text-center text-sm sm:text-base max-w-[90%]">
                           {currentQuestion?.question}
