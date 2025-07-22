@@ -343,7 +343,7 @@ const MeetingRoom = () => {
         />
       </div>
       {/* video layout and call controls */}
-      <div className="fixed bottom-0 left-0 right-0 rounded-t-xl flex w-full items-center justify-center gap-1 sm:gap-5 flex-nowrap sm:flex-wrap p-2 sm:p-4 bg-black/20 backdrop-blur-sm">
+      <div className="fixed bottom-0 left-0 right-0 rounded-t-xl flex w-full items-center justify-center gap-3 sm:gap-5 flex-nowrap sm:flex-wrap p-2 sm:p-4 bg-black/20 backdrop-blur-sm">
          <StudyCallControls
           onLeave={async () => {
             await endTracking();
@@ -393,7 +393,7 @@ const MeetingRoom = () => {
           }}
         >
           <div 
-            className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg"
+            className="bg-white rounded-lg p-6 w-full max-w-sm sm:max-w-md shadow-lg"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-xl font-semibold mb-4 text-[#19232d]">Report Participant</h2>
@@ -521,7 +521,7 @@ const MeetingRoom = () => {
           }}
         >
           <div 
-            className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg"
+            className="bg-white rounded-lg p-6 w-full max-w-sm sm:max-w-md shadow-lg"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-xl font-semibold mb-4 text-[#19232d]">Ban User from Room</h2>
