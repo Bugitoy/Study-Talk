@@ -12,8 +12,8 @@ import '@stream-io/video-react-sdk/dist/css/styles.css';
 import { SocketProvider } from "./SocketProvider";
 
 export const metadata: Metadata = {
-      title: "Study-Talk - Language Learning Platform",
-  description: "Your bridge between Setswana and English languages",
+  title: "Study-Talk: Online Study Groups",
+  description: "Connect with students, join study groups, share confessions, and compete in quizzes. Your all-in-one platform for collaborative learning and student community.",
   icons: {
     icon: '/favicon.ico',
     shortcut: '/favicon.ico',

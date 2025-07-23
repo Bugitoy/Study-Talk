@@ -38,7 +38,7 @@ out/
 .env.production.local
 
 # Credential files
-google-tts.json
+
 *.json.key
 *.pem
 *.p12

@@ -72,6 +72,24 @@ export async function checkAuthStatus() {
       console.log('✅ Existing user updated successfully');
     }
 
+    // Check if user requires 2FA
+    const finalUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { isAdmin: true, twoFactorEnabled: true }
+    });
+
+    console.log('🔍 Final user 2FA check:', {
+      userId: user.id,
+      isAdmin: finalUser?.isAdmin,
+      twoFactorEnabled: finalUser?.twoFactorEnabled
+    });
+
+    // If user is admin and has 2FA enabled, require verification
+    if (finalUser?.isAdmin && finalUser?.twoFactorEnabled) {
+      console.log('🔐 User requires 2FA, redirecting to verification');
+      return { success: true, requires2FA: true };
+    }
+
     return { success: true };
   } catch (error) {
     console.error('❌ Error in checkAuthStatus:', error);

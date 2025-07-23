@@ -19,7 +19,10 @@ const Page = () => {
   useEffect(() => {
     const stripePaymentLink = localStorage.getItem("stripePaymentLink");
 
-    if (data?.success && stripePaymentLink && user?.email) {
+    if (data?.success && data?.requires2FA) {
+      // Redirect to 2FA verification page
+      router.push("/auth/2fa-verify");
+    } else if (data?.success && stripePaymentLink && user?.email) {
       localStorage.removeItem("stripePaymentLink");
       router.push(`${stripePaymentLink}?prefilled_email=${user.email}`);
     } else if (data?.success === false) {
