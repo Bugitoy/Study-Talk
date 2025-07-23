@@ -18,8 +18,9 @@ export async function POST(req: NextRequest) {
       select: { isAdmin: true, twoFactorEnabled: true }
     });
 
-    if (!dbUser?.isAdmin) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    // Allow any authenticated user to setup 2FA (not just admins)
+    if (!dbUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     if (dbUser.twoFactorEnabled) {
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     // Generate TOTP secret
     const secret = speakeasy.generateSecret({
-      name: `Study-Talk Admin`,
+      name: dbUser.isAdmin ? `Study-Talk Admin` : `Study-Talk User`,
       issuer: 'Study-Talk',
       length: 32
     });

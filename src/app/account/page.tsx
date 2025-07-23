@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { X, User, Mail, Calendar, CreditCard, Star, Edit3, AlertTriangle } from "lucide-react";
+import { X, User, Mail, Calendar, CreditCard, Star, Edit3, AlertTriangle, Shield, Smartphone, Download } from "lucide-react";
 import Loader from "@/components/Loader";
 import { Plan } from "@prisma/client";
 import { useToast } from "@/hooks/use-toast";
@@ -27,6 +27,7 @@ interface UserInfo {
   university: string | null;
   universityVerifiedAt: string | null;
   universityChangeCount: number;
+  twoFactorEnabled: boolean;
   createdAt: string;
   subscription: {
     id: string;
@@ -45,6 +46,13 @@ export default function AccountPage() {
   // University editing state
   const [isUniversityDialogOpen, setIsUniversityDialogOpen] = useState(false);
   const [selectedUniversity, setSelectedUniversity] = useState("");
+  
+  // 2FA setup state
+  const [is2FADialogOpen, setIs2FADialogOpen] = useState(false);
+  const [twoFactorSetup, setTwoFactorSetup] = useState<any>(null);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [isSettingUp2FA, setIsSettingUp2FA] = useState(false);
+  const [isVerifying2FA, setIsVerifying2FA] = useState(false);
 
   const { data: userInfo, isLoading, error } = useQuery<UserInfo>({
     queryKey: ["user-info", user?.id],
@@ -190,6 +198,110 @@ export default function AccountPage() {
 
   const handleCancelSubscription = () => {
     createPortalSessionMutation.mutate();
+  };
+
+  const handleSetup2FA = async () => {
+    if (!user?.id) return;
+    
+    setIsSettingUp2FA(true);
+    try {
+      const response = await fetch('/api/auth/2fa/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        setTwoFactorSetup(data);
+        setIs2FADialogOpen(true);
+        toast({
+          title: '2FA Setup',
+          description: 'Scan the QR code with your authenticator app',
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to setup 2FA',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to setup 2FA',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSettingUp2FA(false);
+    }
+  };
+
+  const handleVerify2FA = async () => {
+    if (!user?.id || !verificationCode) return;
+    
+    setIsVerifying2FA(true);
+    try {
+      const response = await fetch('/api/auth/2fa/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userId: user.id,
+          token: verificationCode,
+          useBackupCode: false
+        })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast({
+          title: 'Success',
+          description: '2FA has been enabled successfully',
+        });
+        setIs2FADialogOpen(false);
+        setTwoFactorSetup(null);
+        setVerificationCode('');
+        // Refresh user data
+        queryClient.invalidateQueries({ queryKey: ["user-info", user?.id] });
+      } else {
+        toast({
+          title: 'Error',
+          description: data.error || 'Invalid verification code',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to verify 2FA',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsVerifying2FA(false);
+    }
+  };
+
+  const downloadBackupCodes = () => {
+    if (twoFactorSetup?.backupCodes) {
+      const content = `Study-Talk 2FA Backup Codes\n\nIMPORTANT: Save these codes in a secure location. You can use them if you lose your device.\n\n${twoFactorSetup.backupCodes.join('\n')}\n\nGenerated on: ${new Date().toLocaleDateString()}\nSecurity Note: Never share these codes with anyone.`;
+
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'study-talk-2fa-backup-codes.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Downloaded',
+        description: 'Backup codes downloaded successfully',
+      });
+    }
   };
 
   if (isLoading) {
@@ -356,6 +468,48 @@ export default function AccountPage() {
 
                   <div>
                     <Label
+                      htmlFor="2fa-status"
+                      className="text-sm font-medium text-gray-700"
+                    >
+                      Two-Factor Authentication:
+                    </Label>
+                    <div className="mt-1 relative">
+                      <Input
+                        id="2fa-status"
+                        value={isValidUser ? (userInfo.twoFactorEnabled ? "Enabled" : "Disabled") : ""}
+                        readOnly
+                        className="bg-gray-50 border-gray-200 text-gray-900"
+                        placeholder={!isValidUser ? "Not available" : ""}
+                      />
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
+                        {isValidUser && !userInfo.twoFactorEnabled && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleSetup2FA}
+                            disabled={isSettingUp2FA}
+                            className="h-8 px-3 text-xs bg-green-50 hover:bg-green-100 border-green-200 text-green-600"
+                          >
+                            {isSettingUp2FA ? (
+                              <>
+                                <Loader fullScreen={false} className="w-4 h-4 mr-1" />
+                                Setting up...
+                              </>
+                            ) : (
+                              <>
+                                <Shield className="w-4 h-4 mr-1" />
+                                Setup 2FA
+                              </>
+                            )}
+                          </Button>
+                        )}
+                        <Smartphone className="w-4 h-4 text-gray-400" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label
                       htmlFor="billing-date"
                       className="text-sm font-medium text-gray-700"
                     >
@@ -516,6 +670,115 @@ export default function AccountPage() {
                 </>
               ) : (
                 userInfo?.university ? "Update University" : "Set University"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 2FA Setup Dialog */}
+      <Dialog open={is2FADialogOpen} onOpenChange={setIs2FADialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-green-600" />
+              Setup Two-Factor Authentication
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <Alert className="mb-4">
+              <Smartphone className="h-4 w-4" />
+              <AlertDescription>
+                Scan the QR code below with your authenticator app (Google Authenticator, Authy, etc.) to setup 2FA for your account.
+              </AlertDescription>
+            </Alert>
+            
+            {twoFactorSetup && (
+              <div className="space-y-4">
+                <div className="text-center">
+                  <img 
+                    src={twoFactorSetup.qrCode} 
+                    alt="QR Code" 
+                    className="mx-auto border rounded-lg"
+                    style={{ width: '200px', height: '200px' }}
+                  />
+                </div>
+                
+                <div className="text-center">
+                  <p className="text-sm text-gray-600 mb-2">
+                    Or enter this code manually in your authenticator app:
+                  </p>
+                  <code className="bg-gray-100 px-3 py-2 rounded text-sm font-mono">
+                    {twoFactorSetup.secret}
+                  </code>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="verification-code" className="text-sm font-medium">
+                    Enter the 6-digit code from your authenticator app:
+                  </Label>
+                  <Input
+                    id="verification-code"
+                    type="text"
+                    placeholder="Enter 6-digit code"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value)}
+                    maxLength={6}
+                    className="text-center text-lg font-mono"
+                  />
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm text-yellow-800 font-medium">
+                      <strong>Backup Codes:</strong> Save these codes in a secure location. You can use them if you lose your device:
+                    </p>
+                    <Button
+                      onClick={downloadBackupCodes}
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3 text-xs bg-white hover:bg-gray-50 border-yellow-300 text-yellow-700"
+                    >
+                      <Download className="w-4 h-4 mr-1" />
+                      Download
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {twoFactorSetup.backupCodes?.map((code: string, index: number) => (
+                      <code key={index} className="bg-white px-2 py-1 rounded text-xs font-mono border">
+                        {code}
+                      </code>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIs2FADialogOpen(false);
+                setTwoFactorSetup(null);
+                setVerificationCode('');
+              }}
+              disabled={isVerifying2FA}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleVerify2FA}
+              disabled={!verificationCode.trim() || verificationCode.length !== 6 || isVerifying2FA}
+            >
+              {isVerifying2FA ? (
+                <>
+                  <Loader fullScreen={false} className="w-4 h-4 mr-2" />
+                  Verifying...
+                </>
+              ) : (
+                'Enable 2FA'
               )}
             </Button>
           </DialogFooter>

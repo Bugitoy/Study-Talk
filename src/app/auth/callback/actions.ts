@@ -84,8 +84,8 @@ export async function checkAuthStatus() {
       twoFactorEnabled: finalUser?.twoFactorEnabled
     });
 
-    // If user is admin and has 2FA enabled, require verification
-    if (finalUser?.isAdmin && finalUser?.twoFactorEnabled) {
+    // If user has 2FA enabled, require verification
+    if (finalUser?.twoFactorEnabled) {
       console.log('🔐 User requires 2FA, redirecting to verification');
       return { success: true, requires2FA: true };
     }

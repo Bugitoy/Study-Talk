@@ -21,8 +21,9 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    if (!dbUser?.isAdmin) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    // Allow any authenticated user to verify 2FA (not just admins)
+    if (!dbUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Check if 2FA is enabled OR if we're in the initial setup phase

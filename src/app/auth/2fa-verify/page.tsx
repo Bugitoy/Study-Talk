@@ -46,7 +46,7 @@ export default function TwoFactorVerifyPage() {
       if (response.ok) {
         toast({
           title: 'Success',
-          description: '2FA verification successful',
+          description: 'Two-Factor Authentication verification successful',
         });
         // Redirect to the intended page or home
         router.push('/');
