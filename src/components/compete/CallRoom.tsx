@@ -522,9 +522,9 @@ useEffect(() => {
 
   return (
     <section className="relative h-screen w-full pt-0 text-white">
-      <div className="absolute top-0 left-0 w-full flex flex-col items-center z-20 pt-0 sm:pt-3 px-3 sm:px-6 pb-3 sm:pb-6 pointer-events-none">
-        <div className="backdrop-blur-sm rounded-xl p-3 sm:p-6 shadow-md pointer-events-auto rounded-[8px]">
-          <h1 className="text-2xl sm:text-4xl font-semibold text-[#19232d] text-center">
+      <div className="absolute top-0 lg:top-[-28px] xl:top-0 left-0 lg:left-[15px] xl:left-0 w-full flex flex-col items-center z-20 pt-0 sm:pt-3 px-3 sm:px-6 pb-3 sm:pb-6 lg:p-2 xl:pb-3 pointer-events-none">
+        <div className="backdrop-blur-sm rounded-xl p-3 lg:p-2 xl:p-6 shadow-md pointer-events-auto rounded-[8px]">
+          <h1 className="text-2xl sm:text-4xl lg:text-2xl xl:text-4xl font-semibold text-[#19232d] text-center">
             Room Name: {currentRoom?.name}
           </h1>
         </div>
@@ -532,7 +532,7 @@ useEffect(() => {
 
       {/* video layout */}
       <div className="relative flex size-full items-center justify-center pb-32 sm:pb-40 md:pb-48 pt-12 sm:pt-24 lg:pt-0">
-        <div className="flex flex-col md:flex-row lg:flex-col xl:flex-row items-center gap-0 sm:gap-2 -space-y-2 sm:space-y-0">
+        <div className="flex flex-col md:flex-row lg:flex-row xl:flex-row items-center gap-0 sm:gap-2 -space-y-2 sm:space-y-0">
           {!quizEnded && (
             <>
               {!quizStarted ? (
@@ -546,7 +546,7 @@ useEffect(() => {
               ) : (
                 <>
                   {/* Question sheet */}
-                  <div className="relative w-full max-w-[25rem] sm:max-w-[30rem] md:max-w-[20rem] lg:max-w-[35rem] xl:max-w-[25rem] 2xl:max-w-[50rem] 3xl:max-w-[60rem] h-[15rem] sm:h-[20rem] md:h-[13rem] lg:h-[25rem] xl:h-[20rem] 2xl:h-[25rem] 3xl:h-[30rem] mx-auto sm:right-0 md:right-0 lg:right-20 xl:right-0 md:mr-[1rem] lg:mr-[2rem] xl:mr-[1rem]">
+                  <div className="relative w-full max-w-[25rem] sm:max-w-[30rem] md:max-w-[20rem] lg:max-w-[35rem] xl:max-w-[25rem] 2xl:max-w-[50rem] 3xl:max-w-[60rem] h-[15rem] sm:h-[20rem] md:h-[13rem] lg:h-[25rem] xl:h-[20rem] 2xl:h-[25rem] 3xl:h-[30rem] mx-auto sm:right-0 md:right-0 lg:right-0 xl:right-0 md:mr-[1rem] lg:mr-[2rem] xl:mr-[1rem]">
                     {/* Bottom Card */}
                     <div
                       className="absolute w-[80%] h-full inset-0 translate-y-[-35px] ml-[10px] md:ml-0 lg:ml-[10px] xl:ml-[10px]
@@ -587,7 +587,7 @@ useEffect(() => {
                   </div>
 
                   {/* Answer sheet */}
-                  <div className="flex flex-col items-center justify-center w-full max-w-[25rem] sm:max-w-[30rem] md:max-w-[20rem] lg:max-w-[35rem] xl:max-w-[25rem] 2xl:max-w-[50rem] 3xl:max-w-[60rem] h-[15rem] sm:h-[20rem] md:h-[15rem] lg:h-[24rem] xl:h-[20rem] 2xl:h-[25rem] 3xl:h-[30rem] mx-auto gap-2 sm:gap-5 md:gap-2 lg:gap-5">
+                  <div className="flex flex-col items-center justify-center w-full max-w-[25rem] sm:max-w-[30rem] md:max-w-[20rem] lg:max-w-[35rem] xl:max-w-[25rem] 2xl:max-w-[50rem] 3xl:max-w-[60rem] h-[15rem] sm:h-[20rem] md:h-[15rem] lg:h-[24rem] xl:h-[20rem] 2xl:h-[25rem] 3xl:h-[30rem] mx-auto gap-2 sm:gap-5 md:gap-2 lg:gap-2 xl:gap-5">
                     <button
                       onClick={() => sendAnswer("A")}
                       disabled={timeLeft === Infinity && selectedAnswer !== null}
