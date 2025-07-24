@@ -11,6 +11,7 @@ import ConnectionStatusBar from '@/components/talk/messaging/connectionStatusBar
 import startWebRtcNegotiation from '@/lib/talk/startWebRtcNegotiation';
 import ChangeLocalMediaStream from '@/components/talk/videoCall/changeCam';
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { User, Flag, Menu, X } from "lucide-react";
@@ -129,15 +130,13 @@ export default function ChatPage() {
                     <div className="flex items-center justify-between">
                         {/* Logo */}
                         <Link href="/" className="flex items-center space-x-2">
-                            <div
-                                className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center"
-                                style={{
-                                    backgroundImage:
-                                        "linear-gradient(to bottom right, #F7D379, #F9B288)",
-                                }}
-                            >
-                                <span className="text-white font-bold text-sm sm:text-lg">T</span>
-                            </div>
+                            <Image
+                                src="/Images/logo.svg"
+                                alt="Study-Talk Logo"
+                                width={50}
+                                height={50}
+                                className="w-8 h-8 sm:w-10 sm:h-10"
+                            />
                             <span
                                 className="text-lg sm:text-xl font-bold text-gray-900"
                                 style={{ fontFamily: "Alata, sans-serif" }}
