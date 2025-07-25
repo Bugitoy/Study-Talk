@@ -34,16 +34,10 @@ const StreamVideoProvider = ({ children }: { children: ReactNode }) => {
         setVideoClient(client);
     }, [user, isAuthenticated, isLoading]);
 
-    // Redirect unauthenticated users to Kinde login page
+    // For unauthenticated users, just show loading or render children
+    // The middleware will handle redirects for protected routes
     if (!isLoading && !isAuthenticated) {
-        router.push('/api/auth/login');
-        // Optionally render a fallback while redirecting
-        return (
-            <div className="flex justify-center items-center min-h-screen">
-                <Loader fullScreen={false} className="w-8 h-8 text-orange-500" />
-                <span className="ml-2 text-gray-600">Redirecting to login...</span>
-            </div>
-        );
+        return <>{children}</>;
     }
 
     if (!videoClient) {

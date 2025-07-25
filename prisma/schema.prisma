@@ -60,10 +60,7 @@ model User {
   isFlagged          Boolean @default(false)
   verificationLevel   String @default("NEW_USER") // NEW_USER, VERIFIED, TRUSTED, SUSPICIOUS
   
-  // Two-factor authentication
-  twoFactorEnabled    Boolean @default(false)
-  twoFactorSecret     String? // TOTP secret key
-  backupCodes        String[] @default([]) // Backup codes for 2FA
+
   
   // Reputation history
   reputationHistory  ReputationHistory[]

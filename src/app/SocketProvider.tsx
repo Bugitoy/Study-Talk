@@ -39,8 +39,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             socketInstance.disconnect();
             setSocket(null);
         };
-    } else {
-        router.push('/meetups/talk');
     }
   }, [user, isAuthenticated, isLoading]);
 

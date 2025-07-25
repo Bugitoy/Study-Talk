@@ -25,6 +25,13 @@ const nextConfig = {
   experimental: {
     webpackBuildWorker: true,
   },
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'expo-secure-store': false,
+    };
+    return config;
+  },
 };
 
 module.exports = nextConfig;

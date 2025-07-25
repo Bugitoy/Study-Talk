@@ -98,17 +98,6 @@ export default function NextLayout({ children }: LayoutProps) {
                     >
                       Admin
                     </Link>
-                    {!user?.twoFactorEnabled && (
-                      <Link href="/admin/2fa"
-                      className={cn(
-                        "text-lg font-medium transition-colors hover:text-orange-600",
-                        isActive("/admin/2fa") ? "text-orange-600" : "text-orange-300",
-                      )}
-                      style={{ fontFamily: "Alata, sans-serif" }}
-                      >
-                        2FA
-                      </Link>
-                    )}
                   </>
                 )}
               </nav>
@@ -203,19 +192,6 @@ export default function NextLayout({ children }: LayoutProps) {
                       >
                         Admin
                       </Link>
-                      {!user?.twoFactorEnabled && (
-                        <Link
-                          href="/admin/2fa"
-                          className={cn(
-                            "text-base font-medium transition-colors hover:text-orange-600 py-2 px-3 rounded-lg hover:bg-gray-50",
-                            isActive("/admin/2fa") ? "text-orange-600 bg-orange-50" : "text-orange-300",
-                          )}
-                          style={{ fontFamily: "Alata, sans-serif" }}
-                          onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                          2FA
-                        </Link>
-                      )}
                     </>
                   )}
                 </div>

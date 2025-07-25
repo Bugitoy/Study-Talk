@@ -24,7 +24,7 @@ export async function getUserInfo(userId: string) {
       universityVerifiedAt: user.universityVerifiedAt,
       universityChangeCount: user.universityChangeCount,
       isAdmin: user.isAdmin,
-      twoFactorEnabled: user.twoFactorEnabled,
+  
       createdAt: user.createdAt,
       subscription: user.Subscription,
     };
