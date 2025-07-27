@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo, startTransition } from "react";
 import {
   CallControls,
   CallParticipantsList,
@@ -41,7 +41,21 @@ import {
   SelectValue,
 } from "../ui/select";
 
+// Performance optimization: Debounce function
+const debounce = <T extends (...args: any[]) => any>(
+  func: T,
+  delay: number
+): ((...args: Parameters<T>) => void) => {
+  let timeoutId: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
+};
 
+// Performance optimization: Cache for API responses
+const apiCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 30000; // 30 seconds
 
 const CallRoom = () => {
   const router = useRouter();
@@ -54,6 +68,18 @@ const CallRoom = () => {
   const [showBanDialog, setShowBanDialog] = useState(false);
   const [selectedBanUserId, setSelectedBanUserId] = useState('');
   const [banReason, setBanReason] = useState('');
+  
+  // Add refs to store intervals and timeouts for cleanup
+  const monitorIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const banTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const checkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Performance optimization: Add state for topics and user quizzes
+  const [topics, setTopics] = useState<any[]>([]);
+  const [userQuizzes, setUserQuizzes] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  
   const { useCallCallingState, useLocalParticipant, useCallEndedAt } = useCallStateHooks();
   const { id } = useParams();
   const { toast } = useToast();
@@ -69,10 +95,14 @@ const CallRoom = () => {
   const callingState = useCallCallingState();
   const callEndedAt = useCallEndedAt();
   const localParticipant = useLocalParticipant();
-  const isHost =
+  
+  // Performance optimization: Memoize isHost calculation
+  const isHost = useMemo(() => 
     localParticipant &&
     call?.state.createdBy &&
-    localParticipant.userId === call.state.createdBy.id;
+    localParticipant.userId === call.state.createdBy.id,
+    [localParticipant, call?.state.createdBy]
+  );
 
   const [currentIdx, setCurrentIdx] = useState(0);
   // Start with Infinity so the first question isn't skipped before the
@@ -81,6 +111,8 @@ const CallRoom = () => {
   const [quizEnded, setQuizEnded] = useState(false);
   const [quizStarted, setQuizStarted] = useState(false);
   const callHasEnded = !!callEndedAt;
+  
+  // Performance optimization: Memoize results query
   const { data: results } = useQuizResults(
     quizEnded ? (id as string) : "",
     quizEnded ? (sessionId ?? undefined) : undefined,
@@ -88,6 +120,72 @@ const CallRoom = () => {
   const { user } = useKindeBrowserClient();
   const { startTracking, endTracking, isTracking } = useStreamStudyTimeTracker(call?.id);
   const [showTopicModal, setShowTopicModal] = useState(false);
+
+  // Performance optimization: Memoize current question
+  const currentQuestion = useMemo(() => 
+    currentRoom?.questions?.[currentIdx] || null,
+    [currentRoom?.questions, currentIdx]
+  );
+
+  // Performance optimization: Memoize filtered topics and quizzes with better search
+  const filteredTopics = useMemo(() => {
+    if (!searchQuery.trim()) return topics;
+    const query = searchQuery.toLowerCase();
+    return topics.filter((t) => t.title.toLowerCase().includes(query));
+  }, [topics, searchQuery]);
+
+  const filteredUserQuizzes = useMemo(() => {
+    if (!searchQuery.trim()) return userQuizzes;
+    const query = searchQuery.toLowerCase();
+    return userQuizzes.filter((quiz) =>
+      quiz.title.toLowerCase().includes(query) ||
+      quiz.description.toLowerCase().includes(query)
+    );
+  }, [userQuizzes, searchQuery]);
+
+  // Add cleanup effect for intervals and timeouts
+  useEffect(() => {
+    return () => {
+      // Clean up all intervals and timeouts when component unmounts
+      if (monitorIntervalRef.current) {
+        clearInterval(monitorIntervalRef.current);
+      }
+      if (banTimeoutRef.current) {
+        clearTimeout(banTimeoutRef.current);
+      }
+      if (checkTimeoutRef.current) {
+        clearTimeout(checkTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Performance optimization: Debounced search query
+  const debouncedSetSearchQuery = useCallback(
+    debounce((value: string) => setSearchQuery(value), 300),
+    []
+  );
+
+  // Performance optimization: Cached API fetch function
+  const cachedFetch = useCallback(async (url: string, options?: RequestInit) => {
+    const cacheKey = `${url}-${JSON.stringify(options)}`;
+    const cached = apiCache.get(cacheKey);
+    
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.data;
+    }
+    
+    try {
+      const response = await fetch(url, options);
+      if (response.ok) {
+        const data = await response.json();
+        apiCache.set(cacheKey, { data, timestamp: Date.now() });
+        return data;
+      }
+    } catch (error) {
+      console.error('API fetch error:', error);
+    }
+    return null;
+  }, []);
 
   useEffect(() => {
     if (quizRoom) {
@@ -102,22 +200,7 @@ const CallRoom = () => {
     { value: 'INAPPROPRIATE_CONTENT', label: 'Inappropriate Content' },
     { value: 'OTHER', label: 'Other' },
   ];
-  const [topics, setTopics] = useState<
-  Array<{
-    title: string;
-    description: string;
-    backgroundImage: string;
-  }>
->([]);
-const [userQuizzes, setUserQuizzes] = useState<
-  Array<{
-    id: string;
-    title: string;
-    description: string;
-    createdBy: string;
-  }>
->([]);
-const [searchQuery, setSearchQuery] = useState("");
+
 
 // Start tracking when call is joined
 useEffect(() => {
@@ -135,17 +218,16 @@ useEffect(() => {
   };
 }, []);
 
-  useEffect(() => {
-    if (!call) return;
-    const hostId = call.state.createdBy?.id;
-    if (!hostId) return;
-    const handler = async (e: any) => {
+  // Performance optimization: Memoized participant left handler
+  const handleParticipantLeft = useCallback(async (e: any) => {
       const leftId = e.participant?.userId || e.participant?.user?.id;
+    const hostId = call?.state.createdBy?.id;
+    
       if (leftId === hostId) {
         try {
           // End tracking before call cleanup
           await endTracking();
-          await call.endCall();
+        await call?.endCall();
           // Don't call call.delete() - it causes 403 errors for non-host users
           // The webhook will handle room cleanup when the call ends
         } catch (err) {
@@ -161,12 +243,18 @@ useEffect(() => {
           });
         }
       }
-    };
-    const unsub = call.on("participantLeft", handler);
+  }, [call, isHost, toast, endTracking]);
+
+  useEffect(() => {
+    if (!call) return;
+    const hostId = call.state.createdBy?.id;
+    if (!hostId) return;
+    
+    const unsub = call.on("participantLeft", handleParticipantLeft);
     return () => {
       unsub?.();
     };
-  }, [call, isHost, toast]);
+  }, [call, handleParticipantLeft]);
 
   // Listen for forced disconnection due to ban
   useEffect(() => {
@@ -234,17 +322,57 @@ useEffect(() => {
     fetchUserQuizzes();
   }, [user?.id]);
 
+  // Performance optimization: Memoize questions array
+  const questions = useMemo(() => 
+    roomSettings?.numQuestions
+      ? currentRoom?.questions?.slice(0, roomSettings.numQuestions) || []
+      : currentRoom?.questions || [],
+    [currentRoom?.questions, roomSettings?.numQuestions]
+  );
 
-  const handleStartQuiz = async () => {
-    if (!isHost || !currentRoom) return;
-    const res = await fetch(`/api/quiz-room/${currentRoom.id}/session`, {
+  // Performance optimization: Memoize time per question
+  const timePerQuestion = useMemo(() => 
+    roomSettings?.timePerQuestion ?? currentRoom?.timePerQuestion,
+    [roomSettings?.timePerQuestion, currentRoom?.timePerQuestion]
+  );
+
+  // Performance optimization: Memoize quiz state
+  const isQuizActive = useMemo(() => 
+    quizStarted && !quizEnded && callingState === CallingState.JOINED,
+    [quizStarted, quizEnded, callingState]
+  );
+
+  const canStartQuiz = useMemo(() => 
+    isHost && !quizStarted && currentRoom && call,
+    [isHost, quizStarted, currentRoom, call]
+  );
+
+  // Performance optimization: Memoize submit answer function
+  const submitAnswer = useCallback(async (answerText: string) => {
+    if (!currentRoom || !currentQuestion || !user || !sessionId) return;
+    await fetch(`/api/quiz-room/${currentRoom.id}/answer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: user.id,
+        questionId: currentQuestion.id,
+        sessionId,
+        answer: answerText,
+      }),
+    });
+  }, [currentRoom, currentQuestion, user, sessionId]);
+
+  // Performance optimization: Memoized event handlers
+  const handleStartQuiz = useCallback(async () => {
+    if (!canStartQuiz) return;
+    const res = await fetch(`/api/quiz-room/${currentRoom!.id}/session`, {
       method: "POST",
     });
     if (res.ok) {
       const json = await res.json();
       setSessionId(json.sessionId);
       setStartTimestamp(Date.now());
-      await call.update({
+      await call!.update({
         custom: {
           quizStarted: true,
           sessionId: json.sessionId,
@@ -254,10 +382,10 @@ useEffect(() => {
         },
       });
     }
-  };
+  }, [canStartQuiz, currentRoom, call]);
 
-  const handleRestartQuiz = async () => {
-    if (!isHost || !currentRoom) return;
+  const handleRestartQuiz = useCallback(async () => {
+    if (!isHost || !currentRoom || !call) return;
     const res = await fetch(`/api/quiz-room/${currentRoom.id}/session`, {
       method: "POST",
     });
@@ -269,8 +397,7 @@ useEffect(() => {
       setQuizStarted(true);
       setCurrentIdx(0);
       setSelectedAnswer(null);
-      const t = roomSettings?.timePerQuestion ?? currentRoom.timePerQuestion;
-      setTimeLeft(t === null ? Infinity : t);
+      setTimeLeft(timePerQuestion === null || timePerQuestion === undefined ? Infinity : timePerQuestion);
       await call.update({
         custom: {
           quizStarted: true,
@@ -281,16 +408,13 @@ useEffect(() => {
         },
       });
     }
-  };
+  }, [isHost, currentRoom, call, timePerQuestion]);
 
-  const handleSelectTopic = async (topic: string) => {
+  const handleSelectTopic = useCallback(async (topic: string) => {
     if (!currentRoom) return;
     try {
-      const qRes = await fetch(
-        `/api/questions?topic=${encodeURIComponent(topic)}`,
-      );
-      if (qRes.ok) {
-        const questions = await qRes.json();
+      const questions = await cachedFetch(`/api/questions?topic=${encodeURIComponent(topic)}`);
+      if (questions) {
         const updateRes = await fetch(
           `/api/quiz-room/${currentRoom.id}/questions`,
           {
@@ -321,14 +445,13 @@ useEffect(() => {
       console.error("Failed to load topic", error);
     }
     setShowTopicModal(false);
-  };
+  }, [currentRoom, call, cachedFetch]);
 
-  const handleSelectUserQuiz = async (quizId: string) => {
+  const handleSelectUserQuiz = useCallback(async (quizId: string) => {
     if (!currentRoom) return;
     try {
-      const qRes = await fetch(`/api/user-quizzes/${quizId}`);
-      if (qRes.ok) {
-        const quizData = await qRes.json();
+      const quizData = await cachedFetch(`/api/user-quizzes/${quizId}`);
+      if (quizData) {
         const updateRes = await fetch(
           `/api/quiz-room/${currentRoom.id}/questions`,
           {
@@ -359,7 +482,7 @@ useEffect(() => {
       console.error("Failed to load user quiz", error);
     }
     setShowTopicModal(false);
-  };
+  }, [currentRoom, call, cachedFetch]);
 
   useEffect(() => {
     if (!call) return;
@@ -389,38 +512,15 @@ useEffect(() => {
     }
   }, [currentRoom, callingState, roomSettings, quizStarted]);
 
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-
-  const submitAnswer = async (answerText: string) => {
-    if (!currentRoom || !currentQuestion || !user || !sessionId) return;
-    await fetch(`/api/quiz-room/${currentRoom.id}/answer`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId: user.id,
-        questionId: currentQuestion.id,
-        sessionId,
-        answer: answerText,
-      }),
-    });
-  };
-
+  // Performance optimization: Optimized timer logic
   useEffect(() => {
-    if (
-      !quizStarted ||
-      !currentRoom ||
-      quizEnded ||
-      callingState !== CallingState.JOINED
-    )
+    if (!isQuizActive || !currentRoom) {
       return;
-    const questions = roomSettings?.numQuestions
-    ? currentRoom.questions.slice(0, roomSettings.numQuestions)
-      : currentRoom.questions;
+    }
     
     // Handle unlimited timer case - advance when answer is selected
-    if (timeLeft === Infinity && selectedAnswer && isHost) {
-      // Add a small delay to show the selected answer before moving to next question
-      setTimeout(() => {
+    if (timeLeft === Infinity && selectedAnswer && isHost && call) {
+      const timer = setTimeout(() => {
         if (currentIdx < questions.length - 1) {
           const now = Date.now();
           setCurrentIdx((i) => i + 1);
@@ -436,16 +536,16 @@ useEffect(() => {
         } else {
           call.update({ custom: { ...call.state.custom, quizEnded: true } });
         }
-      }, 1000); // 1 second delay
-      return;
+      }, 1000);
+      return () => clearTimeout(timer);
     }
-    
+
     // Handle timed questions
     if (timeLeft <= 0 && timeLeft !== Infinity) {
       if (!selectedAnswer) {
         submitAnswer("blank");
       }
-      if (isHost && currentIdx < questions.length - 1) {
+      if (isHost && currentIdx < questions.length - 1 && call) {
         const now = Date.now();
         setCurrentIdx((i) => i + 1);
         call.update({
@@ -455,48 +555,47 @@ useEffect(() => {
             startTime: now,
           },
         });
-        const t = roomSettings?.timePerQuestion ?? currentRoom.timePerQuestion;
-        setTimeLeft(t === null ? Infinity : t);
+        setTimeLeft(timePerQuestion === null || timePerQuestion === undefined ? Infinity : timePerQuestion);
         setStartTimestamp(now);
-      } else if (isHost) {
+      } else if (isHost && call) {
         call.update({ custom: { ...call.state.custom, quizEnded: true } });
       }
     }
+
+    // Timer countdown
     if (timeLeft !== Infinity) {
-      const t = setTimeout(() => {
+      const timer = setTimeout(() => {
         if (startTimestamp) {
-          const q = roomSettings?.timePerQuestion ?? currentRoom.timePerQuestion;
-          const left =
-            q === null
-              ? Infinity
-              : q - Math.floor((Date.now() - startTimestamp) / 1000);
+          const left = timePerQuestion === null || timePerQuestion === undefined
+            ? Infinity
+            : timePerQuestion - Math.floor((Date.now() - startTimestamp) / 1000);
           setTimeLeft(left);
         }
       }, 1000);
-      return () => clearTimeout(t);
+      return () => clearTimeout(timer);
     }
   }, [
-    currentIdx,
+    isQuizActive,
     currentRoom,
     timeLeft,
-    quizEnded,
-    callingState,
-    roomSettings,
-    quizStarted,
     selectedAnswer,
     isHost,
+    call,
+    currentIdx,
+    questions.length,
     startTimestamp,
+    timePerQuestion,
+    submitAnswer,
   ]);
 
-  const questions = roomSettings?.numQuestions
-  ? currentRoom?.questions?.slice(0, roomSettings.numQuestions) || []
-  : currentRoom?.questions || [];
-
-  const currentQuestion = questions[currentIdx];
-
-  const sendAnswer = async (answerKey: "A" | "B" | "C" | "D") => {
+  // Performance optimization: Memoized answer selection
+  const sendAnswer = useCallback(async (answerKey: "A" | "B" | "C" | "D") => {
     if (!currentRoom || !currentQuestion || !user || !sessionId) return;
-    setSelectedAnswer(answerKey);
+    
+    // Batch state updates
+    startTransition(() => {
+      setSelectedAnswer(answerKey);
+    });
 
     const answerText =
       answerKey === "A"
@@ -508,7 +607,7 @@ useEffect(() => {
             : currentQuestion.optionD;
 
     await submitAnswer(answerText);
-  };
+  }, [currentRoom, currentQuestion, user, sessionId, submitAnswer]);
 
   useEffect(() => {
     setSelectedAnswer(null);
@@ -849,7 +948,7 @@ useEffect(() => {
             <Input
               placeholder="Search topics and quizzes..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => debouncedSetSearchQuery(e.target.value)}
               className="my-4"
             />
             
@@ -858,12 +957,7 @@ useEffect(() => {
               <div className="mb-6">
                 <h3 className="text-lg font-semibold mb-3 text-gray-700">Your Quizzes</h3>
                 <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
-                  {userQuizzes
-                    .filter((quiz) =>
-                      quiz.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      quiz.description.toLowerCase().includes(searchQuery.toLowerCase())
-                    )
-                    .map((quiz) => (
+                  {filteredUserQuizzes.map((quiz) => (
                       <div
                         key={quiz.id}
                         onClick={() => handleSelectUserQuiz(quiz.id)}
@@ -880,11 +974,7 @@ useEffect(() => {
             <div>
               <h3 className="text-lg font-semibold mb-3 text-gray-700">Topics</h3>
               <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
-                {topics
-                  .filter((t) =>
-                    t.title.toLowerCase().includes(searchQuery.toLowerCase()),
-                  )
-                  .map((topic) => (
+                {filteredTopics.map((topic) => (
                     <TopicItem
                       key={topic.title}
                       title={topic.title}
@@ -1160,7 +1250,7 @@ useEffect(() => {
                           // Instead, we rely on the webhook to prevent banned users from rejoining
                           
                           // Set up continuous monitoring to ensure user is removed
-                          const monitorInterval = setInterval(async () => {
+                          monitorIntervalRef.current = setInterval(async () => {
                             try {
                               const participants = call.state.participants || [];
                               const bannedUserStillInCall = participants.some((p: any) => 
@@ -1179,7 +1269,9 @@ useEffect(() => {
                                   const forceRemoveData = await forceRemoveRes.json();
                                 }
                               } else {
-                                clearInterval(monitorInterval);
+                                  if (monitorIntervalRef.current) {
+                                    clearInterval(monitorIntervalRef.current);
+                                  }
                               }
                             } catch (monitorError) {
                               console.error('Failed to monitor user removal:', monitorError);
@@ -1187,12 +1279,14 @@ useEffect(() => {
                           }, 5000); // Check every 5 seconds
                           
                           // Stop monitoring after 30 seconds
-                          setTimeout(() => {
-                            clearInterval(monitorInterval);
+                                                     banTimeoutRef.current = setTimeout(() => {
+                             if (monitorIntervalRef.current) {
+                               clearInterval(monitorIntervalRef.current);
+                             }
                           }, 30000);
                           
                           // Check if the banned user is still in the call after 3 seconds
-                          setTimeout(async () => {
+                          checkTimeoutRef.current = setTimeout(async () => {
                             try {
                               const participants = call.state.participants || [];
                               const bannedUserStillInCall = participants.some((p: any) => 

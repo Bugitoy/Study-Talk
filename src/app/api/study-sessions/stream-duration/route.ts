@@ -2,13 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { startStudySession, endStudySession, getDailyStudyTime, updateStudySessionWithStreamDuration, updateStudySessionWithStreamDurationByCallId } from '@/lib/db-utils';
 import { getStreamCallDuration } from '@/lib/stream-duration-utils';
 
+// Performance optimization: Only log in development or when explicitly enabled
+const isDebugMode = process.env.NODE_ENV === 'development' || process.env.STREAM_WEBHOOK_DEBUG === 'true';
+
 export async function POST(req: NextRequest) {
   try {
-    console.log('=== WEBHOOK RECEIVED ===');
-    console.log('Headers:', Object.fromEntries(req.headers.entries()));
-    
     const body = await req.json();
-    console.log('Stream.io webhook received:', JSON.stringify(body, null, 2));
+    
+    // Minimal logging for performance
+    if (isDebugMode) {
+      console.log('Stream duration webhook received:', body.type);
+    }
 
     // Handle Stream.io webhook payload
     if (body.type === 'call.ended') {
@@ -16,11 +20,15 @@ export async function POST(req: NextRequest) {
       const callId = call.id;
       const duration = call.duration || 0; // Duration in seconds
       
-      console.log('Call ended webhook:', { callId, duration });
+      if (isDebugMode) {
+        console.log('Call ended webhook:', { callId, duration });
+      }
       
       // Find the session for this call and update it with Stream.io duration
       const session = await updateStudySessionWithStreamDurationByCallId(callId, duration);
-      console.log('Session updated:', session);
+      if (isDebugMode) {
+        console.log('Session updated:', session);
+      }
       return NextResponse.json({ success: true, session });
     }
     
@@ -31,26 +39,36 @@ export async function POST(req: NextRequest) {
       const participant = body.participant;
       const userId = participant?.user?.id;
       
-      console.log('Participant left webhook:', { callId, duration, userId });
+      if (isDebugMode) {
+        console.log('Participant left webhook:', { callId, duration, userId });
+      }
       
       if (callId && duration > 0 && userId) {
         // Find the session for this call and update it with Stream.io duration
         const session = await updateStudySessionWithStreamDurationByCallId(callId, duration);
-        console.log('Session updated from participant left:', session);
+        if (isDebugMode) {
+          console.log('Session updated from participant left:', session);
+        }
         
         if (!session) {
-          console.log('No session found for callId, trying to find by userId...');
+          if (isDebugMode) {
+            console.log('No session found for callId, trying to find by userId...');
+          }
           // Try to find session by userId
           const sessionByUser = await updateStudySessionWithStreamDuration(userId, callId, duration);
           if (sessionByUser) {
-            console.log('Session found and updated by userId:', sessionByUser);
+            if (isDebugMode) {
+              console.log('Session found and updated by userId:', sessionByUser);
+            }
             return NextResponse.json({ success: true, session: sessionByUser });
           }
         }
         
         return NextResponse.json({ success: true, session });
       } else {
-        console.log('Participant left webhook skipped:', { callId, duration, userId, hasCallId: !!callId, hasDuration: duration > 0, hasUserId: !!userId });
+        if (isDebugMode) {
+          console.log('Participant left webhook skipped:', { callId, duration, userId, hasCallId: !!callId, hasDuration: duration > 0, hasUserId: !!userId });
+        }
       }
     }
     
@@ -59,7 +77,9 @@ export async function POST(req: NextRequest) {
       const callId = body.call_cid?.split(':')[1] || body.call?.id;
       const session = body.call?.session;
       
-      console.log('Call session ended webhook:', { callId, session });
+      if (isDebugMode) {
+        console.log('Call session ended webhook:', { callId, session });
+      }
       
       if (callId && session) {
         // Calculate duration from session start and end times
@@ -67,23 +87,33 @@ export async function POST(req: NextRequest) {
         const sessionEnd = new Date(session.ended_at);
         const durationSeconds = Math.floor((sessionEnd.getTime() - sessionStart.getTime()) / 1000);
         
-        console.log('Session duration calculated:', { durationSeconds, sessionStart, sessionEnd });
+        if (isDebugMode) {
+          console.log('Session duration calculated:', { durationSeconds, sessionStart, sessionEnd });
+        }
         
         if (durationSeconds > 0) {
           // Update all study sessions for this call with the session duration
           const updatedSession = await updateStudySessionWithStreamDurationByCallId(callId, durationSeconds);
-          console.log('Study sessions updated with session duration:', updatedSession);
+          if (isDebugMode) {
+            console.log('Study sessions updated with session duration:', updatedSession);
+          }
           
           if (!updatedSession) {
-            console.log('No session found for callId in session_ended, trying to find by created_by...');
+            if (isDebugMode) {
+              console.log('No session found for callId in session_ended, trying to find by created_by...');
+            }
             // Try to find session by the call creator
             const createdBy = body.call?.created_by;
             if (createdBy?.id) {
               const userId = createdBy.id;
-              console.log('Trying to find session by created_by userId:', userId);
+              if (isDebugMode) {
+                console.log('Trying to find session by created_by userId:', userId);
+              }
               const sessionByUser = await updateStudySessionWithStreamDuration(userId, callId, durationSeconds);
               if (sessionByUser) {
-                console.log('Session found and updated by created_by userId:', sessionByUser);
+                if (isDebugMode) {
+                  console.log('Session found and updated by created_by userId:', sessionByUser);
+                }
                 return NextResponse.json({ success: true, session: sessionByUser });
               }
             }
@@ -96,7 +126,9 @@ export async function POST(req: NextRequest) {
     
     // Handle other call events (for debugging)
     if (body.type && body.type.startsWith('call.')) {
-      console.log('Other call event received:', body.type);
+      if (isDebugMode) {
+        console.log('Other call event received:', body.type);
+      }
       return NextResponse.json({ success: true, message: 'Event received' });
     }
     
@@ -104,7 +136,9 @@ export async function POST(req: NextRequest) {
     const { userId, callId, action } = body;
     
     if (!userId || !callId || !action) {
-      console.log('Manual API call with missing fields:', { userId, callId, action });
+      if (isDebugMode) {
+        console.log('Manual API call with missing fields:', { userId, callId, action });
+      }
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -118,7 +152,9 @@ export async function POST(req: NextRequest) {
         const streamDuration = await getStreamCallDuration(callId);
         
         if (streamDuration === 0) {
-          console.warn('Call not found in Stream.io or duration is 0:', callId);
+          if (isDebugMode) {
+            console.warn('Call not found in Stream.io or duration is 0:', callId);
+          }
           // Fallback to manual duration calculation
           const session = await endStudySession(userId, callId);
           return NextResponse.json(session);
@@ -137,8 +173,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
   } catch (error) {
-    console.error('Error handling study session with Stream duration:', error);
-    return NextResponse.json({ error: 'Failed to handle study session' }, { status: 500 });
+    console.error('Error handling Stream duration webhook:', error);
+    return NextResponse.json({ error: 'Failed to process webhook' }, { status: 500 });
   }
 }
 
@@ -146,18 +182,15 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId');
-    const date = searchParams.get('date');
     
     if (!userId) {
-      return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
+      return NextResponse.json({ error: 'userId is required' }, { status: 400 });
     }
     
-    const targetDate = date ? new Date(date) : undefined;
-    const hours = await getDailyStudyTime(userId, targetDate);
-    
-    return NextResponse.json({ hours });
+    const dailyStudyTime = await getDailyStudyTime(userId);
+    return NextResponse.json(dailyStudyTime);
   } catch (error) {
-    console.error('Error getting study time:', error);
-    return NextResponse.json({ error: 'Failed to get study time' }, { status: 500 });
+    console.error('Error getting daily study time:', error);
+    return NextResponse.json({ error: 'Failed to get daily study time' }, { status: 500 });
   }
 } 

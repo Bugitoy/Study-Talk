@@ -169,7 +169,6 @@ export default function CreateRoom() {
       toast({
         title: 'Room Name Required',
         description: 'Please enter a room name',
-        variant: 'destructive',
       });
       return;
     }
@@ -178,7 +177,6 @@ export default function CreateRoom() {
       toast({
         title: 'Invalid Room Name',
         description: roomNameError || 'Please enter a valid room name',
-        variant: 'destructive',
       });
       return;
     }

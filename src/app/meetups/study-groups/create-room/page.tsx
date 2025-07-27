@@ -243,7 +243,6 @@ const handleNext = async () => {
     toast({
       title: 'Room Name Required',
       description: 'Please enter a room name',
-      variant: 'destructive',
     });
     return;
   }
@@ -252,7 +251,6 @@ const handleNext = async () => {
     toast({
       title: 'Invalid Room Name',
       description: roomNameError || 'Please enter a valid room name',
-      variant: 'destructive',
     });
     return;
   }

@@ -1,21 +1,70 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/db/prisma';
+import { validateQuizData, sanitizeInput, logSecurityEvent } from '@/lib/security-utils';
+
+// Rate limiting configuration
+const RATE_LIMIT_CONFIG = {
+  MAX_REQUESTS: 20,
+  WINDOW_MS: 60000, // 1 minute
+};
+
+// Simple in-memory rate limiter (in production, use Redis)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const userLimit = rateLimitMap.get(userId);
+  
+  if (!userLimit || now > userLimit.resetTime) {
+    rateLimitMap.set(userId, { count: 1, resetTime: now + RATE_LIMIT_CONFIG.WINDOW_MS });
+    return false;
+  }
+  
+  if (userLimit.count >= RATE_LIMIT_CONFIG.MAX_REQUESTS) {
+    return true;
+  }
+  
+  userLimit.count++;
+  return false;
+}
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId');
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '12');
+    const offset = (page - 1) * limit;
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
+    // Validate pagination parameters
+    if (page < 1 || limit < 1 || limit > 50) {
+      return NextResponse.json({ error: 'Invalid pagination parameters' }, { status: 400 });
+    }
+
+    // Rate limiting
+    if (checkRateLimit(userId)) {
+      logSecurityEvent('RATE_LIMIT_EXCEEDED', userId, { endpoint: 'GET_QUIZZES' });
+      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
+
+    // Get total count for pagination
+    const totalCount = await prisma.userQuiz.count({
+      where: { userId },
+    });
+
+    // Fetch quizzes with pagination
     const userQuizzes = await prisma.userQuiz.findMany({
       where: { userId },
       include: {
         questions: true,
       },
       orderBy: { updatedAt: 'desc' },
+      skip: offset,
+      take: limit,
     });
 
     // Transform the data to match the expected format
@@ -28,7 +77,15 @@ export async function GET(req: NextRequest) {
       updatedAt: quiz.updatedAt.toISOString(),
     }));
 
-    return NextResponse.json(transformedQuizzes);
+    const hasMore = offset + limit < totalCount;
+
+    return NextResponse.json({
+      quizzes: transformedQuizzes,
+      hasMore,
+      totalCount,
+      currentPage: page,
+      totalPages: Math.ceil(totalCount / limit),
+    });
   } catch (error) {
     console.error('Error fetching user quizzes:', error);
     return NextResponse.json({ error: 'Failed to fetch user quizzes' }, { status: 500 });
@@ -39,30 +96,58 @@ export async function POST(req: NextRequest) {
   try {
     const { userId, title, description, questions } = await req.json();
 
+    // Basic validation
     if (!userId || !title || !description || !questions || !Array.isArray(questions)) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Create the quiz with questions
+    // Rate limiting
+    if (checkRateLimit(userId)) {
+      logSecurityEvent('RATE_LIMIT_EXCEEDED', userId, { endpoint: 'POST_QUIZ' });
+      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
+
+    // Server-side validation
+    const validation = validateQuizData({ title, description, questions });
+    if (!validation.isValid) {
+      logSecurityEvent('VALIDATION_FAILED', userId, { errors: validation.errors });
+      return NextResponse.json({ 
+        error: 'Validation failed', 
+        details: validation.errors 
+      }, { status: 400 });
+    }
+
+    // Sanitize all inputs
+    const sanitizedTitle = sanitizeInput(title);
+    const sanitizedDescription = sanitizeInput(description);
+    const sanitizedQuestions = questions.map((q: any) => ({
+      question: sanitizeInput(q.question),
+      optionA: sanitizeInput(q.optionA),
+      optionB: sanitizeInput(q.optionB),
+      optionC: sanitizeInput(q.optionC),
+      optionD: sanitizeInput(q.optionD),
+      correct: sanitizeInput(q.correct),
+    }));
+
+    // Create the quiz with sanitized data
     const quiz = await prisma.userQuiz.create({
       data: {
         userId,
-        title,
-        description,
+        title: sanitizedTitle,
+        description: sanitizedDescription,
         questions: {
-          create: questions.map((q: any) => ({
-            question: q.question,
-            optionA: q.optionA,
-            optionB: q.optionB,
-            optionC: q.optionC,
-            optionD: q.optionD,
-            correct: q.correct,
-          })),
+          create: sanitizedQuestions,
         },
       },
       include: {
         questions: true,
       },
+    });
+
+    // Log successful creation
+    logSecurityEvent('QUIZ_CREATED', userId, { 
+      quizId: quiz.id, 
+      questionCount: questions.length 
     });
 
     return NextResponse.json({
@@ -75,6 +160,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error('Error creating user quiz:', error);
+    logSecurityEvent('QUIZ_CREATION_ERROR', 'unknown', { error: error instanceof Error ? error.message : 'Unknown error' });
     return NextResponse.json({ error: 'Failed to create user quiz' }, { status: 500 });
   }
 } 

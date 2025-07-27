@@ -338,6 +338,20 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
     setSelectedTopic(topic);
     setSelectedUserQuiz(null);
     saveTopicName(topic.title);
+    
+    // Announce selection to screen readers
+    const announcement = `Topic selected: ${topic.title}`;
+    const liveRegion = document.createElement('div');
+    liveRegion.setAttribute('aria-live', 'polite');
+    liveRegion.setAttribute('aria-atomic', 'true');
+    liveRegion.className = 'sr-only';
+    liveRegion.textContent = announcement;
+    document.body.appendChild(liveRegion);
+    
+    // Remove the announcement after a short delay
+    setTimeout(() => {
+      document.body.removeChild(liveRegion);
+    }, 1000);
   };
 
   const handleQuizLibraryClick = () => {
@@ -350,15 +364,16 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
   if (selectedQuizId && isLoadingQuiz) {
     return (
       <NextLayout>
-        <div className="p-6 max-w-7xl mx-auto">
+        <div className="p-6 max-w-7xl mx-auto" role="main" aria-label="Loading quiz">
           <div className="flex items-center justify-center mb-20">
-            <div className="flex-grow border-t border-blue-200"></div>
-            <h1 className="text-5xl font-bold mx-[5rem]">Loading Your Quiz</h1>
-            <div className="flex-grow border-t border-blue-200"></div>
+            <div className="flex-grow border-t border-blue-200" aria-hidden="true"></div>
+            <h1 className="text-5xl font-bold mx-[5rem]" id="loading-title">Loading Your Quiz</h1>
+            <div className="flex-grow border-t border-blue-200" aria-hidden="true"></div>
           </div>
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="text-center" role="status" aria-live="polite">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" aria-hidden="true"></div>
             <p className="text-gray-600">Loading your quiz data...</p>
+            <div className="sr-only">Loading your quiz data, please wait...</div>
           </div>
         </div>
       </NextLayout>
@@ -367,42 +382,51 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
 
   return (
     <NextLayout>
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto" role="main" aria-label="Choose a topic for your compete room">
+      {/* Skip link for keyboard users */}
+      <a href="#page-title" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-blue-600 text-white px-4 py-2 rounded-md z-50">
+        Skip to main content
+      </a>
 
         <div className="flex items-center justify-center mb-10 sm:mb-16 md:mb-20">
-          <div className="flex-grow border-t border-blue-200"></div>
-             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mx-4 sm:mx-8 md:mx-[5rem] text-center">Choose a Topic</h1>
-          <div className="flex-grow border-t border-blue-200"></div>
+          <div className="flex-grow border-t border-blue-200" aria-hidden="true"></div>
+             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mx-4 sm:mx-8 md:mx-[5rem] text-center" id="page-title">Choose a Topic</h1>
+          <div className="flex-grow border-t border-blue-200" aria-hidden="true"></div>
         </div>
         
         {!selectedTopic && !selectedUserQuiz ? (
-          <div className="text-center mb-6 sm:mb-8">
+          <div className="text-center mb-6 sm:mb-8" role="status" aria-live="polite">
             <div className="inline-flex items-center px-3 py-2 sm:px-4 sm:py-2 bg-blue-100 border border-blue-300 rounded-lg">
-              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
               </svg>
               <span className="text-sm sm:text-base text-blue-800 font-medium">Please select a topic or your own quiz to continue</span>
             </div>
+            <div className="sr-only">Please select a topic or your own quiz to continue</div>
           </div>
         ) : (
-          <div className="text-center mb-6 sm:mb-8">
+          <div className="text-center mb-6 sm:mb-8" role="status" aria-live="polite">
             <div className="inline-flex items-center px-3 py-2 sm:px-4 sm:py-2 bg-green-100 border border-green-300 rounded-lg">
-              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
               <span className="text-sm sm:text-base text-green-800 font-medium">
                 {selectedTopic ? `Topic selected: ${selectedTopic.title}` : `Quiz selected: ${selectedUserQuiz?.title}`}
               </span>
             </div>
+            <div className="sr-only">
+              {selectedTopic ? `Topic selected: ${selectedTopic.title}` : `Quiz selected: ${selectedUserQuiz?.title}`}
+            </div>
           </div>
         )}
         
         {topicsLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 xl:gap-10 mb-6 sm:mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 xl:gap-10 mb-6 sm:mb-8" role="region" aria-label="Loading topics" aria-live="polite">
             {Array.from({ length: 8 }).map((_, idx) => (
               <div
                 key={idx}
                 className="relative flex flex-col justify-end w-full rounded-[14px] min-w-[250px] sm:min-w-[280px] xl:max-w-[280px] min-h-[280px] sm:min-h-[320px] md:min-h-[350px] bg-gray-200 animate-pulse"
+                aria-hidden="true"
               >
                 <div className="relative bg-white/90 backdrop-blur-md flex flex-col rounded-[14px] gap-2 p-4 sm:p-5 md:p-7 h-[10rem] sm:h-[11rem] md:h-[13rem]">
                   <div className="h-6 bg-gray-300 rounded animate-pulse mb-2"></div>
@@ -410,9 +434,10 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
                 </div>
               </div>
             ))}
+            <div className="sr-only" aria-live="polite">Loading topics, please wait...</div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 xl:gap-10 mb-6 sm:mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 xl:gap-10 mb-6 sm:mb-8" role="region" aria-label="Available topics">
             {topicsData.map((topic, idx) => (
               <TopicCard
                 key={idx}
@@ -427,18 +452,26 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
           </div>
         )}
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 lg:gap-7">
-            <div
-              className={`button h-[45px] sm:h-[50px] rounded-lg select-none transition-all duration-150 border-b-[1px] shadow ${
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 lg:gap-7" role="group" aria-label="Action buttons">
+            <button
+              className={`button h-[45px] sm:h-[50px] rounded-lg select-none transition-all duration-150 border-b-[1px] shadow focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
                 (selectedTopic || selectedUserQuiz) && !isCreatingMeeting
                   ? "bg-orange-300 cursor-pointer active:translate-y-2 active:[box-shadow:0_0px_0_0_#f5c782,0_0px_0_0_#f5c78241] active:border-b-[0px] [box-shadow:0_10px_0_0_#f5c782,0_15px_0_0_#f5c78241] border-orange-300" 
                   : "bg-gray-300 cursor-not-allowed border-gray-300"
               }`}
-              tabIndex={0}
-              role="button"
+              disabled={!((selectedTopic || selectedUserQuiz) && !isCreatingMeeting)}
+              aria-describedby="next-button-help"
               onClick={() => {
                 if (!isCreatingMeeting) {
                   createMeeting();
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  if (!isCreatingMeeting) {
+                    createMeeting();
+                  }
                 }
               }}
             >
@@ -447,21 +480,37 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
               }`}>
                 {isCreatingMeeting ? "Creating..." : (selectedTopic || selectedUserQuiz) ? "Next" : "Select a topic first"}
               </span>
+            </button>
+            <div id="next-button-help" className="sr-only">
+              {isCreatingMeeting 
+                ? "Creating meeting, please wait..." 
+                : (selectedTopic || selectedUserQuiz) 
+                  ? "Continue to create your compete room" 
+                  : "Please select a topic or quiz first to continue"
+              }
             </div>
 
-            <div
+            <button
               className="button h-[45px] sm:h-[50px] bg-pink-300 rounded-lg cursor-pointer select-none
                 active:translate-y-2 active:[box-shadow:0_0px_0_0_#f582ed,0_0px_0_0_#f582ed41]
                 active:border-b-[0px]
                 transition-all duration-150 [box-shadow:0_10px_0_0_#f582ed,0_15px_0_0_#f582ed41]
-                border-b-[1px] border-pink-300 shadow"
-              tabIndex={0}
-              role="button"
+                border-b-[1px] border-pink-300 shadow focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2"
+              aria-describedby="create-quiz-help"
               onClick={handleNext}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleNext();
+                }
+              }}
             >
               <span className="flex flex-col justify-center items-center h-full text-gray-800 font-bold text-sm sm:text-base lg:text-lg">
                 Create your own quiz
               </span>
+            </button>
+            <div id="create-quiz-help" className="sr-only">
+              Navigate to quiz library to create your own custom quiz
             </div>
         </div>
         

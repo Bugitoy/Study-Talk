@@ -1,6 +1,9 @@
 import prisma from "@/db/prisma";
 import { botDetectionService, BotDetectionResult } from './bot-detection';
 
+// Performance optimization: Only log in development or when explicitly enabled
+const isDebugMode = process.env.NODE_ENV === 'development' || process.env.STREAM_WEBHOOK_DEBUG === 'true';
+
 // Get user information with subscription details
 export async function getUserInfo(userId: string) {
   try {
@@ -364,7 +367,9 @@ export async function listActiveCompeteRooms() {
 
 export async function endCompeteRoom(callId: string) {
   try {
-    console.log('endCompeteRoom called for callId:', callId);
+    if (isDebugMode) {
+      console.log('endCompeteRoom called for callId:', callId);
+    }
     
     // Check if room exists and is not already ended
     const room = await prisma.competeRoom.findFirst({
@@ -372,23 +377,31 @@ export async function endCompeteRoom(callId: string) {
     });
     
     if (!room) {
-      console.log('No compete room found for callId:', callId);
+      if (isDebugMode) {
+        console.log('No compete room found for callId:', callId);
+      }
       return;
     }
     
     if (room.ended) {
-      console.log('Room already ended for callId:', callId);
+      if (isDebugMode) {
+        console.log('Room already ended for callId:', callId);
+      }
       return;
     }
     
-    console.log('Ending compete room:', room.roomName, 'for callId:', callId);
+    if (isDebugMode) {
+      console.log('Ending compete room:', room.roomName, 'for callId:', callId);
+    }
     
     const result = await prisma.competeRoom.updateMany({ 
       where: { callId }, 
       data: { ended: true } 
     });
     
-    console.log('Compete room ended successfully. Updated count:', result.count);
+    if (isDebugMode) {
+      console.log('Compete room ended successfully. Updated count:', result.count);
+    }
   } catch (error) {
     console.error('Error ending compete room:', error);
   }
@@ -397,7 +410,9 @@ export async function endCompeteRoom(callId: string) {
 // Study Session functions
 export async function startStudySession(userId: string, callId: string) {
   try {
-    console.log(`startStudySession called with userId: ${userId} callId: ${callId}`);
+    if (isDebugMode) {
+      console.log(`startStudySession called with userId: ${userId} callId: ${callId}`);
+    }
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -412,11 +427,15 @@ export async function startStudySession(userId: string, callId: string) {
     });
     
     if (existingSession) {
-      console.log('Found existing session:', existingSession.id);
+      if (isDebugMode) {
+        console.log('Found existing session:', existingSession.id);
+      }
       return existingSession;
     }
     
-    console.log('Creating new study session...');
+    if (isDebugMode) {
+      console.log('Creating new study session...');
+    }
     const newSession = await prisma.studySession.create({
       data: {
         userId,
@@ -425,22 +444,26 @@ export async function startStudySession(userId: string, callId: string) {
       },
     });
     
-    console.log('Created new study session:', {
-      id: newSession.id,
-      userId: newSession.userId,
-      callId: newSession.callId,
-      joinedAt: newSession.joinedAt,
-      leftAt: newSession.leftAt,
-      duration: newSession.duration,
-      date: newSession.date,
-      createdAt: newSession.createdAt
-    });
+    if (isDebugMode) {
+      console.log('Created new study session:', {
+        id: newSession.id,
+        userId: newSession.userId,
+        callId: newSession.callId,
+        joinedAt: newSession.joinedAt,
+        leftAt: newSession.leftAt,
+        duration: newSession.duration,
+        date: newSession.date,
+        createdAt: newSession.createdAt
+      });
+    }
     
     return newSession;
   } catch (error) {
     // If it's a unique constraint violation, try to find the existing session
     if ((error as any).code === 'P2002') {
-      console.log('Duplicate session detected, finding existing session...');
+      if (isDebugMode) {
+        console.log('Duplicate session detected, finding existing session...');
+      }
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
@@ -453,7 +476,9 @@ export async function startStudySession(userId: string, callId: string) {
       });
       
       if (existingSession) {
-        console.log('Found existing session after duplicate error:', existingSession.id);
+        if (isDebugMode) {
+          console.log('Found existing session after duplicate error:', existingSession.id);
+        }
         return existingSession;
       }
     }
@@ -490,7 +515,9 @@ export async function endStudySession(userId: string, callId: string) {
 
 export async function updateStudySessionWithStreamDurationByCallId(callId: string, streamDurationSeconds: number) {
   try {
-    console.log(`Looking for session with callId: ${callId}`);
+    if (isDebugMode) {
+      console.log(`Looking for session with callId: ${callId}`);
+    }
     
     // Find any session for this call (not just active ones)
     const session = await prisma.studySession.findFirst({
@@ -499,23 +526,29 @@ export async function updateStudySessionWithStreamDurationByCallId(callId: strin
     });
     
     if (!session) {
-      console.warn('No session found for call:', callId);
-      
-      // Let's check what sessions exist for this callId
-      const allSessions = await prisma.studySession.findMany({
-        where: { callId },
-        orderBy: { joinedAt: 'desc' },
-      });
-      console.log(`Found ${allSessions.length} sessions for callId ${callId}:`, allSessions.map(s => ({ id: s.id, userId: s.userId, joinedAt: s.joinedAt, leftAt: s.leftAt, duration: s.duration })));
+      if (isDebugMode) {
+        console.warn('No session found for call:', callId);
+        
+        // Let's check what sessions exist for this callId
+        const allSessions = await prisma.studySession.findMany({
+          where: { callId },
+          orderBy: { joinedAt: 'desc' },
+        });
+        console.log(`Found ${allSessions.length} sessions for callId ${callId}:`, allSessions.map(s => ({ id: s.id, userId: s.userId, joinedAt: s.joinedAt, leftAt: s.leftAt, duration: s.duration })));
+      }
       
       return null;
     }
     
-    console.log(`Found session: ${session.id}, leftAt: ${session.leftAt}, duration: ${session.duration}`);
+    if (isDebugMode) {
+      console.log(`Found session: ${session.id}, leftAt: ${session.leftAt}, duration: ${session.duration}`);
+    }
     
     // If session already has duration, don't overwrite it
     if (session.duration !== null) {
-      console.log('Session already has duration, skipping update');
+      if (isDebugMode) {
+        console.log('Session already has duration, skipping update');
+      }
       return session;
     }
     
@@ -524,21 +557,27 @@ export async function updateStudySessionWithStreamDurationByCallId(callId: strin
     // If Stream.io duration is 0, use manual calculation
     let duration: number;
     if (streamDurationSeconds === 0) {
-      console.log('Stream.io duration is 0, using manual calculation');
+      if (isDebugMode) {
+        console.log('Stream.io duration is 0, using manual calculation');
+      }
       duration = Math.floor((leftAt.getTime() - session.joinedAt.getTime()) / (1000 * 60));
     } else {
       // Convert Stream.io duration from seconds to minutes
       duration = Math.floor(streamDurationSeconds / 60);
     }
     
-    console.log(`Session duration: ${duration} minutes (Stream.io: ${streamDurationSeconds}s, Manual: ${Math.floor((leftAt.getTime() - session.joinedAt.getTime()) / (1000 * 60))}m)`);
+    if (isDebugMode) {
+      console.log(`Session duration: ${duration} minutes (Stream.io: ${streamDurationSeconds}s, Manual: ${Math.floor((leftAt.getTime() - session.joinedAt.getTime()) / (1000 * 60))}m)`);
+    }
     
     const updatedSession = await prisma.studySession.update({
       where: { id: session.id },
       data: { leftAt, duration },
     });
     
-    console.log('Session updated successfully:', { id: updatedSession.id, duration: updatedSession.duration, leftAt: updatedSession.leftAt });
+    if (isDebugMode) {
+      console.log('Session updated successfully:', { id: updatedSession.id, duration: updatedSession.duration, leftAt: updatedSession.leftAt });
+    }
     return updatedSession;
   } catch (error) {
     console.error('Error updating study session with Stream duration by callId:', error);
@@ -548,7 +587,9 @@ export async function updateStudySessionWithStreamDurationByCallId(callId: strin
 
 export async function updateStudySessionWithStreamDuration(userId: string, callId: string, streamDurationSeconds: number) {
   try {
-    console.log(`Looking for active session with userId: ${userId}, callId: ${callId}`);
+    if (isDebugMode) {
+      console.log(`Looking for active session with userId: ${userId}, callId: ${callId}`);
+    }
     
     // First try to find any session that hasn't been updated with duration yet
     let session = await prisma.studySession.findFirst({
@@ -569,23 +610,29 @@ export async function updateStudySessionWithStreamDuration(userId: string, callI
     }
     
     if (!session) {
-      console.warn('No session found for user:', userId, 'call:', callId);
-      
-      // Let's check what sessions exist for this user and callId
-      const allSessions = await prisma.studySession.findMany({
-        where: { userId, callId },
-        orderBy: { joinedAt: 'desc' },
-      });
-      console.log(`Found ${allSessions.length} sessions for userId ${userId} and callId ${callId}:`, allSessions.map(s => ({ id: s.id, joinedAt: s.joinedAt, leftAt: s.leftAt, duration: s.duration })));
+      if (isDebugMode) {
+        console.warn('No session found for user:', userId, 'call:', callId);
+        
+        // Let's check what sessions exist for this user and callId
+        const allSessions = await prisma.studySession.findMany({
+          where: { userId, callId },
+          orderBy: { joinedAt: 'desc' },
+        });
+        console.log(`Found ${allSessions.length} sessions for userId ${userId} and callId ${callId}:`, allSessions.map(s => ({ id: s.id, joinedAt: s.joinedAt, leftAt: s.leftAt, duration: s.duration })));
+      }
       
       return null;
     }
     
-    console.log(`Found session: ${session.id}, joinedAt: ${session.joinedAt}, leftAt: ${session.leftAt}, duration: ${session.duration}`);
+    if (isDebugMode) {
+      console.log(`Found session: ${session.id}, joinedAt: ${session.joinedAt}, leftAt: ${session.leftAt}, duration: ${session.duration}`);
+    }
     
     // If session already has duration, don't overwrite it
     if (session.duration !== null) {
-      console.log('Session already has duration, skipping update');
+      if (isDebugMode) {
+        console.log('Session already has duration, skipping update');
+      }
       return session;
     }
     
@@ -594,21 +641,27 @@ export async function updateStudySessionWithStreamDuration(userId: string, callI
     // If Stream.io duration is 0, use manual calculation
     let duration: number;
     if (streamDurationSeconds === 0) {
-      console.log('Stream.io duration is 0, using manual calculation');
+      if (isDebugMode) {
+        console.log('Stream.io duration is 0, using manual calculation');
+      }
       duration = Math.floor((leftAt.getTime() - session.joinedAt.getTime()) / (1000 * 60));
     } else {
       // Convert Stream.io duration from seconds to minutes
       duration = Math.floor(streamDurationSeconds / 60);
     }
     
-    console.log(`Session duration: ${duration} minutes (Stream.io: ${streamDurationSeconds}s, Manual: ${Math.floor((leftAt.getTime() - session.joinedAt.getTime()) / (1000 * 60))}m)`);
+    if (isDebugMode) {
+      console.log(`Session duration: ${duration} minutes (Stream.io: ${streamDurationSeconds}s, Manual: ${Math.floor((leftAt.getTime() - session.joinedAt.getTime()) / (1000 * 60))}m)`);
+    }
     
     const updatedSession = await prisma.studySession.update({
       where: { id: session.id },
       data: { leftAt, duration },
     });
     
-    console.log('Session updated successfully:', { id: updatedSession.id, duration: updatedSession.duration, leftAt: updatedSession.leftAt });
+    if (isDebugMode) {
+      console.log('Session updated successfully:', { id: updatedSession.id, duration: updatedSession.duration, leftAt: updatedSession.leftAt });
+    }
     return updatedSession;
   } catch (error) {
     console.error('Error updating study session with Stream duration:', error);

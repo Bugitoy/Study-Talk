@@ -3,6 +3,9 @@ import { StreamClient } from '@stream-io/node-sdk';
 const apiKey = process.env.NEXT_PUBLIC_STREAM_API_KEY;
 const apiSecret = process.env.STREAM_SECRET_KEY;
 
+// Performance optimization: Only log in development or when explicitly enabled
+const isDebugMode = process.env.NODE_ENV === 'development' || process.env.STREAM_WEBHOOK_DEBUG === 'true';
+
 /**
  * Get call duration from Stream.io API
  * @param callId - The Stream.io call ID
@@ -22,7 +25,9 @@ export async function getStreamCallDuration(callId: string): Promise<number> {
     });
 
     if (calls.length === 0) {
-      console.warn('Call not found in Stream.io:', callId);
+      if (isDebugMode) {
+        console.warn('Call not found in Stream.io:', callId);
+      }
       return 0;
     }
 
@@ -46,9 +51,9 @@ export async function getStreamCallDuration(callId: string): Promise<number> {
       duration = Math.floor((endTime - startTime) / 1000);
     }
     
-    console.log(`Stream.io call duration for ${callId}:`, duration, 'seconds');
-    console.log('Call object keys:', Object.keys(call.call));
-    console.log('Call duration property:', (call.call as any).duration);
+    if (isDebugMode) {
+      console.log(`Stream.io call duration for ${callId}:`, duration, 'seconds');
+    }
     
     return duration;
   } catch (error) {
@@ -58,12 +63,12 @@ export async function getStreamCallDuration(callId: string): Promise<number> {
 }
 
 /**
- * Convert Stream.io duration (seconds) to minutes
- * @param durationSeconds - Duration in seconds from Stream.io
+ * Convert Stream.io duration from seconds to minutes
+ * @param seconds - Duration in seconds
  * @returns Duration in minutes
  */
-export function convertStreamDurationToMinutes(durationSeconds: number): number {
-  return Math.floor(durationSeconds / 60);
+export function convertStreamDurationToMinutes(seconds: number): number {
+  return Math.floor(seconds / 60);
 }
 
 /**
@@ -106,43 +111,57 @@ export async function getStreamCallDetails(callId: string) {
 }
 
 /**
- * Check if a call is still active in Stream.io
+ * Check if a Stream.io call is still active
  * @param callId - The Stream.io call ID
  * @returns True if call is active, false otherwise
  */
 export async function isStreamCallActive(callId: string): Promise<boolean> {
-  const details = await getStreamCallDetails(callId);
-  if (!details) return false;
-  
-  // Check if call has ended
-  return !details.call.ended_at;
+  if (!apiKey || !apiSecret) {
+    return false;
+  }
+
+  try {
+    const client = new StreamClient(apiKey, apiSecret);
+    const { calls } = await client.video.queryCalls({
+      filter_conditions: { id: callId },
+      limit: 1,
+    });
+
+    if (calls.length === 0) {
+      return false;
+    }
+
+    const call = calls[0];
+    return !(call.call as any).ended_at;
+  } catch (error) {
+    console.error('Error checking if call is active:', error);
+    return false;
+  }
 }
 
 /**
- * Get all active calls for a user from Stream.io
+ * Get all active calls for a user
  * @param userId - The user ID
  * @returns Array of active call IDs
  */
 export async function getUserActiveCalls(userId: string): Promise<string[]> {
   if (!apiKey || !apiSecret) {
-    console.warn('Stream credentials not configured');
     return [];
   }
 
   try {
     const client = new StreamClient(apiKey, apiSecret);
     const { calls } = await client.video.queryCalls({
-      filter_conditions: {
-        'members.user_id': userId,
+      filter_conditions: { 
+        'created_by.id': userId,
+        'ended_at': null 
       },
-      limit: 50,
+      limit: 10,
     });
 
-    return calls
-      .filter(call => !call.call.ended_at)
-      .map(call => call.call.id as string);
+    return calls.map(call => call.call.id);
   } catch (error) {
-    console.error('Error fetching user active calls from Stream.io:', error);
+    console.error('Error fetching user active calls:', error);
     return [];
   }
 } 
