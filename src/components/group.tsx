@@ -6,9 +6,10 @@ interface GroupCardProps {
   profilePics: string[];
   onJoin: () => void;
   color?: string; // Tailwind class for background color
+  isAuthenticated?: boolean;
 }
 
-const GroupCard: React.FC<GroupCardProps> = ({ title, peopleCount, profilePics, onJoin, color }) => {
+const GroupCard: React.FC<GroupCardProps> = ({ title, peopleCount, profilePics, onJoin, color, isAuthenticated = true }) => {
   // Show up to 5 profile pics, rest as +N
   const maxAvatars = 5;
   const extraCount = profilePics.length > maxAvatars ? profilePics.length - maxAvatars : 0;
@@ -38,7 +39,12 @@ const GroupCard: React.FC<GroupCardProps> = ({ title, peopleCount, profilePics, 
       </div>
       <button
         onClick={onJoin}
-        className="w-full bg-fuchsia-100 hover:bg-fuchsia-200 text-gray-800 font-semibold py-1.5 sm:py-2 rounded-lg transition-colors shadow text-sm sm:text-base"
+        disabled={!isAuthenticated}
+        className={`w-full font-semibold py-1.5 sm:py-2 rounded-lg transition-colors shadow text-sm sm:text-base ${
+          isAuthenticated 
+            ? 'bg-fuchsia-100 hover:bg-fuchsia-200 text-gray-800 cursor-pointer' 
+            : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+        }`}
       >
         Join
       </button>

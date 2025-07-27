@@ -3,11 +3,11 @@ import prisma from '@/db/prisma';
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { reporterId, reason, reportType } = await req.json();
-    const confessionId = params.id;
+    const { id: confessionId } = await params;
     
     if (!reporterId || !reason || !reportType || !confessionId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });

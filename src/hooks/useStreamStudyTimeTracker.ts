@@ -6,6 +6,7 @@ export function useStreamStudyTimeTracker(callId?: string) {
   const { user, isAuthenticated, isLoading } = useKindeBrowserClient();
   const [dailyHours, setDailyHours] = useState(0);
   const [isTracking, setIsTracking] = useState(false);
+  const [isLoadingHours, setIsLoadingHours] = useState(false);
   const sessionStartedRef = useRef(false);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const retryCountRef = useRef(0);
@@ -13,7 +14,7 @@ export function useStreamStudyTimeTracker(callId?: string) {
   const authStableRef = useRef(false);
   
   // Store current auth state in refs to avoid closure issues
-  const currentUserRef = useRef(user);
+  const currentUserRef = useRef(user || null);
   const currentIsAuthenticatedRef = useRef(isAuthenticated);
   const currentIsLoadingRef = useRef(isLoading);
 
@@ -119,6 +120,7 @@ export function useStreamStudyTimeTracker(callId?: string) {
     if (!user?.id) return;
     
     try {
+      setIsLoadingHours(true);
       const response = await fetch(`/api/study-sessions/stream-duration?userId=${user.id}`);
       if (response.ok) {
         const data = await response.json();
@@ -126,15 +128,17 @@ export function useStreamStudyTimeTracker(callId?: string) {
       }
     } catch (error) {
       console.error('Failed to fetch daily hours:', error);
+    } finally {
+      setIsLoadingHours(false);
     }
   };
 
   // Load daily hours on mount and user change
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && isAuthenticated) {
       fetchDailyHours();
     }
-  }, [user?.id]);
+  }, [user?.id, isAuthenticated]);
 
   // Auto-refresh daily hours every 5 minutes while tracking
   useEffect(() => {
@@ -157,7 +161,7 @@ export function useStreamStudyTimeTracker(callId?: string) {
       // Reset retry count and auth refs
       retryCountRef.current = 0;
       authStableRef.current = false;
-      currentUserRef.current = undefined;
+      currentUserRef.current = null;
       currentIsAuthenticatedRef.current = false;
       currentIsLoadingRef.current = true;
     };
@@ -166,6 +170,7 @@ export function useStreamStudyTimeTracker(callId?: string) {
   return {
     dailyHours,
     isTracking,
+    isLoadingHours,
     startTracking,
     endTracking,
     refreshDailyHours: fetchDailyHours,

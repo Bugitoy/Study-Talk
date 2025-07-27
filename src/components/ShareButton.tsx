@@ -69,9 +69,10 @@ export default function ShareButton({
         size={size}
         className={className}
         onClick={() => setShowShareDialog(true)}
+        title="Share"
       >
-        <Share2 className="w-4 h-4" />
-        Share
+        <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
+        <span className="hidden md:inline">Share</span>
       </Button>
 
       <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>

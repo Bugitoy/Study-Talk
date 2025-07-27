@@ -107,7 +107,7 @@ export default function UniversityConfessionsPage() {
       {posts.map((post, index) => (
         <div
           key={post.id}
-          className="rounded-[12px] border border-gray-300 bg-white p-4 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out transform hover:scale-[1.01] lg:p-6 relative"
+          className="rounded-[12px] border border-gray-300 bg-white p-3 sm:p-4 lg:p-6 shadow-sm hover:shadow-md transition-all duration-300 ease-in-out transform hover:scale-[1.01] relative"
           style={{ 
             animation: `fadeInUp 0.5s ease-out ${index * 0.1}s both`,
           }}
@@ -124,21 +124,21 @@ export default function UniversityConfessionsPage() {
           )}
 
           {/* Header */}
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
             {post.author?.image && !post.isAnonymous ? (
               <Image
                 src={post.author.image}
                 alt={post.author.name || "User"}
                 width={40}
                 height={40}
-                className="rounded-[8px] object-cover"
+                className="rounded-[8px] object-cover w-8 h-8 sm:w-10 sm:h-10"
               />
             ) : (
-              <span className="w-10 h-10 flex items-center justify-center bg-gray-200 rounded-[8px]">
-                <UserIcon className="w-6 h-6 text-gray-500" />
+              <span className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-gray-200 rounded-[8px]">
+                <UserIcon className="w-4 h-4 sm:w-6 sm:h-6 text-gray-500" />
               </span>
             )}
-            <div className="text-sm lg:text-base">
+            <div className="text-xs sm:text-sm lg:text-base">
               <p className="font-semibold text-gray-800">
                 Posted by {post.isAnonymous ? "Anonymous" : (post.author?.name || "Unknown")}
               </p>
@@ -150,20 +150,21 @@ export default function UniversityConfessionsPage() {
           
           {/* Title */}
           <h3 
-            className="font-semibold text-lg text-gray-900 mb-2 cursor-pointer hover:text-blue-600 transition-colors"
+            className="font-semibold text-base sm:text-lg text-gray-900 mb-2 cursor-pointer hover:text-blue-600 transition-colors"
             onClick={() => router.push(`/meetups/confessions/post/${post.id}`)}
           >
             {post.title}
           </h3>
           
           {/* Content */}
-          <p className="text-gray-700 whitespace-pre-line mb-4 line-clamp-3 lg:line-clamp-none">
+          <p className="text-gray-700 whitespace-pre-line mb-3 sm:mb-4 line-clamp-3 lg:line-clamp-none text-sm sm:text-base">
             {post.content}
           </p>
           
           {/* Combined Stats & Actions */}
-          <div className="flex items-center flex-wrap gap-6 text-sm text-gray-600 mt-4">
-            <div className="flex items-center gap-1">
+          <div className="flex items-center justify-between gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600 mt-3 sm:mt-4">
+            {/* Action Buttons */}
+            <div className="flex items-center justify-start flex-1 gap-3 sm:gap-4">
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
@@ -174,12 +175,13 @@ export default function UniversityConfessionsPage() {
                     ? 'text-green-600 font-semibold' 
                     : 'text-gray-600 hover:text-green-600'
                 }`}
+                title={`${post.believeCount} Believers`}
               >
-                <ThumbsUp className={`w-4 h-4 ${post.userVote === 'BELIEVE' ? 'fill-current' : ''}`} />
-                {post.believeCount} Believers
+                <ThumbsUp className={`w-4 h-4 sm:w-5 sm:h-5 ${post.userVote === 'BELIEVE' ? 'fill-current' : ''}`} />
+                <span className="hidden sm:inline">{post.believeCount}</span>
+                <span className="hidden md:inline"> Believers</span>
               </button>
-            </div>
-            <div className="flex items-center gap-1">
+              
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
@@ -190,12 +192,13 @@ export default function UniversityConfessionsPage() {
                     ? 'text-red-600 font-semibold' 
                     : 'text-gray-600 hover:text-red-600'
                 }`}
+                title={`${post.doubtCount} Non Believers`}
               >
-                <ThumbsDown className={`w-4 h-4 ${post.userVote === 'DOUBT' ? 'fill-current' : ''}`} />
-                {post.doubtCount} Non Believers
+                <ThumbsDown className={`w-4 h-4 sm:w-5 sm:h-5 ${post.userVote === 'DOUBT' ? 'fill-current' : ''}`} />
+                <span className="hidden sm:inline">{post.doubtCount}</span>
+                <span className="hidden md:inline"> Non Believers</span>
               </button>
-            </div>
-            <div className="flex items-center gap-1">
+              
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -206,31 +209,39 @@ export default function UniversityConfessionsPage() {
                     ? 'text-blue-600 font-semibold'
                     : 'text-gray-600 hover:text-blue-600'
                 }`}
+                title={`${post.commentCount} Comments`}
               >
-                <MessageCircle className="w-4 h-4" /> {post.commentCount} Comments
+                <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="hidden sm:inline">{post.commentCount}</span>
+                <span className="hidden md:inline"> Comments</span>
               </button>
-            </div>
-            <ShareButton 
-              confessionId={post.id}
-              confessionTitle={post.title}
-              variant="ghost"
-              size="sm"
-              className="flex items-center gap-1 cursor-pointer hover:text-gray-800"
-            />
-            <div
-              className="flex items-center gap-1 cursor-pointer hover:text-gray-800"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleToggleSave(post.id);
-              }}
-            >
-              <Bookmark
-                className={`w-4 h-4 ${isConfessionSaved(post.id) ? 'text-yellow-400' : ''}`}
-                fill={isConfessionSaved(post.id) ? '#FACC15' : 'none'}
+              
+              <ShareButton 
+                confessionId={post.id}
+                confessionTitle={post.title}
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-1 cursor-pointer hover:text-gray-800"
               />
-              {isConfessionSaved(post.id) ? 'Saved' : 'Save'}
+              
+              <div
+                className="flex items-center gap-1 cursor-pointer hover:text-gray-800"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggleSave(post.id);
+                }}
+                title={isConfessionSaved(post.id) ? 'Saved' : 'Save'}
+              >
+                <Bookmark
+                  className={`w-4 h-4 sm:w-5 sm:h-5 ${isConfessionSaved(post.id) ? 'text-yellow-400' : ''}`}
+                  fill={isConfessionSaved(post.id) ? '#FACC15' : 'none'}
+                />
+                <span className="hidden md:inline">{isConfessionSaved(post.id) ? 'Saved' : 'Save'}</span>
+              </div>
             </div>
-            <div className="ml-auto text-gray-500">
+            
+            {/* Timestamp */}
+            <div className="text-gray-500 text-xs sm:text-sm">
               {formatTimeAgo(post.createdAt)}
             </div>
           </div>
@@ -241,6 +252,7 @@ export default function UniversityConfessionsPage() {
               isVisible={openCommentSections.has(post.id)}
               onClose={() => toggleCommentSection(post.id)}
               updateCommentCount={updateCommentCount}
+              user={user}
             />
           )}
         </div>
@@ -250,17 +262,17 @@ export default function UniversityConfessionsPage() {
 
   return (
     <NextLayout>
-      <div className="max-w-5xl mx-auto w-full py-8 px-4">
+      <div className="max-w-5xl mx-auto w-full py-4 sm:py-8 px-4">
         {/* Header with Back Button */}
-        <div className="flex items-center gap-4 mb-6 relative">
+        <div className="flex items-center gap-2 sm:gap-4 mb-4 sm:mb-6 relative">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
+            className="flex items-center gap-1 sm:gap-2 text-gray-600 hover:text-gray-800 transition-colors"
           >
-            <ArrowLeft className="w-5 h-5" />
-            Back
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">Back</span>
           </button>
-          <h1 className="text-6xl font-extrabold text-gray-800">
+          <h1 className="text-2xl sm:text-4xl lg:text-6xl font-extrabold text-gray-800">
             {universityName} Confessions
           </h1>
           {/* New posts banner - DISABLED */}
@@ -273,19 +285,19 @@ export default function UniversityConfessionsPage() {
         </div>
 
         {/* Controls */}
-        <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-4">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search confessions..."
-            className="flex-1 min-w-[200px] px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none text-lg shadow-sm transition-colors"
+            className="flex-1 min-w-0 px-3 sm:px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none text-base sm:text-lg shadow-sm transition-colors"
           />
           
           <div className="flex gap-2">
             <button
               onClick={() => setSortBy('recent')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base ${
                 sortBy === 'recent'
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -295,7 +307,7 @@ export default function UniversityConfessionsPage() {
             </button>
             <button
               onClick={() => setSortBy('hot')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base ${
                 sortBy === 'hot'
                   ? 'bg-red-500 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'

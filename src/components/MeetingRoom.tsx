@@ -32,6 +32,68 @@ import {
 
 type CallLayoutType = 'grid' | 'speaker-left' | 'speaker-right';
 
+// Security configuration
+const SECURITY_CONFIG = {
+  MAX_REPORT_LENGTH: 1000,
+  MAX_BAN_REASON_LENGTH: 500,
+  MAX_OTHER_NAME_LENGTH: 100,
+  REPORT_RATE_LIMIT: {
+    MAX_ATTEMPTS: 30,
+    WINDOW_MS: 60000, // 1 minute
+  },
+  BAN_RATE_LIMIT: {
+    MAX_ATTEMPTS: 25,
+    WINDOW_MS: 300000, // 5 minutes
+  },
+  FORBIDDEN_CHARS: /[<>\"'&]/g,
+  ALLOWED_CHARS: /^[a-zA-Z0-9\s\-_.,!?()@#$%*+=:;()[\]{}|\\/]+$/,
+};
+
+// Input sanitization utility
+const sanitizeInput = (input: string, maxLength: number): string => {
+  if (!input || typeof input !== 'string') return '';
+  
+  // Remove forbidden characters
+  let sanitized = input.replace(SECURITY_CONFIG.FORBIDDEN_CHARS, '');
+  
+  // Normalize whitespace
+  sanitized = sanitized.replace(/\s+/g, ' ').trim();
+  
+  // Truncate to max length
+  if (sanitized.length > maxLength) {
+    sanitized = sanitized.substring(0, maxLength);
+  }
+  
+  return sanitized;
+};
+
+// Rate limiting utility
+const createRateLimiter = (config: typeof SECURITY_CONFIG.REPORT_RATE_LIMIT) => {
+  let attempts = 0;
+  let lastReset = Date.now();
+  
+  return () => {
+    const now = Date.now();
+    if (now - lastReset > config.WINDOW_MS) {
+      attempts = 0;
+      lastReset = now;
+    }
+    
+    if (attempts >= config.MAX_ATTEMPTS) {
+      return false;
+    }
+    
+    attempts++;
+    return true;
+  };
+};
+
+// Audit logging utility - DISABLED for performance
+const logSecurityEvent = async (event: string, data: any) => {
+  // Audit logging disabled to prevent performance impact
+  // In production, this would be re-enabled with proper logging service
+};
+
 const goals = [
   { key: 'join', label: 'Join', icon: SquarePlus },
   { key: 'befriend', label: 'Make a friend', icon: Handshake },
@@ -40,22 +102,26 @@ const goals = [
 ];
 
 const MeetingGoalsBar = ({ completedGoals = [] }: { completedGoals: string[] }) => (
-  <div className="w-full max-w-3xl mx-auto flex flex-col items-center">
+  <div className="w-full max-w-3xl mx-auto flex flex-col items-center" role="progressbar" aria-label="Meeting goals progress" aria-valuenow={completedGoals.length} aria-valuemin={0} aria-valuemax={4}>
     <div className="flex items-center w-full justify-between">
       {goals.map((goal, idx) => {
         const Icon = goal.icon;
+        const isCompleted = completedGoals.includes(goal.key);
         return (
           <React.Fragment key={goal.key}>
             <div className="flex flex-col items-center w-16 sm:w-24">
-              <div className={`w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center z-10 bg-white rounded-[8px] border-2 ${completedGoals.includes(goal.key) ? 'border-yellow-400' : 'border-gray-300'}`}>
-                <Icon className={`w-5 h-5 sm:w-8 sm:h-8 ${completedGoals.includes(goal.key) ? 'text-yellow-500' : 'text-gray-400'}`} />
+              <div 
+                className={`w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center z-10 bg-white rounded-[8px] border-2 ${isCompleted ? 'border-yellow-400' : 'border-gray-300'}`}
+                aria-label={`${goal.label} goal ${isCompleted ? 'completed' : 'not completed'}`}
+              >
+                <Icon className={`w-5 h-5 sm:w-8 sm:h-8 ${isCompleted ? 'text-yellow-500' : 'text-gray-400'}`} />
               </div>
               <span className="mt-1 sm:mt-2 text-[10px] sm:text-xs text-[#19232d] font-medium text-center w-full">
                 {goal.label}
               </span>
             </div>
             {idx < goals.length - 1 && (
-              <div className="flex-1 h-0.5 bg-gray-300 mx-1" />
+              <div className="flex-1 h-0.5 bg-gray-300 mx-1" aria-hidden="true" />
             )}
           </React.Fragment>
         );
@@ -66,8 +132,6 @@ const MeetingGoalsBar = ({ completedGoals = [] }: { completedGoals: string[] }) 
 
 const MeetingRoom = () => {
   const searchParams = useSearchParams();
-  // Remove personal room logic
-  // const isPersonalRoom = !!searchParams.get('personal');
   const groupName = searchParams.get('name') || 'Study Group';
   const router = useRouter();
   const call = useCall();
@@ -86,6 +150,12 @@ const MeetingRoom = () => {
   const [selectedBanUserId, setSelectedBanUserId] = useState('');
   const [banReason, setBanReason] = useState('');
   const [isCheckingAccess, setIsCheckingAccess] = useState(true);
+  const [showBanConfirmation, setShowBanConfirmation] = useState(false);
+  const [banConfirmationData, setBanConfirmationData] = useState<any>(null);
+
+  // Rate limiters
+  const reportRateLimiter = createRateLimiter(SECURITY_CONFIG.REPORT_RATE_LIMIT);
+  const banRateLimiter = createRateLimiter(SECURITY_CONFIG.BAN_RATE_LIMIT);
 
   // for more detail about types of CallingState see: https://getstream.io/video/docs/react/ui-cookbook/ringing-call/#incoming-call-panel
   const callingState = useCallCallingState();
@@ -288,12 +358,302 @@ const MeetingRoom = () => {
     { value: 'OTHER', label: 'Other' },
   ];
 
+  // Handle report submission with security measures
+  const handleReportSubmit = async () => {
+    // Rate limiting check
+    if (!reportRateLimiter()) {
+      toast({
+        title: "Rate Limited",
+        description: "Too many report attempts. Please wait before trying again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const reporterId = call?.state.localParticipant?.userId;
+    const reportedId = selectedReportedId === 'other' ? otherReportedName : selectedReportedId;
+    const callId = call?.id;
+
+    // Input validation
+    if (!reporterId || !reportedId || !callId || !reportReason.trim()) {
+      toast({
+        title: "Error",
+        description: "Please fill all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Sanitize inputs
+    const sanitizedReason = sanitizeInput(reportReason, SECURITY_CONFIG.MAX_REPORT_LENGTH);
+    const sanitizedReportedId = selectedReportedId === 'other' 
+      ? sanitizeInput(otherReportedName, SECURITY_CONFIG.MAX_OTHER_NAME_LENGTH)
+      : reportedId;
+
+    // Validate sanitized input
+    if (!sanitizedReason.trim()) {
+      toast({
+        title: "Error",
+        description: "Please provide a valid description.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Log security event (disabled for performance)
+      // await logSecurityEvent('report_submitted', {
+      //   reporterId,
+      //   reportedId: sanitizedReportedId,
+      //   callId,
+      //   reportType,
+      //   reasonLength: sanitizedReason.length,
+      // });
+
+      const res = await fetch('/api/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          reporterId, 
+          reportedId: sanitizedReportedId, 
+          callId, 
+          reason: sanitizedReason, 
+          reportType 
+        }),
+      });
+
+      if (res.ok) {
+        toast({
+          title: "Success",
+          description: "Report submitted successfully!",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to submit report.",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to submit report.",
+        variant: "destructive",
+      });
+    }
+
+    // Reset form
+    setShowReportDialog(false);
+    setReportReason('');
+    setSelectedReportedId('');
+    setOtherReportedName('');
+    setReportType('INAPPROPRIATE_BEHAVIOR');
+  };
+
+  // Handle ban submission with security measures
+  const handleBanSubmit = async (confirmedData?: any) => {
+    const data = confirmedData || banConfirmationData;
+    
+    // Rate limiting check
+    if (!banRateLimiter()) {
+      toast({
+        title: "Rate Limited",
+        description: "Too many ban attempts. Please wait before trying again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!data?.selectedBanUserId || !call?.id) {
+      toast({
+        title: "Error",
+        description: "Please select a user to ban.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Sanitize ban reason
+    const sanitizedBanReason = sanitizeInput(data.banReason, SECURITY_CONFIG.MAX_BAN_REASON_LENGTH);
+
+    try {
+      // Log security event (disabled for performance)
+      // await logSecurityEvent('ban_submitted', {
+      //   hostId: currentUserId,
+      //   bannedUserId: data.selectedBanUserId,
+      //   callId: call.id,
+      //   reasonLength: sanitizedBanReason.length,
+      // });
+
+      const res = await fetch('/api/room/ban', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userId: data.selectedBanUserId, 
+          callId: call.id,
+          hostId: currentUserId,
+          reason: sanitizedBanReason.trim() || 'Banned by host'
+        }),
+      });
+
+      if (res.ok) {
+        toast({
+          title: "Success",
+          description: "User banned and removed from room immediately!",
+        });
+        
+        // Also call the force remove endpoint as an additional measure
+        try {
+          const forceRemoveRes = await fetch('/api/room/force-remove', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: data.selectedBanUserId, callId: call.id }),
+          });
+          
+          if (forceRemoveRes.ok) {
+            const forceRemoveData = await forceRemoveRes.json();
+          }
+        } catch (forceRemoveError) {
+          console.error('Failed to call force remove:', forceRemoveError);
+        }
+        
+        // Force a refresh of call participants to update the UI
+        if (call) {
+          try {
+            // Try to force the user to leave by updating call state
+            await call.update({
+              custom: { 
+                ...call.state.custom, 
+                bannedUser: data.selectedBanUserId,
+                banTimestamp: Date.now()
+              }
+            });
+            
+            // Also try to remove the user directly from the call state
+            const participants = call.state.participants || [];
+            const targetParticipant = participants.find((p: any) => 
+              (p.userId || p.user?.id) === data.selectedBanUserId
+            );
+            
+            if (targetParticipant) {
+              // Try to force a participant list refresh
+              setTimeout(() => {
+                call.update({ 
+                  custom: { 
+                    ...call.state.custom, 
+                    forceRefresh: Date.now(),
+                    bannedUser: data.selectedBanUserId
+                  } 
+                });
+              }, 500);
+            }
+            
+            // Note: We don't end the call as it would remove all users
+            // Instead, we rely on the webhook to prevent banned users from rejoining
+            
+            // Set up continuous monitoring to ensure user is removed
+            const monitorInterval = setInterval(async () => {
+              try {
+                const participants = call.state.participants || [];
+                const bannedUserStillInCall = participants.some((p: any) => 
+                  (p.userId || p.user?.id) === data.selectedBanUserId
+                );
+                
+                if (bannedUserStillInCall) {
+                  // Call force remove endpoint
+                  const forceRemoveRes = await fetch('/api/room/force-remove', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: data.selectedBanUserId, callId: call.id }),
+                  });
+                  
+                  if (forceRemoveRes.ok) {
+                    const forceRemoveData = await forceRemoveRes.json();
+                  }
+                } else {
+                  clearInterval(monitorInterval);
+                }
+              } catch (monitorError) {
+                console.error('Failed to monitor user removal:', monitorError);
+              }
+            }, 5000); // Check every 5 seconds
+            
+            // Stop monitoring after 30 seconds
+            setTimeout(() => {
+              clearInterval(monitorInterval);
+            }, 30000);
+            
+            // Check if the banned user is still in the call after 3 seconds
+            setTimeout(async () => {
+              try {
+                const participants = call.state.participants || [];
+                const bannedUserStillInCall = participants.some((p: any) => 
+                  (p.userId || p.user?.id) === data.selectedBanUserId
+                );
+                
+                if (bannedUserStillInCall) {
+                  // Call the force remove endpoint again
+                  const forceRemoveRes = await fetch('/api/room/force-remove', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: data.selectedBanUserId, callId: call.id }),
+                  });
+                  
+                  if (forceRemoveRes.ok) {
+                    const forceRemoveData = await forceRemoveRes.json();
+                  }
+                  
+                  // Additional attempt: try to force the user to leave by updating call state
+                  try {
+                    await call.update({
+                      custom: { 
+                        ...call.state.custom, 
+                        forceUserLeave: data.selectedBanUserId,
+                        forceLeaveTimestamp: Date.now()
+                      }
+                    });
+                  } catch (updateError) {
+                    console.error('Failed to force call update:', updateError);
+                  }
+                }
+              } catch (checkError) {
+                console.error('Failed to check if banned user is still in call:', checkError);
+              }
+            }, 3000);
+            
+          } catch (updateError) {
+            console.error('Failed to update call after ban:', updateError);
+          }
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to ban user from room.",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to ban user from room.",
+        variant: "destructive",
+      });
+    }
+
+    // Reset form
+    setShowBanDialog(false);
+    setShowBanConfirmation(false);
+    setSelectedBanUserId('');
+    setBanReason('');
+    setBanConfirmationData(null);
+  };
+
   return (
     <>
       {callingState !== CallingState.JOINED || isCheckingAccess ? (
         <Loader />
       ) : (
-    <section className="relative h-screen w-full overflow-hidden pt-4 text-white">
+    <section className="relative h-screen w-full overflow-hidden pt-4 text-white" role="main" aria-label="Study group meeting room">
       {/* Overlay: Group name title and MeetingGoalsBar */}
       <div className="absolute top-0 left-0 w-full flex flex-col items-center z-20 p-3 sm:p-6 pointer-events-none">
         <div className="backdrop-blur-sm rounded-xl p-3 sm:p-6 shadow-md pointer-events-auto rounded-[8px]">
@@ -322,6 +682,7 @@ const MeetingRoom = () => {
           <div 
             className="fixed inset-0 bg-black bg-opacity-50 z-40"
             onClick={() => setShowParticipants(false)}
+            aria-hidden="true"
           />
         )}
         
@@ -343,7 +704,7 @@ const MeetingRoom = () => {
         />
       </div>
       {/* video layout and call controls */}
-      <div className="fixed bottom-0 left-0 right-0 rounded-t-xl flex w-full items-center justify-center gap-3 sm:gap-5 flex-nowrap sm:flex-wrap p-2 sm:p-4 bg-black/20 backdrop-blur-sm">
+      <div className="fixed bottom-0 left-0 right-0 rounded-t-xl flex w-full items-center justify-center gap-3 sm:gap-5 flex-nowrap sm:flex-wrap p-2 sm:p-4 bg-black/20 backdrop-blur-sm" role="toolbar" aria-label="Meeting controls">
          <StudyCallControls
           onLeave={async () => {
             await endTracking();
@@ -357,25 +718,50 @@ const MeetingRoom = () => {
         <div className="hidden sm:block">
           <CallStatsButton />
         </div>
-        <button onClick={() => setShowParticipants((prev) => !prev)}>
+        <button 
+          onClick={() => setShowParticipants((prev) => !prev)}
+          aria-label={showParticipants ? "Hide participants list" : "Show participants list"}
+          aria-pressed={showParticipants}
+          aria-describedby="participants-help"
+        >
           <div className="cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-[#4c535b]">
             <Users size={16} className="sm:w-5 text-white" />
           </div>
         </button>
+        <div id="participants-help" className="sr-only">
+          Click to view or hide the list of participants in this meeting
+        </div>
+        
         {/* Report Button */}
-        <button onClick={() => setShowReportDialog(true)}>
+        <button 
+          onClick={() => setShowReportDialog(true)}
+          aria-label="Report a participant"
+          aria-describedby="report-help"
+        >
           <div className="cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-red-600">
             <Flag size={16} className="sm:w-5 text-white" />
           </div>
         </button>
+        <div id="report-help" className="sr-only">
+          Click to report inappropriate behavior by a participant
+        </div>
         
         {/* Ban User Button (only for host) */}
         {isHost && (
-          <button onClick={() => setShowBanDialog(true)}>
-            <div className="cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-red-600">
-              <Shield size={16} className="sm:w-5 text-white" />
+          <>
+            <button 
+              onClick={() => setShowBanDialog(true)}
+              aria-label="Ban a participant from the room"
+              aria-describedby="ban-help"
+            >
+              <div className="cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-red-600">
+                <Shield size={16} className="sm:w-5 text-white" />
+              </div>
+            </button>
+            <div id="ban-help" className="sr-only">
+              Click to ban a participant from this room (host only)
             </div>
-          </button>
+          </>
         )}
        
         {isHost && <EndCallButton />}
@@ -391,16 +777,23 @@ const MeetingRoom = () => {
             setOtherReportedName('');
             setReportType('INAPPROPRIATE_BEHAVIOR');
           }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="report-dialog-title"
+          aria-describedby="report-dialog-description"
         >
           <div 
             className="bg-white rounded-lg p-6 w-full max-w-sm sm:max-w-md shadow-lg"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-xl font-semibold mb-4 text-[#19232d]">Report Participant</h2>
+            <h2 id="report-dialog-title" className="text-xl font-semibold mb-4 text-[#19232d]">Report Participant</h2>
+            <p id="report-dialog-description" className="sr-only">
+              Use this form to report inappropriate behavior by a participant
+            </p>
             <div className="mb-4">
-              <label className="block mb-2 text-[#19232d] font-medium">Who are you reporting?</label>
+              <label className="block mb-2 text-[#19232d] font-medium" htmlFor="reported-participant">Who are you reporting?</label>
               <Select value={selectedReportedId} onValueChange={setSelectedReportedId}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full" id="reported-participant" aria-describedby="participant-help">
                   <SelectValue placeholder="Select a participant" />
                 </SelectTrigger>
                 <SelectContent>
@@ -412,19 +805,24 @@ const MeetingRoom = () => {
                   <SelectItem value="other">Other (not in list)</SelectItem>
                 </SelectContent>
               </Select>
+              <div id="participant-help" className="sr-only">
+                Choose the participant you want to report
+              </div>
               {selectedReportedId === 'other' && (
                 <input
                   className="w-full border border-gray-300 rounded p-2 mt-2 text-black"
                   placeholder="Enter name or details"
                   value={otherReportedName}
                   onChange={e => setOtherReportedName(e.target.value)}
+                  maxLength={SECURITY_CONFIG.MAX_OTHER_NAME_LENGTH}
+                  aria-label="Enter name or details for the person you're reporting"
                 />
               )}
             </div>
             <div className="mb-4">
-              <label className="block mb-2 text-[#19232d] font-medium">Type of Report</label>
+              <label className="block mb-2 text-[#19232d] font-medium" htmlFor="report-type">Type of Report</label>
               <Select value={reportType} onValueChange={setReportType}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full" id="report-type" aria-describedby="report-type-help">
                   <SelectValue placeholder="Select report type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -435,14 +833,29 @@ const MeetingRoom = () => {
                   ))}
                 </SelectContent>
               </Select>
+              <div id="report-type-help" className="sr-only">
+                Choose the type of inappropriate behavior you're reporting
+              </div>
             </div>
-            <textarea
-              className="w-full border border-gray-300 rounded p-2 mb-4 text-black"
-              rows={4}
-              placeholder="Describe the issue..."
-              value={reportReason}
-              onChange={e => setReportReason(e.target.value)}
-            />
+            <div className="mb-4">
+              <label className="block mb-2 text-[#19232d] font-medium" htmlFor="report-reason">Description</label>
+              <textarea
+                id="report-reason"
+                className="w-full border border-gray-300 rounded p-2 mb-4 text-black"
+                rows={4}
+                placeholder="Describe the issue..."
+                value={reportReason}
+                onChange={e => setReportReason(e.target.value)}
+                maxLength={SECURITY_CONFIG.MAX_REPORT_LENGTH}
+                aria-describedby="report-reason-help"
+              />
+              <div id="report-reason-help" className="sr-only">
+                Provide details about the inappropriate behavior you're reporting
+              </div>
+              <div className="text-xs text-gray-500 text-right">
+                {reportReason.length}/{SECURITY_CONFIG.MAX_REPORT_LENGTH} characters
+              </div>
+            </div>
             <div className="flex justify-end gap-2">
               <button
                 className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-black"
@@ -453,55 +866,15 @@ const MeetingRoom = () => {
                   setOtherReportedName('');
                   setReportType('INAPPROPRIATE_BEHAVIOR');
                 }}
+                aria-label="Cancel report submission"
               >
                 Cancel
               </button>
               <button
                 className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                onClick={async () => {
-                  const reporterId = call?.state.localParticipant?.userId;
-                  const reportedId = selectedReportedId === 'other' ? otherReportedName : selectedReportedId;
-                  const callId = call?.id;
-                  if (!reporterId || !reportedId || !callId || !reportReason.trim()) {
-                    toast({
-                      title: "Error",
-                      description: "Please fill all fields.",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-                  try {
-                    const res = await fetch('/api/report', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ reporterId, reportedId, callId, reason: reportReason, reportType }),
-                    });
-                    if (res.ok) {
-                      toast({
-                        title: "Success",
-                        description: "Report submitted successfully!",
-                      });
-                    } else {
-                      toast({
-                        title: "Error",
-                        description: "Failed to submit report.",
-                        variant: "destructive",
-                      });
-                    }
-                  } catch (err) {
-                    toast({
-                      title: "Error",
-                      description: "Failed to submit report.",
-                      variant: "destructive",
-                    });
-                  }
-                  setShowReportDialog(false);
-                  setReportReason('');
-                  setSelectedReportedId('');
-                  setOtherReportedName('');
-                  setReportType('INAPPROPRIATE_BEHAVIOR');
-                }}
+                onClick={handleReportSubmit}
                 disabled={(!selectedReportedId || (selectedReportedId === 'other' && !otherReportedName.trim()) || !reportReason.trim())}
+                aria-label="Submit report"
               >
                 Submit
               </button>
@@ -519,16 +892,23 @@ const MeetingRoom = () => {
             setSelectedBanUserId('');
             setBanReason('');
           }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ban-dialog-title"
+          aria-describedby="ban-dialog-description"
         >
           <div 
             className="bg-white rounded-lg p-6 w-full max-w-sm sm:max-w-md shadow-lg"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-xl font-semibold mb-4 text-[#19232d]">Ban User from Room</h2>
+            <h2 id="ban-dialog-title" className="text-xl font-semibold mb-4 text-[#19232d]">Ban User from Room</h2>
+            <p id="ban-dialog-description" className="sr-only">
+              Use this form to ban a participant from this room (host only)
+            </p>
             <div className="mb-4">
-              <label className="block mb-2 text-[#19232d] font-medium">Who are you banning?</label>
+              <label className="block mb-2 text-[#19232d] font-medium" htmlFor="ban-participant">Who are you banning?</label>
               <Select value={selectedBanUserId} onValueChange={setSelectedBanUserId}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full" id="ban-participant" aria-describedby="ban-participant-help">
                   <SelectValue placeholder="Select a participant" />
                 </SelectTrigger>
                 <SelectContent>
@@ -539,16 +919,28 @@ const MeetingRoom = () => {
                   ))}
                 </SelectContent>
               </Select>
+              <div id="ban-participant-help" className="sr-only">
+                Choose the participant you want to ban from this room
+              </div>
             </div>
             <div className="mb-4">
-              <label className="block mb-2 text-[#19232d] font-medium">Reason (optional)</label>
+              <label className="block mb-2 text-[#19232d] font-medium" htmlFor="ban-reason">Reason (optional)</label>
               <textarea
+                id="ban-reason"
                 className="w-full border border-gray-300 rounded p-2 text-black"
                 rows={3}
                 placeholder="Why are you banning this user?"
                 value={banReason}
                 onChange={e => setBanReason(e.target.value)}
+                maxLength={SECURITY_CONFIG.MAX_BAN_REASON_LENGTH}
+                aria-describedby="ban-reason-help"
               />
+              <div id="ban-reason-help" className="sr-only">
+                Provide a reason for banning this participant (optional)
+              </div>
+              <div className="text-xs text-gray-500 text-right">
+                {banReason.length}/{SECURITY_CONFIG.MAX_BAN_REASON_LENGTH} characters
+              </div>
             </div>
             <div className="flex justify-end gap-2">
               <button
@@ -558,13 +950,14 @@ const MeetingRoom = () => {
                   setSelectedBanUserId('');
                   setBanReason('');
                 }}
+                aria-label="Cancel ban action"
               >
                 Cancel
               </button>
               <button
                 className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                onClick={async () => {
-                  if (!selectedBanUserId || !call?.id) {
+                onClick={() => {
+                  if (!selectedBanUserId) {
                     toast({
                       title: "Error",
                       description: "Please select a user to ban.",
@@ -572,168 +965,90 @@ const MeetingRoom = () => {
                     });
                     return;
                   }
-                  try {
-                    const res = await fetch('/api/room/ban', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ 
-                        userId: selectedBanUserId, 
-                        callId: call.id,
-                        hostId: currentUserId,
-                        reason: banReason.trim() || 'Banned by host'
-                      }),
-                    });
-                    if (res.ok) {
-                      toast({
-                        title: "Success",
-                        description: "User banned and removed from room immediately!",
-                      });
-                      
-                      // Also call the force remove endpoint as an additional measure
-                      try {
-                        const forceRemoveRes = await fetch('/api/room/force-remove', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ userId: selectedBanUserId, callId: call.id }),
-                        });
-                        
-                        if (forceRemoveRes.ok) {
-                          const forceRemoveData = await forceRemoveRes.json();
-                          // Don't show call ended toast as we're not ending the call anymore
-                        }
-                      } catch (forceRemoveError) {
-                        console.error('Failed to call force remove:', forceRemoveError);
-                      }
-                      
-                      // Force a refresh of call participants to update the UI
-                      if (call) {
-                        try {
-                          // Try to force the user to leave by updating call state
-                          await call.update({
-                            custom: { 
-                              ...call.state.custom, 
-                              bannedUser: selectedBanUserId,
-                              banTimestamp: Date.now()
-                            }
-                          });
-                          
-                          // Also try to remove the user directly from the call state
-                          const participants = call.state.participants || [];
-                          const targetParticipant = participants.find((p: any) => 
-                            (p.userId || p.user?.id) === selectedBanUserId
-                          );
-                          
-                          if (targetParticipant) {
-                            // Try to force a participant list refresh
-                            setTimeout(() => {
-                              call.update({ 
-                                custom: { 
-                                  ...call.state.custom, 
-                                  forceRefresh: Date.now(),
-                                  bannedUser: selectedBanUserId
-                                } 
-                              });
-                            }, 500);
-                          }
-                          
-                          // Note: We don't end the call as it would remove all users
-                          // Instead, we rely on the webhook to prevent banned users from rejoining
-                          
-                          // Set up continuous monitoring to ensure user is removed
-                          const monitorInterval = setInterval(async () => {
-                            try {
-                              const participants = call.state.participants || [];
-                              const bannedUserStillInCall = participants.some((p: any) => 
-                                (p.userId || p.user?.id) === selectedBanUserId
-                              );
-                              
-                              if (bannedUserStillInCall) {
-                                // Call force remove endpoint
-                                const forceRemoveRes = await fetch('/api/room/force-remove', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ userId: selectedBanUserId, callId: call.id }),
-                                });
-                                
-                                if (forceRemoveRes.ok) {
-                                  const forceRemoveData = await forceRemoveRes.json();
-                                }
-                              } else {
-                                clearInterval(monitorInterval);
-                              }
-                            } catch (monitorError) {
-                              console.error('Failed to monitor user removal:', monitorError);
-                            }
-                          }, 5000); // Check every 5 seconds
-                          
-                          // Stop monitoring after 30 seconds
-                          setTimeout(() => {
-                            clearInterval(monitorInterval);
-                          }, 30000);
-                          
-                          // Check if the banned user is still in the call after 3 seconds
-                          setTimeout(async () => {
-                            try {
-                              const participants = call.state.participants || [];
-                              const bannedUserStillInCall = participants.some((p: any) => 
-                                (p.userId || p.user?.id) === selectedBanUserId
-                              );
-                              
-                              if (bannedUserStillInCall) {
-                                // Call the force remove endpoint again
-                                const forceRemoveRes = await fetch('/api/room/force-remove', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ userId: selectedBanUserId, callId: call.id }),
-                                });
-                                
-                                if (forceRemoveRes.ok) {
-                                  const forceRemoveData = await forceRemoveRes.json();
-                                }
-                                
-                                // Additional attempt: try to force the user to leave by updating call state
-                                try {
-                                  await call.update({
-                                    custom: { 
-                                      ...call.state.custom, 
-                                      forceUserLeave: selectedBanUserId,
-                                      forceLeaveTimestamp: Date.now()
-                                    }
-                                  });
-                                } catch (updateError) {
-                                  console.error('Failed to force call update:', updateError);
-                                }
-                              }
-                            } catch (checkError) {
-                              console.error('Failed to check if banned user is still in call:', checkError);
-                            }
-                          }, 3000);
-                          
-                        } catch (updateError) {
-                          console.error('Failed to update call after ban:', updateError);
-                        }
-                      }
-                    } else {
-                      toast({
-                        title: "Error",
-                        description: "Failed to ban user from room.",
-                        variant: "destructive",
-                      });
-                    }
-                  } catch (err) {
-                    toast({
-                      title: "Error",
-                      description: "Failed to ban user from room.",
-                      variant: "destructive",
-                    });
-                  }
+                  
+                  // Store data for confirmation
+                  setBanConfirmationData({
+                    selectedBanUserId,
+                    banReason,
+                  });
+                  
+                  // Show confirmation dialog
+                  setShowBanConfirmation(true);
                   setShowBanDialog(false);
-                  setSelectedBanUserId('');
-                  setBanReason('');
                 }}
                 disabled={!selectedBanUserId}
+                aria-label="Ban selected user from room"
               >
                 Ban User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ban Confirmation Dialog */}
+      {showBanConfirmation && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+          onClick={() => {
+            setShowBanConfirmation(false);
+            setBanConfirmationData(null);
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ban-confirmation-title"
+          aria-describedby="ban-confirmation-description"
+        >
+          <div 
+            className="bg-white rounded-lg p-6 w-full max-w-sm sm:max-w-md shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="ban-confirmation-title" className="text-xl font-semibold mb-4 text-[#19232d]">Confirm Ban</h2>
+            <p id="ban-confirmation-description" className="sr-only">
+              Confirm that you want to ban this user from the room
+            </p>
+            <div className="mb-4">
+              <p className="text-[#19232d] mb-2">
+                Are you sure you want to ban this user from the room?
+              </p>
+              <p className="text-sm text-gray-600 mb-4">
+                This action cannot be undone. The user will be immediately removed and prevented from rejoining.
+              </p>
+              {banConfirmationData && (
+                <div className="bg-gray-100 p-3 rounded mb-4">
+                  <p className="text-sm font-medium text-[#19232d]">User to ban:</p>
+                  <p className="text-sm text-gray-700">
+                    {(() => {
+                      const participant = call?.state.participants?.find((p: any) => p.userId === banConfirmationData.selectedBanUserId);
+                      return participant?.name || (participant as any)?.user?.name || banConfirmationData.selectedBanUserId;
+                    })()}
+                  </p>
+                  {banConfirmationData.banReason && (
+                    <>
+                      <p className="text-sm font-medium text-[#19232d] mt-2">Reason:</p>
+                      <p className="text-sm text-gray-700">{banConfirmationData.banReason}</p>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-black"
+                onClick={() => {
+                  setShowBanConfirmation(false);
+                  setBanConfirmationData(null);
+                }}
+                aria-label="Cancel ban confirmation"
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                onClick={() => handleBanSubmit()}
+                aria-label="Confirm ban action"
+              >
+                Confirm Ban
               </button>
             </div>
           </div>

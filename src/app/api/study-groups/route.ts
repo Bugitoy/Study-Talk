@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { StreamClient } from '@stream-io/node-sdk';
 import { createStudyGroupRoom, listActiveStudyGroupRooms, endStudyGroupRoom } from '@/lib/db-utils';
 import prisma from '@/db/prisma';
+import { createRateLimit, ROOM_CREATION_RATE_LIMIT } from '@/lib/rate-limit';
 
 const apiKey = process.env.NEXT_PUBLIC_STREAM_API_KEY;
 const apiSecret = process.env.STREAM_SECRET_KEY;
@@ -81,11 +82,24 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  // Apply server-side rate limiting
+  const rateLimit = createRateLimit(ROOM_CREATION_RATE_LIMIT);
+  const rateLimitResult = rateLimit(req);
+  
+  if (rateLimitResult) {
+    return rateLimitResult;
+  }
+  
   try {
     const { callId, roomName, hostId } = await req.json();
     if (!callId || !roomName || !hostId) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
+    
+    // Log room creation attempt for security monitoring
+    const clientIP = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    console.log(`Room creation attempt: IP=${clientIP}, roomName="${roomName}", callId=${callId}`);
+    
     const room = await createStudyGroupRoom({ callId, roomName, hostId });
     return NextResponse.json(room);
   } catch (error) {

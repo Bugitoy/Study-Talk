@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { endStudyGroupRoom } from '@/lib/db-utils';
 
-export async function PUT(req: NextRequest, { params }: { params: { callId: string } }) {
-  const { callId } = params;
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ callId: string }> }) {
+  const { callId } = await params;
   try {
     await endStudyGroupRoom(callId);
     return NextResponse.json({ ok: true });

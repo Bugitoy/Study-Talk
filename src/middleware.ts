@@ -8,6 +8,10 @@ const publicRoutes = [
   '/pricing', 
   '/about',
   '/meetups',
+  '/meetups/study-groups',
+  '/meetups/study-groups/leaderboard',
+  '/meetups/confessions',
+  '/meetups/compete',
   '/login'
 ];
 
@@ -21,9 +25,6 @@ const protectedRoutes = [
 const protectedSubroutes = [
   '/admin/reports',
   '/admin/reputation',
-  '/meetups/study-groups',
-  '/meetups/confessions',
-  '/meetups/compete',
   '/meetups/talk'
 ];
 

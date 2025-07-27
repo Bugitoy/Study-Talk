@@ -10,6 +10,7 @@ import Alert from "@/components/Alert";
 import { Button } from "@/components/ui/button";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { useRoomSettingByCallId } from "@/hooks/useRoomSettings";
+import { useToast } from '@/hooks/use-toast';
 
 const CallSetup = ({
   setIsSetupComplete,
@@ -30,6 +31,8 @@ const CallSetup = ({
   const [quizAlreadyStarted, setQuizAlreadyStarted] = useState(
     call?.state.custom?.quizStarted,
   );
+  const { toast } = useToast();
+  const [isJoining, setIsJoining] = useState(false);
 
   if (!call) {
     throw new Error(
@@ -99,6 +102,66 @@ const CallSetup = ({
     }
   }, [roomSettings, call]);
 
+  const handleJoin = async () => {
+    if (isJoining) return;
+    
+    setIsJoining(true);
+    
+    try {
+      // Join the call
+      await call.join();
+      
+      // Only the call creator can update call properties
+      const isCallCreator = call.state.createdBy?.id === authUser?.id;
+      if (isCallCreator) {
+        // Ensure the current user becomes a call member so their avatar is queryable
+        try {
+          if (authUser) {
+            await call.updateCallMembers({
+              update_members: [
+                {
+                  user_id: authUser.id,
+                },
+              ],
+            } as any);
+          }
+        } catch (err) {
+          console.error("Failed to add user as call member", err);
+          // Don't fail the entire join process for this
+        }
+        
+        try {
+          await call.update({
+            custom: {
+              ...call.state.custom,
+              hostJoined: true,
+              availability: roomSettings?.availability || call.state.custom?.availability,
+              roomName: roomSettings?.roomName || call.state.custom?.roomName,
+            },
+          });
+        } catch (e) {
+          console.error('Failed to update call', e);
+          toast({
+            title: 'Warning',
+            description: 'Joined successfully but failed to update room settings.',
+            variant: 'default',
+          });
+        }
+      }
+
+      setIsSetupComplete(true);
+    } catch (error) {
+      console.error('Failed to join call:', error);
+      toast({
+        title: 'Failed to Join',
+        description: 'Unable to join the compete room. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
   if (callTimeNotArrived)
     return (
       <Alert
@@ -129,6 +192,9 @@ const CallSetup = ({
                 : 'bg-blue-400 hover:bg-blue-500 text-white'
             }`}
             onClick={() => setIsMicOff(!isMicOff)}
+            aria-label={`${isMicOff ? 'Enable' : 'Disable'} microphone`}
+            aria-pressed={!isMicOff}
+            disabled={isJoining}
           >
             {isMicOff ? 'Mic Off' : 'Mic On'}
           </Button>
@@ -141,52 +207,28 @@ const CallSetup = ({
                 : 'bg-blue-400 hover:bg-blue-500 text-white'
             }`}
             onClick={() => setIsCameraOff(!isCameraOff)}
+            aria-label={`${isCameraOff ? 'Enable' : 'Disable'} camera`}
+            aria-pressed={!isCameraOff}
+            disabled={isJoining}
           >
             {isCameraOff ? 'Camera Off' : 'Camera On'}
           </Button>
         )}
         <DeviceSettings />
         <Button
-        className="rounded-md bg-blue-300 hover:bg-blue-400 px-12 py-7 text-xl"
-        onClick={async () => {
-          await call.join();
-          // Only the call creator can update call properties
-          const isCallCreator = call.state.createdBy?.id === authUser?.id;
-          if (isCallCreator) {
-            // Ensure the current user becomes a call member so their avatar is queryable
-            try {
-              if (authUser) {
-                await call.updateCallMembers({
-                  update_members: [
-                    {
-                      user_id: authUser.id,
-                    },
-                  ],
-                } as any);
-              }
-            } catch (err) {
-              console.error("Failed to add user as call member", err);
-            }
-            try {
-              await call.update({
-                custom: {
-                  ...call.state.custom,
-                  hostJoined: true,
-                  availability: roomSettings?.availability || call.state.custom?.availability,
-                  roomName: roomSettings?.roomName || call.state.custom?.roomName,
-                },
-              });
-            } catch (e) {
-              console.error('Failed to update call', e);
-            }
-          }
-          setIsSetupComplete(true);
-        }}
+        className="rounded-md bg-blue-300 hover:bg-blue-400 px-12 py-7 text-xl disabled:opacity-50 disabled:cursor-not-allowed"
+        onClick={handleJoin}
+        disabled={isJoining}
+        aria-label="Join compete room"
+        aria-describedby="join-help"
       >
-        Join
+        {isJoining ? 'Joining...' : 'Join'}
       </Button>
       </div>
-
+      
+      <div id="join-help" className="sr-only">
+        Click to join the compete room with your current device settings
+      </div>
     </div>
   );
 };

@@ -15,8 +15,8 @@ export const useStreak = () => {
     lastStudyDate: null,
     totalStudyDays: 0,
   });
-  const [loading, setLoading] = useState(true);
-  const { user } = useKindeBrowserClient();
+  const [loading, setLoading] = useState(false); // Start with false for better UX
+  const { user, isAuthenticated } = useKindeBrowserClient();
 
   const fetchStreakData = async () => {
     if (!user?.id) return;
@@ -57,10 +57,14 @@ export const useStreak = () => {
   };
 
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && isAuthenticated) {
+      setLoading(true); // Only set loading to true when we're actually fetching
       fetchStreakData();
+    } else {
+      // For non-authenticated users, set loading to false immediately
+      setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, isAuthenticated]);
 
   return {
     streakData,

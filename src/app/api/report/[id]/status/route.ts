@@ -3,11 +3,11 @@ import prisma from '@/db/prisma';
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { status, adminNotes, resolvedBy } = await req.json();
-    const reportId = params.id;
+    const { id: reportId } = await params;
 
     if (!status) {
       return NextResponse.json({ error: 'Status is required' }, { status: 400 });

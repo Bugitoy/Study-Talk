@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import NextLayout from "@/components/NextLayout";
 import { User as UserIcon, ThumbsUp, ThumbsDown, MessageCircle, Bookmark, Plus, Flag } from "lucide-react";
 import Image from "next/image";
@@ -40,6 +40,7 @@ export default function ConfessionsPage() {
   const [newBody, setNewBody] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(true);
   const [openCommentSections, setOpenCommentSections] = useState<Set<string>>(new Set());
+  const [userUniversity, setUserUniversity] = useState<string | null>(null);
   
   // Report functionality
   const [showReportDialog, setShowReportDialog] = useState(false);
@@ -87,6 +88,25 @@ export default function ConfessionsPage() {
   
   const { universities, loading: universitiesLoading } = useUniversities();
 
+  // Fetch user's university information
+  useEffect(() => {
+    const fetchUserUniversity = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const response = await fetch(`/api/user?userId=${user.id}`);
+        if (response.ok) {
+          const userData = await response.json();
+          setUserUniversity(userData.university);
+        }
+      } catch (error) {
+        console.error('Failed to fetch user university:', error);
+      }
+    };
+
+    fetchUserUniversity();
+  }, [user?.id]);
+
   const handleCreatePost = async () => {
     if (!user?.id || !newTitle.trim() || !newBody.trim()) return;
     
@@ -95,7 +115,7 @@ export default function ConfessionsPage() {
         title: newTitle.trim(),
         content: newBody.trim(),
         authorId: user.id,
-                 university: (user as any).university || undefined,
+        university: userUniversity || undefined,
         isAnonymous,
       });
       
@@ -275,40 +295,53 @@ export default function ConfessionsPage() {
             </p>
             
             {/* Combined Stats & Actions */}
-            <div className="flex items-center flex-wrap gap-3 sm:gap-6 text-xs sm:text-sm text-gray-600 mt-3 sm:mt-4">
-              <div className="flex items-center gap-1">
+            <div className="flex items-center justify-between gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600 mt-3 sm:mt-4">
+              {/* Action Buttons */}
+              <div className="flex items-center justify-start flex-1 gap-3 sm:gap-4">
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (!user) {
+                      toast({ title: 'Login Required', description: 'Please log in to vote.', variant: 'destructive' });
+                      return;
+                    }
                     handleVote(post.id, 'BELIEVE');
                   }}
+                  disabled={!user}
                   className={`flex items-center gap-1 transition-colors ${
                     post.userVote === 'BELIEVE' 
                       ? 'text-green-600 font-semibold' 
                       : 'text-gray-600 hover:text-green-600'
-                  }`}
+                  } ${!user ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  title={`${post.believeCount} Believers`}
                 >
-                  <ThumbsUp className={`w-3 h-3 sm:w-4 sm:h-4 ${post.userVote === 'BELIEVE' ? 'fill-current' : ''}`} />
-                  {post.believeCount} Believers
+                  <ThumbsUp className={`w-4 h-4 sm:w-5 sm:h-5 ${post.userVote === 'BELIEVE' ? 'fill-current' : ''}`} />
+                  <span className="hidden sm:inline">{post.believeCount}</span>
+                  <span className="hidden md:inline"> Believers</span>
                 </button>
-              </div>
-              <div className="flex items-center gap-1">
+                
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (!user) {
+                      toast({ title: 'Login Required', description: 'Please log in to vote.', variant: 'destructive' });
+                      return;
+                    }
                     handleVote(post.id, 'DOUBT');
                   }}
+                  disabled={!user}
                   className={`flex items-center gap-1 transition-colors ${
                     post.userVote === 'DOUBT' 
                       ? 'text-red-600 font-semibold' 
                       : 'text-gray-600 hover:text-red-600'
-                  }`}
+                  } ${!user ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  title={`${post.doubtCount} Non Believers`}
                 >
-                  <ThumbsDown className={`w-3 h-3 sm:w-4 sm:h-4 ${post.userVote === 'DOUBT' ? 'fill-current' : ''}`} />
-                  {post.doubtCount} Non Believers
+                  <ThumbsDown className={`w-4 h-4 sm:w-5 sm:h-5 ${post.userVote === 'DOUBT' ? 'fill-current' : ''}`} />
+                  <span className="hidden sm:inline">{post.doubtCount}</span>
+                  <span className="hidden md:inline"> Non Believers</span>
                 </button>
-              </div>
-              <div className="flex items-center gap-1">
+                
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -319,41 +352,64 @@ export default function ConfessionsPage() {
                       ? 'text-blue-600 font-semibold'
                       : 'text-gray-600 hover:text-blue-600'
                   }`}
+                  title={`${post.commentCount} Comments`}
                 >
-                  <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" /> {post.commentCount} Comments
+                  <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="hidden sm:inline">{post.commentCount}</span>
+                  <span className="hidden md:inline"> Comments</span>
                 </button>
-              </div>
-              <ShareButton 
-                confessionId={post.id}
-                confessionTitle={post.title}
-                variant="ghost"
-                size="sm"
-                className="flex items-center gap-1 cursor-pointer hover:text-gray-800"
-              />
-              <div
-                className="flex items-center gap-1 cursor-pointer hover:text-gray-800"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleToggleSave(post.id);
-                }}
-              >
-                <Bookmark
-                  className={`w-3 h-3 sm:w-4 sm:h-4 ${isConfessionSaved(post.id) ? 'text-yellow-400' : ''}`}
-                  fill={isConfessionSaved(post.id) ? '#FACC15' : 'none'}
+                
+                <ShareButton 
+                  confessionId={post.id}
+                  confessionTitle={post.title}
+                  variant="ghost"
+                  size="sm"
+                  className="flex items-center gap-1 cursor-pointer hover:text-gray-800"
                 />
-                {isConfessionSaved(post.id) ? 'Saved' : 'Save'}
+                
+                <div
+                  className={`flex items-center gap-1 cursor-pointer hover:text-gray-800 ${!user ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!user) {
+                      toast({ title: 'Login Required', description: 'Please log in to save posts.', variant: 'destructive' });
+                      return;
+                    }
+                    handleToggleSave(post.id);
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  title={isConfessionSaved(post.id) ? 'Saved' : 'Save'}
+                >
+                  <Bookmark
+                    className={`w-4 h-4 sm:w-5 sm:h-5 ${isConfessionSaved(post.id) ? 'text-yellow-400' : ''}`}
+                    fill={isConfessionSaved(post.id) ? '#FACC15' : 'none'}
+                  />
+                  <span className="hidden md:inline">{isConfessionSaved(post.id) ? 'Saved' : 'Save'}</span>
+                </div>
+                
+                <div
+                  className={`flex items-center gap-1 cursor-pointer hover:text-red-600 ${!user ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!user) {
+                      toast({ title: 'Login Required', description: 'Please log in to report posts.', variant: 'destructive' });
+                      return;
+                    }
+                    setSelectedConfessionId(post.id);
+                    setShowReportDialog(true);
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  title="Report"
+                >
+                  <Flag className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="hidden md:inline">Report</span>
+                </div>
               </div>
-              <div
-                className="flex items-center gap-1 cursor-pointer hover:text-red-600"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedConfessionId(post.id);
-                  setShowReportDialog(true);
-                }}
-              >
-                <Flag className="w-3 h-3 sm:w-4 sm:h-4" /> Report
-              </div>
-              <div className="ml-auto text-gray-500 text-xs sm:text-sm">
+              
+              {/* Timestamp */}
+              <div className="text-gray-500 text-xs sm:text-sm">
                 {formatTimeAgo(post.createdAt)}
               </div>
             </div>
@@ -364,6 +420,7 @@ export default function ConfessionsPage() {
                 isVisible={openCommentSections.has(post.id)}
                 onClose={() => toggleCommentSection(post.id)}
                 updateCommentCount={updateCommentCount}
+                user={user}
               />
             )}
           </div>
@@ -496,15 +553,24 @@ export default function ConfessionsPage() {
             }
             className="w-full sm:flex-1 min-w-[200px] px-3 sm:px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none text-base sm:text-lg shadow-sm transition-colors"
           />
-          {user && (
-            <button
-            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-yellow-300 rounded-[12px] px-3 sm:px-4 py-2 font-semibold text-gray-800 hover:bg-yellow-400 transition-colors text-sm sm:text-base"
-            onClick={() => setIsPostModalOpen(true)}
-          >
-            <Plus className="w-4 h-4 sm:h-8" />
-            Make a post
-          </button>
-          )}
+                      <Button
+              className={`w-full sm:w-auto flex items-center justify-center gap-2 rounded-[12px] px-3 sm:px-4 py-2 font-semibold transition-colors text-sm sm:text-base ${
+                user 
+                  ? 'bg-yellow-300 text-gray-800 hover:bg-yellow-400' 
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+              onClick={() => {
+                if (!user) {
+                  toast({ title: 'Login Required', description: 'Please log in to create a post.', variant: 'destructive' });
+                  return;
+                }
+                setIsPostModalOpen(true);
+              }}
+              disabled={!user}
+            >
+              <Plus className="w-4 h-4 sm:h-8" />
+              Make a post
+            </Button>
         </div>
         {/* Content */}
         {renderContent()}

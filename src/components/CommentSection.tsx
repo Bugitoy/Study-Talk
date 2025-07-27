@@ -26,10 +26,11 @@ interface CommentSectionProps {
   isVisible: boolean;
   onClose?: () => void;
   updateCommentCount: (confessionId: string, newCount: number) => void;
+  user?: any;
 }
 
-export function CommentSection({ confessionId, isVisible, onClose, updateCommentCount }: CommentSectionProps) {
-  const { user } = useKindeBrowserClient();
+export function CommentSection({ confessionId, isVisible, onClose, updateCommentCount, user }: CommentSectionProps) {
+  const { user: kindeUser } = useKindeBrowserClient();
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(false);
   const [newComment, setNewComment] = useState('');
@@ -148,42 +149,36 @@ export function CommentSection({ confessionId, isVisible, onClose, updateComment
               {user.picture ? (
                 <Image
                   src={user.picture}
-                  alt={user.given_name || "User"}
+                  alt="Profile"
                   width={32}
                   height={32}
-                  className="rounded-full object-cover"
+                  className="rounded-full w-8 h-8 object-cover"
                 />
               ) : (
-                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                <span className="w-8 h-8 flex items-center justify-center bg-gray-200 rounded-full">
                   <UserIcon className="w-4 h-4 text-gray-500" />
-                </div>
+                </span>
               )}
-              <div className="flex-1">
-                <Textarea
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Write a comment..."
-                  className="min-h-[10px] text-gray-800 resize-none border-0 focus:ring-0 p-2"
-                  disabled={submitting}
-                />
-                <div className="flex justify-between items-center mt-3">
-                  <span className="text-xs text-gray-500">Commenting as {user.given_name || 'You'}</span>
-                  <Button
-                    onClick={handleSubmitComment}
-                    disabled={!newComment.trim() || submitting}
-                    size="sm"
-                    className="bg-blue-300 hover:bg-blue-600"
-                  >
-                    <Send className="w-4 h-4 mr-2" />
-                    {submitting ? 'Posting...' : 'Post'}
-                  </Button>
-                </div>
-              </div>
+              <Textarea
+                value={newComment}
+                onChange={e => setNewComment(e.target.value)}
+                placeholder="Write a comment..."
+                className="flex-1 min-h-[36px] max-h-[120px] resize-none border-gray-300 focus:border-blue-400"
+                rows={1}
+                disabled={submitting}
+              />
+              <Button
+                onClick={handleSubmitComment}
+                disabled={submitting || !newComment.trim()}
+                className="ml-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
             </div>
           </div>
         ) : (
           <div className="bg-white rounded-lg p-4 border border-gray-200 text-center text-gray-500">
-            Please log in to comment
+            <span>Please log in to comment.</span>
           </div>
         )}
 
@@ -234,36 +229,23 @@ export function CommentSection({ confessionId, isVisible, onClose, updateComment
                 </div>
 
                 {/* Reply Input */}
-                {replyingTo === comment.id && user && (
-                  <div className="mt-4 ml-11 bg-gray-50 rounded-lg p-3 border border-gray-200">
+                {user && replyingTo === comment.id && (
+                  <div className="flex items-center gap-2 mt-2">
                     <Textarea
                       value={replyContent}
-                      onChange={(e) => setReplyContent(e.target.value)}
+                      onChange={e => setReplyContent(e.target.value)}
                       placeholder="Write a reply..."
-                      className="min-h-[60px] resize-none text-gray-800 bg-white"
+                      className="flex-1 min-h-[32px] max-h-[80px] resize-none border-gray-300 focus:border-blue-400"
+                      rows={1}
                       disabled={submitting}
                     />
-                    <div className="flex justify-end gap-2 mt-2">
-                      <Button
-                        onClick={() => {
-                          setReplyingTo(null);
-                          setReplyContent('');
-                        }}
-                        variant="outline"
-                        size="sm"
-                        disabled={submitting}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={() => handleSubmitReply(comment.id)}
-                        disabled={!replyContent.trim() || submitting}
-                        size="sm"
-                        className="bg-blue-500 hover:bg-blue-600"
-                      >
-                        {submitting ? 'Posting...' : 'Reply'}
-                      </Button>
-                    </div>
+                    <Button
+                      onClick={() => handleSubmitReply(comment.id)}
+                      disabled={submitting || !replyContent.trim()}
+                      className="px-2 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <Reply className="w-4 h-4" />
+                    </Button>
                   </div>
                 )}
 

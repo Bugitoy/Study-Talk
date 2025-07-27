@@ -960,7 +960,7 @@ export async function getConfessionsInfinite(options: {
           select: { id: true, name: true },
         },
         votes: {
-          select: { voteType: true },
+          select: { voteType: true, userId: true },
         },
         _count: {
           select: {
@@ -992,7 +992,7 @@ export async function getConfessionsInfinite(options: {
       const doubtCount = confession.votes.filter(v => v.voteType === 'DOUBT').length;
       
       // Find user's vote if userId is provided
-      const userVote = userId ? confession.votes.find(v => (v as any).userId === userId) : null;
+      const userVote = userId ? confession.votes.find(v => v.userId === userId) : null;
       
       return {
         ...confession,
@@ -1144,6 +1144,7 @@ export async function createConfessionComment(data: {
   authorId: string;
   confessionId: string;
   parentId?: string;
+  isAnonymous?: boolean;
 }) {
   try {
     const comment = await prisma.confessionComment.create({
@@ -1152,6 +1153,7 @@ export async function createConfessionComment(data: {
         authorId: data.authorId,
         confessionId: data.confessionId,
         parentId: data.parentId,
+        isAnonymous: data.isAnonymous ?? true,
       },
           include: {
             author: {
