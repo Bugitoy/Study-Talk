@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRoomSetting, updateRoomSetting } from '@/lib/db-utils';
+import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server';
 
 export async function GET(
     req: NextRequest,
     context: { params: Promise<{ id: string }> },
   ) {
+    // Add authentication check
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await context.params;
     try {
       const setting = await getRoomSetting(id);
@@ -20,6 +29,14 @@ export async function PUT(
     req: NextRequest,
     context: { params: Promise<{ id: string }> },
   ) {
+    // Add authentication check
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await context.params;
     try {
       const data = await req.json();

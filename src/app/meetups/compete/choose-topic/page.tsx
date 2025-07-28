@@ -5,6 +5,7 @@ import TopicCard from "@/components/compete/TopicCard";
 import { Call, useStreamVideoClient } from "@stream-io/video-react-sdk";
 import { useToast } from "@/components/ui/use-toast";
 import { useState, useEffect } from "react";
+import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
 type QuizQuestion = {
   question: string;
   optionA: string;
@@ -33,6 +34,9 @@ const pastelColors = [
     'bg-thanodi-lightBlue',
   ];
 
+// Room creation steps
+type CreationStep = 'idle' | 'creating' | 'configuring' | 'finalizing' | 'complete' | 'error';
+
 export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete: (isSetupComplete: boolean) => void 
 }) {
   const router = useRouter();
@@ -45,6 +49,8 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
   const [selectedUserQuiz, setSelectedUserQuiz] = useState<any>(null);
   const [isLoadingQuiz, setIsLoadingQuiz] = useState(false);
   const [isCreatingMeeting, setIsCreatingMeeting] = useState(false);
+  const [creationStep, setCreationStep] = useState<CreationStep>('idle');
+  const [creationError, setCreationError] = useState<string | null>(null);
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const settingsId = searchParams.get('settings') || undefined;
@@ -91,6 +97,8 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
     }
     
     setIsCreatingMeeting(true);
+    setCreationStep('creating');
+    setCreationError(null);
     
     try {
       
@@ -147,6 +155,8 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
       
       
       setCallDetail(call);
+      setCreationStep('configuring');
+      
       let sampleQuestions: QuizQuestion[] = [];
       if (selectedTopic) {
         const res = await fetch(`/api/questions?topic=${encodeURIComponent(selectedTopic.title)}`);
@@ -182,6 +192,7 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
         sampleQuestions = userQuizQuestions;
       }
       
+      setCreationStep('finalizing');
       
       if (roomSettings) {
         
@@ -228,6 +239,9 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
           }),
         });
       }
+      
+      setCreationStep('complete');
+      
       if (!values.description) {
         router.push(`/meetups/compete/room/${call.id}`);
       }
@@ -236,6 +250,7 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
       });
     } catch (error) {
       console.error('Error creating meeting:', error);
+      setCreationStep('error');
       
       // Provide more specific error messages based on the error type
       let errorMessage = 'Failed to create meeting. Please try again.';
@@ -250,6 +265,7 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
         }
       }
       
+      setCreationError(errorMessage);
       toast({ 
         title: 'Failed to create Meeting',
         description: errorMessage,
@@ -457,9 +473,11 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
               className={`button h-[45px] sm:h-[50px] rounded-lg select-none transition-all duration-150 border-b-[1px] shadow focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
                 (selectedTopic || selectedUserQuiz) && !isCreatingMeeting
                   ? "bg-orange-300 cursor-pointer active:translate-y-2 active:[box-shadow:0_0px_0_0_#f5c782,0_0px_0_0_#f5c78241] active:border-b-[0px] [box-shadow:0_10px_0_0_#f5c782,0_15px_0_0_#f5c78241] border-orange-300" 
-                  : "bg-gray-300 cursor-not-allowed border-gray-300"
+                  : isCreatingMeeting
+                    ? "bg-orange-200 cursor-not-allowed border-orange-200"
+                    : "bg-gray-300 cursor-not-allowed border-gray-300"
               }`}
-              disabled={!((selectedTopic || selectedUserQuiz) && !isCreatingMeeting)}
+              disabled={!((selectedTopic || selectedUserQuiz) && !isCreatingMeeting) || isCreatingMeeting}
               aria-describedby="next-button-help"
               onClick={() => {
                 if (!isCreatingMeeting) {
@@ -475,15 +493,52 @@ export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete
                 }
               }}
             >
-              <span className={`flex flex-col justify-center items-center h-full font-bold text-sm sm:text-base lg:text-lg ${
+              <span className={`flex items-center justify-center gap-2 h-full font-bold text-sm sm:text-base lg:text-lg ${
                 (selectedTopic || selectedUserQuiz) && !isCreatingMeeting ? "text-gray-800" : "text-gray-500"
               }`}>
-                {isCreatingMeeting ? "Creating..." : (selectedTopic || selectedUserQuiz) ? "Next" : "Select a topic first"}
+                {isCreatingMeeting ? (
+                  <>
+                    {creationStep === 'creating' && (
+                      <>
+                        <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                        Creating Room...
+                      </>
+                    )}
+                    {creationStep === 'configuring' && (
+                      <>
+                        <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                        Configuring Settings...
+                      </>
+                    )}
+                    {creationStep === 'finalizing' && (
+                      <>
+                        <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                        Finalizing...
+                      </>
+                    )}
+                    {creationStep === 'complete' && (
+                      <>
+                        <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+                        Complete!
+                      </>
+                    )}
+                    {creationStep === 'error' && (
+                      <>
+                        <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
+                        Error
+                      </>
+                    )}
+                  </>
+                ) : (selectedTopic || selectedUserQuiz) ? (
+                  "Next"
+                ) : (
+                  "Select a topic first"
+                )}
               </span>
             </button>
             <div id="next-button-help" className="sr-only">
               {isCreatingMeeting 
-                ? "Creating meeting, please wait..." 
+                ? `Room creation in progress: ${creationStep === 'creating' ? 'Creating room' : creationStep === 'configuring' ? 'Configuring settings' : creationStep === 'finalizing' ? 'Finalizing setup' : creationStep === 'complete' ? 'Room created successfully' : 'Error occurred during creation'}`
                 : (selectedTopic || selectedUserQuiz) 
                   ? "Continue to create your compete room" 
                   : "Please select a topic or quiz first to continue"

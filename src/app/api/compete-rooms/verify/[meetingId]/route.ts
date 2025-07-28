@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server';
 import prisma from '@/db/prisma';
+import { createRateLimit, COMPETE_VERIFICATION_RATE_LIMIT } from '@/lib/rate-limit';
 
 // Logging utility for compete meetings
 const logCompeteSecurityEvent = (event: string, details: any) => {
@@ -29,6 +30,14 @@ export async function GET(
   const startTime = Date.now();
   
   try {
+    // Apply rate limiting
+    const rateLimit = createRateLimit(COMPETE_VERIFICATION_RATE_LIMIT);
+    const rateLimitResult = rateLimit(req);
+    
+    if (rateLimitResult) {
+      return rateLimitResult;
+    }
+
     // Get user session
     const { getUser } = getKindeServerSession();
     const user = await getUser();

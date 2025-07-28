@@ -2,12 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { StreamClient } from '@stream-io/node-sdk';
 import { createCompeteRoom, listActiveCompeteRooms, endCompeteRoom } from '@/lib/db-utils';
 import prisma from '@/db/prisma';
+import { createRateLimit, COMPETE_ROOMS_RATE_LIMIT } from '@/lib/rate-limit';
+import { sanitizeInput } from '@/lib/security-utils';
 
 const apiKey = process.env.NEXT_PUBLIC_STREAM_API_KEY;
 const apiSecret = process.env.STREAM_SECRET_KEY;
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    // Apply rate limiting
+    const rateLimit = createRateLimit(COMPETE_ROOMS_RATE_LIMIT);
+    const rateLimitResult = rateLimit(req);
+    
+    if (rateLimitResult) {
+      return rateLimitResult;
+    }
+
     const rooms = await listActiveCompeteRooms();
     console.log('Active rooms from database:', rooms.length, rooms.map(r => r.roomName));
     
@@ -93,11 +103,38 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { callId, roomName, hostId } = await req.json();
-    if (!callId || !roomName || !hostId) {
-      return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+    // Apply rate limiting
+    const rateLimit = createRateLimit(COMPETE_ROOMS_RATE_LIMIT);
+    const rateLimitResult = rateLimit(req);
+    
+    if (rateLimitResult) {
+      return rateLimitResult;
     }
-    const room = await createCompeteRoom({ callId, roomName, hostId });
+
+    const { callId, roomName, hostId } = await req.json();
+    
+    // Input validation
+    if (!callId || !roomName || !hostId) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Sanitize inputs
+    const sanitizedRoomName = sanitizeInput(roomName);
+
+    // Content length validation
+    if (sanitizedRoomName.length > 100) {
+      return NextResponse.json({ error: 'Room name too long (max 100 characters)' }, { status: 400 });
+    }
+
+    if (sanitizedRoomName.trim().length === 0) {
+      return NextResponse.json({ error: 'Room name cannot be empty' }, { status: 400 });
+    }
+
+    const room = await createCompeteRoom({ 
+      callId, 
+      roomName: sanitizedRoomName, 
+      hostId 
+    });
     return NextResponse.json(room);
   } catch (error) {
     console.error('Error creating compete room:', error);

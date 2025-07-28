@@ -80,3 +80,13 @@ export const CONFESSION_RATE_LIMIT = {
   maxAttempts: 20, // Generous limit - 20 confessions per 5 minutes
   windowMs: 5 * 60 * 1000, // 5 minutes
 }; 
+
+export const COMPETE_ROOMS_RATE_LIMIT = {
+  maxAttempts: 30, // 30 requests per minute
+  windowMs: 60 * 1000, // 1 minute
+};
+
+export const COMPETE_VERIFICATION_RATE_LIMIT = {
+  maxAttempts: 50, // 50 verification requests per minute
+  windowMs: 60 * 1000, // 1 minute
+}; 
