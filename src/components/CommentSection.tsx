@@ -163,7 +163,7 @@ export function CommentSection({ confessionId, isVisible, onClose, updateComment
                 value={newComment}
                 onChange={e => setNewComment(e.target.value)}
                 placeholder="Write a comment..."
-                className="flex-1 min-h-[36px] max-h-[120px] resize-none border-gray-300 focus:border-blue-400"
+                className="flex-1 min-h-[36px] max-h-[120px] resize-none border-gray-300 focus:border-gray-400 text-black"
                 rows={1}
                 disabled={submitting}
               />
@@ -235,7 +235,7 @@ export function CommentSection({ confessionId, isVisible, onClose, updateComment
                       value={replyContent}
                       onChange={e => setReplyContent(e.target.value)}
                       placeholder="Write a reply..."
-                      className="flex-1 min-h-[32px] max-h-[80px] resize-none border-gray-300 focus:border-blue-400"
+                      className="flex-1 min-h-[32px] max-h-[80px] resize-none border-gray-300 focus:border-gray-400 text-black"
                       rows={1}
                       disabled={submitting}
                     />

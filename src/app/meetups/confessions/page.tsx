@@ -316,7 +316,7 @@ export default function ConfessionsPage() {
                   title={`${post.believeCount} Believers`}
                 >
                   <ThumbsUp className={`w-4 h-4 sm:w-5 sm:h-5 ${post.userVote === 'BELIEVE' ? 'fill-current' : ''}`} />
-                  <span className="hidden sm:inline">{post.believeCount}</span>
+                  <span className="inline">{post.believeCount}</span>
                   <span className="hidden md:inline"> Believers</span>
                 </button>
                 
@@ -338,7 +338,7 @@ export default function ConfessionsPage() {
                   title={`${post.doubtCount} Non Believers`}
                 >
                   <ThumbsDown className={`w-4 h-4 sm:w-5 sm:h-5 ${post.userVote === 'DOUBT' ? 'fill-current' : ''}`} />
-                  <span className="hidden sm:inline">{post.doubtCount}</span>
+                  <span className="inline">{post.doubtCount}</span>
                   <span className="hidden md:inline"> Non Believers</span>
                 </button>
                 
@@ -355,7 +355,7 @@ export default function ConfessionsPage() {
                   title={`${post.commentCount} Comments`}
                 >
                   <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
-                  <span className="hidden sm:inline">{post.commentCount}</span>
+                  <span className="inline">{post.commentCount}</span>
                   <span className="hidden md:inline"> Comments</span>
                 </button>
                 
@@ -577,47 +577,47 @@ export default function ConfessionsPage() {
 
         {/* Post Creation Modal */}
         <Dialog open={isPostModalOpen} onOpenChange={setIsPostModalOpen}>
-          <DialogContent className="backdrop-blur-md bg-white/90 rounded-[12px] max-w-2xl mx-4">
-            <DialogHeader>
-              <DialogTitle className="text-xl sm:text-2xl font-bold text-center">Create a confession</DialogTitle>
+          <DialogContent className="backdrop-blur-md bg-white/90 rounded-[12px] max-w-[95vw] sm:max-w-2xl mx-auto p-4 sm:p-6">
+            <DialogHeader className="mb-4 sm:mb-6">
+              <DialogTitle className="text-lg sm:text-xl md:text-2xl font-bold text-center">Create a confession</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 mt-4">
+            <div className="space-y-3 sm:space-y-4 mt-2 sm:mt-4">
               <Input
                 placeholder="Title"
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
-                className="rounded-[8px]"
+                className="rounded-[8px] text-sm sm:text-base h-10 sm:h-12"
               />
               <Textarea
                 placeholder="Write your confession..."
-                rows={6}
+                rows={4}
                 value={newBody}
                 onChange={(e) => setNewBody(e.target.value)}
-                className="rounded-[8px]"
+                className="rounded-[8px] text-sm sm:text-base resize-none"
               />
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 sm:gap-3 pt-2">
                 <input
                   type="checkbox"
                   id="anonymous"
                   checked={isAnonymous}
                   onChange={(e) => setIsAnonymous(e.target.checked)}
-                  className="rounded"
+                  className="rounded w-4 h-4 sm:w-5 sm:h-5"
                 />
-                <label htmlFor="anonymous" className="text-sm text-gray-600">
+                <label htmlFor="anonymous" className="text-xs sm:text-sm text-gray-600 cursor-pointer">
                   Post anonymously
                 </label>
               </div>
             </div>
-            <DialogFooter className="mt-6 flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
+            <DialogFooter className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
               <Button
                 variant="outline"
-                className="rounded-[8px] w-full sm:w-auto"
+                className="rounded-[8px] w-full sm:w-auto h-10 sm:h-12 text-sm sm:text-base"
                 onClick={() => setIsPostModalOpen(false)}
               >
                 Cancel
               </Button>
               <Button
-                className="bg-yellow-300 hover:bg-yellow-400 text-gray-800 rounded-[8px] w-full sm:w-auto"
+                className="bg-yellow-300 hover:bg-yellow-400 text-gray-800 rounded-[8px] w-full sm:w-auto h-10 sm:h-12 text-sm sm:text-base"
                 onClick={handleCreatePost}
                 disabled={!newTitle.trim() || !newBody.trim()}
               >

@@ -578,7 +578,7 @@ useEffect(() => {
     if (!call) return;
     
     const sub = call.state.custom$.subscribe((custom: any) => {
-      if (custom.quizStarted) setQuizStarted(true);
+      if (custom.quizStarted !== undefined) setQuizStarted(custom.quizStarted);
       if (custom.sessionId) setSessionId(custom.sessionId);
       if (typeof custom.currentIdx === "number") setCurrentIdx(custom.currentIdx);
       if (typeof custom.startTime === "number") {
@@ -587,7 +587,7 @@ useEffect(() => {
         const left = timePerQuestion === null || timePerQuestion === undefined ? Infinity : Math.max(0, timePerQuestion - elapsed);
         setTimeLeft(left);
       }
-      if (custom.quizEnded) setQuizEnded(true);
+      if (custom.quizEnded !== undefined) setQuizEnded(custom.quizEnded);
     });
     
     return sub;
@@ -823,131 +823,131 @@ useEffect(() => {
       {/* video layout */}
       <div className="relative flex size-full items-center justify-center pb-32 sm:pb-40 md:pb-48 pt-12 sm:pt-24 lg:pt-0">
         <div className="flex flex-col md:flex-row lg:flex-row xl:flex-row items-center gap-0 sm:gap-2 -space-y-2 sm:space-y-0">
+          {/* Show waiting message when quiz hasn't started yet */}
+          {!quizStarted && !quizEnded && (
+            <div className="relative w-full max-w-[25rem] sm:max-w-[30rem] md:max-w-[20rem] lg:max-w-[35rem] xl:max-w-[25rem] 2xl:max-w-[50rem] 3xl:max-w-[60rem] h-[15rem] sm:h-[20rem] md:h-[15rem] lg:h-[40rem] xl:h-[20rem] 2xl:h-[25rem] 3xl:h-[30rem] mx-auto md:mr-[1rem] lg:mr-[2rem] xl:mr-[1rem] flex items-center justify-center p-4">
+              <p className="text-gray-700 font-semibold text-center text-sm sm:text-base">
+                {isHost
+                  ? "Start the quiz using the controls below."
+                  : "Waiting for host to start..."}
+              </p>
+            </div>
+          )}
+
+          {/* Show quiz interface when quiz has started */}
           {shouldShowQuiz && (
             <>
-              {!quizStarted ? (
-                <div className="relative w-full max-w-[25rem] sm:max-w-[30rem] md:max-w-[20rem] lg:max-w-[35rem] xl:max-w-[25rem] 2xl:max-w-[50rem] 3xl:max-w-[60rem] h-[15rem] sm:h-[20rem] md:h-[15rem] lg:h-[40rem] xl:h-[20rem] 2xl:h-[25rem] 3xl:h-[30rem] mx-auto md:mr-[1rem] lg:mr-[2rem] xl:mr-[1rem] flex items-center justify-center p-4">
-                  <p className="text-gray-700 font-semibold text-center text-sm sm:text-base">
-                    {isHost
-                      ? "Start the quiz using the controls below."
-                      : "Waiting for host to start..."}
-                  </p>
+              {/* Question sheet */}
+              <div className="relative w-full max-w-[25rem] sm:max-w-[30rem] md:max-w-[20rem] lg:max-w-[35rem] xl:max-w-[25rem] 2xl:max-w-[50rem] 3xl:max-w-[60rem] h-[15rem] sm:h-[20rem] md:h-[13rem] lg:h-[25rem] xl:h-[20rem] 2xl:h-[25rem] 3xl:h-[30rem] mx-auto sm:right-0 md:right-0 lg:right-0 xl:right-0 md:mr-[1rem] lg:mr-[2rem] xl:mr-[1rem]">
+                {/* Bottom Card */}
+                <div
+                  className="absolute w-[80%] h-full inset-0 translate-y-[-35px] ml-[10px] md:ml-0 lg:ml-[10px] xl:ml-[10px]
+                          translate-x-[28px] bg-rose-200 border border-white rounded-[30px] shadow-md
+                          flex items-center justify-center text-xl font-bold text-gray-600"
+                ></div>
+
+                {/* Middle Card */}
+                <div
+                  className="absolute w-[93%] md:w-[90%] lg:w-[90%] xl:w-[90%] h-full inset-0 translate-y-[-18px] translate-x-[14px] lg:ml-[4px]
+                          bg-red-200 border border-white rounded-[30px] shadow-md flex items-center justify-center
+                          text-xl font-bold text-gray-600"
+                ></div>
+
+                {/* Top Card */}
+                <div
+                  className="bg-red-100 absolute w-full h-full inset-0 border border-white rounded-[30px]
+                          shadow-md flex items-center justify-center text-xl font-bold text-gray-600"
+                >
+                  <div className="flex flex-col items-center justify-center p-4">
+                    <h1 className="text-xl sm:text-3xl md:text-xl lg:text-3xl xl:text-2xl 2xl:text-4xl 3xl:text-5xl font-bold text-gray-600 mb-4 sm:mb-7">
+                      Question {currentIdx + 1}/{roomSettings?.numQuestions || currentRoom?.questions?.length || 0}:
+                    </h1>
+                    <p className="text-gray-600 font-light text-center text-sm sm:text-base md:text-sm lg:text-base xl:text-sm 2xl:text-lg 3xl:text-xl max-w-[90%]">
+                      {currentQuestion?.question}
+                    </p>
+                    {timeLeft === Infinity ? (
+                      <p className="mt-4 text-gray-500 text-sm sm:text-base md:text-sm lg:text-base xl:text-sm 2xl:text-lg 3xl:text-xl">
+                        Click an answer to continue
+                      </p>
+                    ) : (
+                      <p className="mt-4 text-gray-500 text-sm sm:text-base md:text-sm lg:text-base xl:text-sm 2xl:text-lg 3xl:text-xl">
+                        Time left: {timeLeft}s
+                      </p>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <>
-                  {/* Question sheet */}
-                  <div className="relative w-full max-w-[25rem] sm:max-w-[30rem] md:max-w-[20rem] lg:max-w-[35rem] xl:max-w-[25rem] 2xl:max-w-[50rem] 3xl:max-w-[60rem] h-[15rem] sm:h-[20rem] md:h-[13rem] lg:h-[25rem] xl:h-[20rem] 2xl:h-[25rem] 3xl:h-[30rem] mx-auto sm:right-0 md:right-0 lg:right-0 xl:right-0 md:mr-[1rem] lg:mr-[2rem] xl:mr-[1rem]">
-                    {/* Bottom Card */}
-                    <div
-                      className="absolute w-[80%] h-full inset-0 translate-y-[-35px] ml-[10px] md:ml-0 lg:ml-[10px] xl:ml-[10px]
-                              translate-x-[28px] bg-rose-200 border border-white rounded-[30px] shadow-md
-                              flex items-center justify-center text-xl font-bold text-gray-600"
-                    ></div>
+              </div>
 
-                    {/* Middle Card */}
-                    <div
-                      className="absolute w-[93%] md:w-[90%] lg:w-[90%] xl:w-[90%] h-full inset-0 translate-y-[-18px] translate-x-[14px] lg:ml-[4px]
-                              bg-red-200 border border-white rounded-[30px] shadow-md flex items-center justify-center
-                              text-xl font-bold text-gray-600"
-                    ></div>
+              {/* Answer sheet */}
+              <div className="flex flex-col items-center justify-center w-full max-w-[25rem] sm:max-w-[30rem] md:max-w-[20rem] lg:max-w-[35rem] xl:max-w-[25rem] 2xl:max-w-[50rem] 3xl:max-w-[60rem] h-[15rem] sm:h-[20rem] md:h-[15rem] lg:h-[24rem] xl:h-[20rem] 2xl:h-[25rem] 3xl:h-[30rem] mx-auto gap-2 sm:gap-5 md:gap-2 lg:gap-2 xl:gap-5">
+                <button
+                  onClick={() => sendAnswer("A")}
+                  disabled={timeLeft === Infinity && selectedAnswer !== null}
+                  className={cn(
+                    "bg-thanodi-lightPeach border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xs sm:text-xl md:text-sm lg:text-xl xl:text-lg 2xl:text-2xl 3xl:text-3xl font-bold text-gray-600 p-2 sm:p-5 md:p-1 lg:p-3 xl:p-4 2xl:p-6 3xl:p-8 w-full",
+                    selectedAnswer === "A" && (timeLeft === Infinity ? "bg-green-400" : "bg-gray-400"),
+                    timeLeft === Infinity && selectedAnswer !== null && "opacity-50 cursor-not-allowed",
+                  )}
+                >
+                  <h1 className="text-lg sm:text-3xl md:text-lg lg:text-3xl xl:text-2xl 2xl:text-4xl 3xl:text-5xl font-bold text-gray-600 ml-2 mr-1 sm:mr-5">
+                    A
+                  </h1>
+                  <p className="text-gray-600 font-light text-center text-xs sm:text-base md:text-xs lg:text-base xl:text-sm 2xl:text-lg 3xl:text-xl flex-1">
+                    {currentQuestion?.optionA}
+                  </p>
+                </button>
 
-                    {/* Top Card */}
-                    <div
-                      className="bg-red-100 absolute w-full h-full inset-0 border border-white rounded-[30px]
-                              shadow-md flex items-center justify-center text-xl font-bold text-gray-600"
-                    >
-                      <div className="flex flex-col items-center justify-center p-4">
-                        <h1 className="text-xl sm:text-3xl md:text-xl lg:text-3xl xl:text-2xl 2xl:text-4xl 3xl:text-5xl font-bold text-gray-600 mb-4 sm:mb-7">
-                          Question {currentIdx + 1}/{roomSettings?.numQuestions || currentRoom?.questions?.length || 0}:
-                        </h1>
-                        <p className="text-gray-600 font-light text-center text-sm sm:text-base md:text-sm lg:text-base xl:text-sm 2xl:text-lg 3xl:text-xl max-w-[90%]">
-                          {currentQuestion?.question}
-                        </p>
-                        {timeLeft === Infinity ? (
-                          <p className="mt-4 text-gray-500 text-sm sm:text-base md:text-sm lg:text-base xl:text-sm 2xl:text-lg 3xl:text-xl">
-                            Click an answer to continue
-                          </p>
-                        ) : (
-                          <p className="mt-4 text-gray-500 text-sm sm:text-base md:text-sm lg:text-base xl:text-sm 2xl:text-lg 3xl:text-xl">
-                            Time left: {timeLeft}s
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                <button
+                  onClick={() => sendAnswer("B")}
+                  disabled={timeLeft === Infinity && selectedAnswer !== null}
+                  className={cn(
+                    "bg-thanodi-blue border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xs sm:text-xl md:text-sm lg:text-xl xl:text-lg 2xl:text-2xl 3xl:text-3xl font-bold text-gray-600 p-2 sm:p-5 md:p-3 lg:p-5 xl:p-4 2xl:p-6 3xl:p-8 w-full",
+                    selectedAnswer === "B" && (timeLeft === Infinity ? "bg-green-400" : "bg-gray-400"),
+                    timeLeft === Infinity && selectedAnswer !== null && "opacity-50 cursor-not-allowed",
+                  )}
+                >
+                  <h1 className="text-lg sm:text-3xl md:text-lg lg:text-3xl xl:text-2xl 2xl:text-4xl 3xl:text-5xl font-bold text-gray-600 ml-2 mr-1 sm:mr-5">
+                    B
+                  </h1>
+                  <p className="text-gray-600 font-light text-center text-xs sm:text-base md:text-xs lg:text-base xl:text-sm 2xl:text-lg 3xl:text-xl flex-1">
+                    {currentQuestion?.optionB}
+                  </p>
+                </button>
 
-                  {/* Answer sheet */}
-                  <div className="flex flex-col items-center justify-center w-full max-w-[25rem] sm:max-w-[30rem] md:max-w-[20rem] lg:max-w-[35rem] xl:max-w-[25rem] 2xl:max-w-[50rem] 3xl:max-w-[60rem] h-[15rem] sm:h-[20rem] md:h-[15rem] lg:h-[24rem] xl:h-[20rem] 2xl:h-[25rem] 3xl:h-[30rem] mx-auto gap-2 sm:gap-5 md:gap-2 lg:gap-2 xl:gap-5">
-                    <button
-                      onClick={() => sendAnswer("A")}
-                      disabled={timeLeft === Infinity && selectedAnswer !== null}
-                      className={cn(
-                        "bg-thanodi-lightPeach border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xs sm:text-xl md:text-sm lg:text-xl xl:text-lg 2xl:text-2xl 3xl:text-3xl font-bold text-gray-600 p-2 sm:p-5 md:p-1 lg:p-3 xl:p-4 2xl:p-6 3xl:p-8 w-full",
-                        selectedAnswer === "A" && (timeLeft === Infinity ? "bg-green-400" : "bg-gray-400"),
-                        timeLeft === Infinity && selectedAnswer !== null && "opacity-50 cursor-not-allowed",
-                      )}
-                    >
-                      <h1 className="text-lg sm:text-3xl md:text-lg lg:text-3xl xl:text-2xl 2xl:text-4xl 3xl:text-5xl font-bold text-gray-600 ml-2 mr-1 sm:mr-5">
-                        A
-                      </h1>
-                      <p className="text-gray-600 font-light text-center text-xs sm:text-base md:text-xs lg:text-base xl:text-sm 2xl:text-lg 3xl:text-xl flex-1">
-                        {currentQuestion?.optionA}
-                      </p>
-                    </button>
+                <button
+                  onClick={() => sendAnswer("C")}
+                  disabled={timeLeft === Infinity && selectedAnswer !== null}
+                  className={cn(
+                    "bg-thanodi-lightBlue border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xs sm:text-xl md:text-sm lg:text-xl xl:text-lg 2xl:text-2xl 3xl:text-3xl font-bold text-gray-600 p-2 sm:p-5 md:p-3 lg:p-5 xl:p-4 2xl:p-6 3xl:p-8 w-full",
+                    selectedAnswer === "C" && (timeLeft === Infinity ? "bg-green-400" : "bg-gray-400"),
+                    timeLeft === Infinity && selectedAnswer !== null && "opacity-50 cursor-not-allowed",
+                  )}
+                >
+                  <h1 className="text-lg sm:text-3xl md:text-lg lg:text-3xl xl:text-2xl 2xl:text-4xl 3xl:text-5xl font-bold text-gray-600 ml-2 mr-1 sm:mr-5">
+                    C
+                  </h1>
+                  <p className="text-gray-600 font-light text-center text-xs sm:text-base md:text-xs lg:text-base xl:text-sm 2xl:text-lg 3xl:text-xl flex-1">
+                    {currentQuestion?.optionC}
+                  </p>
+                </button>
 
-                    <button
-                      onClick={() => sendAnswer("B")}
-                      disabled={timeLeft === Infinity && selectedAnswer !== null}
-                      className={cn(
-                        "bg-thanodi-blue border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xs sm:text-xl md:text-sm lg:text-xl xl:text-lg 2xl:text-2xl 3xl:text-3xl font-bold text-gray-600 p-2 sm:p-5 md:p-3 lg:p-5 xl:p-4 2xl:p-6 3xl:p-8 w-full",
-                        selectedAnswer === "B" && (timeLeft === Infinity ? "bg-green-400" : "bg-gray-400"),
-                        timeLeft === Infinity && selectedAnswer !== null && "opacity-50 cursor-not-allowed",
-                      )}
-                    >
-                      <h1 className="text-lg sm:text-3xl md:text-lg lg:text-3xl xl:text-2xl 2xl:text-4xl 3xl:text-5xl font-bold text-gray-600 ml-2 mr-1 sm:mr-5">
-                        B
-                      </h1>
-                      <p className="text-gray-600 font-light text-center text-xs sm:text-base md:text-xs lg:text-base xl:text-sm 2xl:text-lg 3xl:text-xl flex-1">
-                        {currentQuestion?.optionB}
-                      </p>
-                    </button>
-
-                    <button
-                      onClick={() => sendAnswer("C")}
-                      disabled={timeLeft === Infinity && selectedAnswer !== null}
-                      className={cn(
-                        "bg-thanodi-lightBlue border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xs sm:text-xl md:text-sm lg:text-xl xl:text-lg 2xl:text-2xl 3xl:text-3xl font-bold text-gray-600 p-2 sm:p-5 md:p-3 lg:p-5 xl:p-4 2xl:p-6 3xl:p-8 w-full",
-                        selectedAnswer === "C" && (timeLeft === Infinity ? "bg-green-400" : "bg-gray-400"),
-                        timeLeft === Infinity && selectedAnswer !== null && "opacity-50 cursor-not-allowed",
-                      )}
-                    >
-                      <h1 className="text-lg sm:text-3xl md:text-lg lg:text-3xl xl:text-2xl 2xl:text-4xl 3xl:text-5xl font-bold text-gray-600 ml-2 mr-1 sm:mr-5">
-                        C
-                      </h1>
-                      <p className="text-gray-600 font-light text-center text-xs sm:text-base md:text-xs lg:text-base xl:text-sm 2xl:text-lg 3xl:text-xl flex-1">
-                        {currentQuestion?.optionC}
-                      </p>
-                    </button>
-
-                    <button
-                      onClick={() => sendAnswer("D")}
-                      disabled={timeLeft === Infinity && selectedAnswer !== null}
-                      className={cn(
-                        "bg-thanodi-cream border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xs sm:text-xl md:text-sm lg:text-xl xl:text-lg 2xl:text-2xl 3xl:text-3xl font-bold text-gray-600 p-2 sm:p-5 md:p-3 lg:p-5 xl:p-4 2xl:p-6 3xl:p-8 w-full",
-                        selectedAnswer === "D" && (timeLeft === Infinity ? "bg-green-400" : "bg-gray-400"),
-                        timeLeft === Infinity && selectedAnswer !== null && "opacity-50 cursor-not-allowed",
-                      )}
-                    >
-                      <h1 className="text-lg sm:text-3xl md:text-lg lg:text-3xl xl:text-2xl 2xl:text-4xl 3xl:text-5xl font-bold text-gray-600 ml-2 mr-1 sm:mr-5">
-                        D
-                      </h1>
-                      <p className="text-gray-600 font-light text-center text-xs sm:text-base md:text-xs lg:text-base xl:text-sm 2xl:text-lg 3xl:text-xl flex-1">
-                        {currentQuestion?.optionD}
-                      </p>
-                    </button>
-                  </div>
-                </>
-              )}
+                <button
+                  onClick={() => sendAnswer("D")}
+                  disabled={timeLeft === Infinity && selectedAnswer !== null}
+                  className={cn(
+                    "bg-thanodi-peach border border-gray-300 rounded-[30px] shadow-md flex items-center justify-center text-xs sm:text-xl md:text-sm lg:text-xl xl:text-lg 2xl:text-2xl 3xl:text-3xl font-bold text-gray-600 p-2 sm:p-5 md:p-3 lg:p-5 xl:p-4 2xl:p-6 3xl:p-8 w-full",
+                    selectedAnswer === "D" && (timeLeft === Infinity ? "bg-green-400" : "bg-gray-400"),
+                    timeLeft === Infinity && selectedAnswer !== null && "opacity-50 cursor-not-allowed",
+                  )}
+                >
+                  <h1 className="text-lg sm:text-3xl md:text-lg lg:text-3xl xl:text-2xl 2xl:text-4xl 3xl:text-5xl font-bold text-gray-600 ml-2 mr-1 sm:mr-5">
+                    D
+                  </h1>
+                  <p className="text-gray-600 font-light text-center text-xs sm:text-base md:text-xs lg:text-base xl:text-sm 2xl:text-lg 3xl:text-xl flex-1">
+                    {currentQuestion?.optionD}
+                  </p>
+                </button>
+              </div>
             </>
           )}
           {shouldShowResults && (
@@ -1025,38 +1025,38 @@ useEffect(() => {
       </div>
 
       {/* call controls */}
-      <div className="fixed bottom-0 left-0 right-0 rounded-t-xl flex w-full items-center justify-center gap-1 sm:gap-2 md:gap-3 lg:gap-4 flex-nowrap p-2 sm:p-4 bg-black/20 backdrop-blur-sm overflow-x-auto">
-        <div className="flex items-center gap-3">
+      <div className="fixed bottom-0 left-0 right-0 rounded-t-xl flex w-full items-center justify-center gap-1 sm:gap-2 md:gap-3 lg:gap-4 flex-nowrap p-1 sm:p-2 md:p-4 bg-black/20 backdrop-blur-sm overflow-x-auto">
+        <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
           {/* Custom call controls based on room settings */}
           {roomSettings?.mic === 'flexible' && call && (
             <button
               onClick={handleMicToggle}
-              className="cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-[#4c535b] flex items-center justify-center"
+              className="cursor-pointer rounded-2xl bg-[#19232d] px-1 sm:px-2 md:px-4 py-1 sm:py-2 hover:bg-[#4c535b] flex items-center justify-center"
             >
               {call.microphone.state.status === 'enabled' ? (
-                <Mic size={16} className="sm:w-5 text-white" />
+                <Mic size={14} className="sm:w-4 md:w-5 text-white" />
               ) : (
-                <MicOff size={16} className="sm:w-5 text-white" />
+                <MicOff size={14} className="sm:w-4 md:w-5 text-white" />
               )}
             </button>
           )}
           {roomSettings?.camera === 'flexible' && call && (
             <button
               onClick={handleCameraToggle}
-              className="cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-[#4c535b] flex items-center justify-center"
+              className="cursor-pointer rounded-2xl bg-[#19232d] px-1 sm:px-2 md:px-4 py-1 sm:py-2 hover:bg-[#4c535b] flex items-center justify-center"
             >
               {call.camera.state.status === 'enabled' ? (
-                <Video size={16} className="sm:w-5 text-white" />
+                <Video size={14} className="sm:w-4 md:w-5 text-white" />
               ) : (
-                <VideoOff size={16} className="sm:w-5 text-white" />
+                <VideoOff size={14} className="sm:w-4 md:w-5 text-white" />
               )}
             </button>
           )}
           <button
             onClick={handleLeaveCall}
-            className="cursor-pointer rounded-2xl bg-red-500 px-2 sm:px-4 py-2 hover:bg-red-600 flex items-center justify-center"
+            className="cursor-pointer rounded-2xl bg-red-500 px-1 sm:px-2 md:px-4 py-1 sm:py-2 hover:bg-red-600 flex items-center justify-center"
           >
-            <PhoneOff size={16} className="sm:w-5 text-white" />
+            <PhoneOff size={14} className="sm:w-4 md:w-5 text-white" />
           </button>
         </div>
         {isHost && <EndCallButton />}
@@ -1066,7 +1066,7 @@ useEffect(() => {
         {shouldShowStartButton && (
           <button
             onClick={handleStartQuiz}
-            className="cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-xs sm:text-sm text-white"
+            className="cursor-pointer rounded-2xl bg-[#19232d] px-1 sm:px-2 md:px-4 py-1 sm:py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-[10px] sm:text-xs md:text-sm text-white"
           >
             <span className="hidden sm:inline md:hidden lg:inline xl:hidden">Start Quiz</span>
             <span className="sm:hidden md:inline lg:hidden xl:inline">Start</span>
@@ -1076,14 +1076,15 @@ useEffect(() => {
         {shouldShowRestartButton && (
           <button
             onClick={handleRestartQuiz}
-            className="cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-xs sm:text-sm text-white"
+            className="cursor-pointer rounded-2xl bg-[#19232d] px-1 sm:px-2 md:px-4 py-1 sm:py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-[10px] sm:text-xs md:text-sm text-white"
           >
-            Restart
+            <span className="hidden sm:inline">Restart</span>
+            <span className="sm:hidden">Restart</span>
           </button>
         )}
           {isHost && (
           <button
-            className="cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-xs sm:text-sm text-white"
+            className="cursor-pointer rounded-2xl bg-[#19232d] px-1 sm:px-2 md:px-4 py-1 sm:py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-[10px] sm:text-xs md:text-sm text-white"
             onClick={handleOpenTopicModal}
           >
             <span className="hidden sm:inline md:hidden lg:inline xl:hidden">Choose a topic</span>
@@ -1092,23 +1093,23 @@ useEffect(() => {
         )}
 
         <button onClick={() => dispatch({ type: 'SET_PARTICIPANTS', payload: true })}>
-          <div className=" cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-[#4c535b] ">
-            <Users size={16} className="sm:w-5 text-white" />
+          <div className="cursor-pointer rounded-2xl bg-[#19232d] px-1 sm:px-2 md:px-4 py-1 sm:py-2 hover:bg-[#4c535b] flex items-center justify-center">
+            <Users size={14} className="sm:w-4 md:w-5 text-white" />
           </div>
         </button>
         
         {/* Report Button */}
         <button onClick={handleOpenReportDialog}>
-          <div className="cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-red-600 ml-2">
-            <Flag size={16} className="sm:w-5 text-white" />
+          <div className="cursor-pointer rounded-2xl bg-[#19232d] px-1 sm:px-2 md:px-4 py-1 sm:py-2 hover:bg-red-600 flex items-center justify-center">
+            <Flag size={14} className="sm:w-4 md:w-5 text-white" />
           </div>
         </button>
         
         {/* Ban User Button (only for host) */}
         {isHost && (
           <button onClick={handleOpenBanDialog}>
-            <div className="cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-red-600 ml-2">
-              <Shield size={16} className="sm:w-5 text-white" />
+            <div className="cursor-pointer rounded-2xl bg-[#19232d] px-1 sm:px-2 md:px-4 py-1 sm:py-2 hover:bg-red-600 flex items-center justify-center">
+              <Shield size={14} className="sm:w-4 md:w-5 text-white" />
             </div>
           </button>
         )}
@@ -1185,7 +1186,7 @@ useEffect(() => {
             <div className="mb-4">
               <label className="block mb-2 text-[#19232d] font-medium">Who are you reporting?</label>
               <Select value={selectedReportedId} onValueChange={setSelectedReportedId}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full text-black">
                   <SelectValue placeholder="Select a participant" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1209,7 +1210,7 @@ useEffect(() => {
             <div className="mb-4">
               <label className="block mb-2 text-[#19232d] font-medium">Type of Report</label>
               <Select value={reportType} onValueChange={setReportType}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full text-black">
                   <SelectValue placeholder="Select report type" />
                 </SelectTrigger>
                 <SelectContent>

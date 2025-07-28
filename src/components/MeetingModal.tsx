@@ -34,31 +34,51 @@ const MeetingModal = ({
 }: MeetingModalProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="flex w-full max-w-[520px] flex-col gap-6 border-none bg-blue-400 px-6 py-9 text-white">
-        <div className="flex flex-col gap-6">
-          {image && (
-            <div className="flex justify-center">
-              <Image src={image} alt="checked" width={72} height={72} />
-            </div>
-          )}
-          <DialogTitle className={cn("text-3xl font-bold leading-[42px]", className)}>
-            {title}
-          </DialogTitle>
+      <DialogContent 
+        className="flex w-full max-w-[520px] flex-col gap-6 border-none bg-blue-400 px-6 py-9 text-white"
+        role="dialog"
+        aria-modal="true"
+        aria-describedby="modal-description"
+      >
+        {image && (
+          <div className="flex justify-center">
+            <Image 
+              src={image} 
+              alt="Modal illustration" 
+              width={72} 
+              height={72} 
+              aria-hidden="true"
+            />
+          </div>
+        )}
+        
+        <DialogTitle 
+          className={cn("text-3xl font-bold leading-[42px]", className)}
+        >
+          {title}
+        </DialogTitle>
+        
+        <div id="modal-description" className="flex flex-col gap-6">
           {children}
+          
           <Button
-            className={
-              "bg-blue-300 hover:bg-blue-500 text-white rounded-[8px] focus-visible:ring-0 focus-visible:ring-offset-0"
-            }
+            className={cn(
+              "bg-blue-300 hover:bg-blue-500 text-white rounded-[8px] focus-visible:ring-0 focus-visible:ring-offset-0",
+              buttonClassName
+            )}
             onClick={handleClick}
+            aria-label={buttonText || "Schedule Meeting"}
           >
             {buttonIcon && (
               <Image
                 src={buttonIcon}
-                alt="button icon"
+                alt=""
                 width={13}
                 height={13}
+                aria-hidden="true"
               />
-            )}{" "}
+            )}
+            {buttonIcon && <span className="sr-only">Icon</span>}
             &nbsp;
             {buttonText || "Schedule Meeting"}
           </Button>

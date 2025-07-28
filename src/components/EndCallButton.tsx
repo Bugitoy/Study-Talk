@@ -33,9 +33,9 @@ const EndCallButton = () => {
   };
 
   return (
-    <Button onClick={endCall} className="bg-red-500 text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2">
+    <Button onClick={endCall} className="bg-red-500 h-6 sm:h-auto text-xs sm:text-base px-2 sm:px-4 py-1 sm:py-2">
       <span className="hidden sm:inline md:hidden lg:inline xl:hidden">End call for everyone</span>
-      <span className="sm:hidden md:inline lg:hidden xl:inline">Everyone</span>
+      <span className="sm:hidden md:inline lg:hidden xl:inline">End</span>
     </Button>
   );
 };

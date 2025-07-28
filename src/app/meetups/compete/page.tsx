@@ -225,8 +225,6 @@ const Compete = ({
     }
   }, [user?.id]);
 
-
-
   // Validate compete meeting link
   const validateCompeteMeetingLink = useCallback((link: string): { isValid: boolean; error: string; sanitizedLink?: string } => {
     // Check length
@@ -616,194 +614,245 @@ const Compete = ({
 
   return (
     <NextLayout>
-      <div className="flex flex-col gap-6 sm:gap-8 lg:gap-12 px-4 sm:px-6 lg:px-8">
-
-        <div className="max-w-5xl mx-auto w-full flex flex-col lg:flex-row items-center lg:items-end justify-between gap-4 mb-2">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-7xl font-extrabold text-lightBlue-100 text-center lg:text-left">
-            Compete with people on various topics
-          </h1>
-          <div className="relative w-full max-w-xs">
-            <Input
-              placeholder="Search for a study group..."
-            value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full px-3 sm:px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 text-base sm:text-lg shadow-sm transition-colors"
-              maxLength={COMPETE_SEARCH_CONFIG.MAX_LENGTH}
-              aria-label="Search compete rooms"
-              aria-describedby={searchError ? "search-error" : "search-help"}
-              role="searchbox"
-              aria-invalid={!isSearchValid}
-              aria-required="false"
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  clearSearch();
-                  e.currentTarget.blur();
-                }
-              }}
-            />
-            {search && (
-              <button
-                onClick={clearSearch}
-                className="absolute right-3 top-1/3 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                type="button"
-                aria-label="Clear search"
-                title="Clear search"
-              >
-                ✕
-              </button>
-            )}
-            {/* Search character count */}
-            {search && (
-              <div className={`text-xs mt-1 ${
-                search.length > COMPETE_SEARCH_CONFIG.MAX_LENGTH * 0.8 
-                  ? 'text-yellow-600' 
-                  : 'text-gray-400'
-              }`}>
-                {search.length}/{COMPETE_SEARCH_CONFIG.MAX_LENGTH} characters
-              </div>
-            )}
-            {/* Accessibility help text */}
-            <div id="search-help" className="sr-only">
-              Search for compete rooms. Use up to {COMPETE_SEARCH_CONFIG.MAX_LENGTH} characters.
-            </div>
-            {/* Error message for screen readers */}
-            {searchError && (
-              <div id="search-error" className="sr-only" role="alert" aria-live="polite">
-                {searchError}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Custom Progress Bar and Leaderboard Button */}
-        <div className="max-w-4xl mx-auto w-full flex flex-col sm:flex-row items-center mb-4 gap-3 sm:gap-4">
-          <div className="flex flex-row w-full gap-2 sm:gap-4 lg:gap-8">
-            <div
-              className={`flex-grow h-[60px] sm:h-[70px] lg:h-[80px] rounded-lg cursor-pointer select-none
-                        transition-all duration-150 border-b-[1px] shadow ${
-                          isAuthenticated 
-                            ? 'active:translate-y-2 active:[box-shadow:0_0px_0_0_#F7D379,0_0px_0_0_#F7D37941] active:border-b-[0px] [box-shadow:0_10px_0_0_#F7D379,0_15px_0_0_#F7D37941] border-yellow-400 bg-yellow-300 hover:bg-yellow-400' 
-                            : 'bg-gray-300 cursor-not-allowed border-gray-400'
-                        }`}
-                        tabIndex={0}
-                        role="button"
-                         onClick={joinRandomRoom}
-                      >
-              <span className={`flex flex-col justify-center items-center h-full font-bold text-xs sm:text-base lg:text-lg ${
-                isAuthenticated ? 'text-gray-800' : 'text-gray-500'
-              }`}>
-                Random room
-              </span>
-            </div>
-
-            <div
-              className={`flex-grow h-[60px] sm:h-[70px] lg:h-[80px] rounded-lg cursor-pointer select-none
-                  transition-all duration-150 border-b-[1px] shadow ${
-                    isAuthenticated 
-                      ? 'active:translate-y-2 active:[box-shadow:0_0px_0_0_#F7D379,0_0px_0_0_#F7D37941] active:border-b-[0px] [box-shadow:0_10px_0_0_#F7D379,0_15px_0_0_#F7D37941] border-yellow-400 bg-yellow-300 hover:bg-yellow-400' 
-                      : 'bg-gray-300 cursor-not-allowed border-gray-400'
-                  }`}
-                  tabIndex={0}
-                  role="button"
-                  onClick={handleJoinRoom}
+      {/* Skip to main content link for screen readers */}
+      <a 
+        href="#main-content" 
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-blue-600 text-white px-4 py-2 rounded z-50"
+        aria-label="Skip to main content"
+      >
+        Skip to main content
+      </a>
+      
+      <main id="main-content" className="flex flex-col gap-6 sm:gap-8 lg:gap-12 px-4 sm:px-6 lg:px-8" role="main">
+        {/* Header Section */}
+        <section aria-labelledby="page-heading">
+          <div className="max-w-5xl mx-auto w-full flex flex-col lg:flex-row items-center lg:items-end justify-between gap-4 mb-2">
+            <h1 
+              id="page-heading"
+              className="text-2xl sm:text-3xl lg:text-4xl xl:text-7xl font-extrabold text-lightBlue-100 text-center lg:text-left"
+            >
+              Compete with people on various topics
+            </h1>
+            
+            {/* Search Section */}
+            <div className="relative w-full max-w-xs">
+              <label htmlFor="room-search" className="sr-only">
+                Search for compete rooms
+              </label>
+              <Input
+                id="room-search"
+                placeholder="Search for a study group..."
+                value={search}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="w-full px-3 sm:px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 text-base sm:text-lg shadow-sm transition-colors"
+                maxLength={COMPETE_SEARCH_CONFIG.MAX_LENGTH}
+                aria-label="Search compete rooms"
+                aria-describedby={searchError ? "search-error" : "search-help"}
+                role="searchbox"
+                aria-invalid={!isSearchValid}
+                aria-required="false"
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    clearSearch();
+                    e.currentTarget.blur();
+                  }
+                }}
+              />
+              {search && (
+                <button
+                  onClick={clearSearch}
+                  className="absolute right-3 top-1/3 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  type="button"
+                  aria-label="Clear search"
+                  title="Clear search"
                 >
-                  <span className={`flex flex-col justify-center items-center h-full font-bold text-xs sm:text-base lg:text-lg ${
-                    isAuthenticated ? 'text-gray-800' : 'text-gray-500'
-                  }`}>
-                    Join a room
-                  </span>
+                  ✕
+                </button>
+              )}
+              {/* Search character count */}
+              {search && (
+                <div className={`text-xs mt-1 ${
+                  search.length > COMPETE_SEARCH_CONFIG.MAX_LENGTH * 0.8 
+                    ? 'text-yellow-600' 
+                    : 'text-gray-400'
+                }`}>
+                  {search.length}/{COMPETE_SEARCH_CONFIG.MAX_LENGTH} characters
                 </div>
-    
-                <div
-                  className={`flex-grow h-[60px] sm:h-[70px] lg:h-[80px] rounded-lg cursor-pointer select-none
+              )}
+              {/* Accessibility help text */}
+              <div id="search-help" className="sr-only">
+                Search for compete rooms. Use up to {COMPETE_SEARCH_CONFIG.MAX_LENGTH} characters.
+              </div>
+              {/* Error message for screen readers */}
+              {searchError && (
+                <div id="search-error" className="sr-only" role="alert" aria-live="polite">
+                  {searchError}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Action Buttons Section */}
+        <section aria-labelledby="action-buttons-heading">
+          <h2 id="action-buttons-heading" className="sr-only">Room Actions</h2>
+          <div className="max-w-4xl mx-auto w-full flex flex-col sm:flex-row items-center mb-4 gap-3 sm:gap-4">
+            <div className="flex flex-row w-full gap-2 sm:gap-4 lg:gap-8" role="group" aria-label="Room action buttons">
+              <button
+                className={`flex-grow h-[60px] sm:h-[70px] lg:h-[80px] rounded-lg cursor-pointer select-none
+                          transition-all duration-150 border-b-[1px] shadow ${
+                            isAuthenticated 
+                              ? 'active:translate-y-2 active:[box-shadow:0_0px_0_0_#F7D379,0_0px_0_0_#F7D37941] active:border-b-[0px] [box-shadow:0_10px_0_0_#F7D379,0_15px_0_0_#F7D37941] border-yellow-400 bg-yellow-300 hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2' 
+                              : 'bg-gray-300 cursor-not-allowed border-gray-400'
+                          }`}
+                onClick={joinRandomRoom}
+                disabled={!isAuthenticated}
+                aria-label={isAuthenticated ? "Join a random compete room" : "Login required to join random room"}
+                aria-describedby={!isAuthenticated ? "login-required" : undefined}
+              >
+                <span className={`flex flex-col justify-center items-center h-full font-bold text-xs sm:text-base lg:text-lg ${
+                  isAuthenticated ? 'text-gray-800' : 'text-gray-500'
+                }`}>
+                  Random room
+                </span>
+              </button>
+
+              <button
+                className={`flex-grow h-[60px] sm:h-[70px] lg:h-[80px] rounded-lg cursor-pointer select-none
                     transition-all duration-150 border-b-[1px] shadow ${
                       isAuthenticated 
-                        ? 'active:translate-y-2 active:[box-shadow:0_0px_0_0_#F7D379,0_0px_0_0_#F7D37941] active:border-b-[0px] [box-shadow:0_10px_0_0_#F7D379,0_15px_0_0_#F7D37941] border-yellow-400 bg-yellow-300 hover:bg-yellow-400' 
+                        ? 'active:translate-y-2 active:[box-shadow:0_0px_0_0_#F7D379,0_0px_0_0_#F7D37941] active:border-b-[0px] [box-shadow:0_10px_0_0_#F7D379,0_15px_0_0_#F7D37941] border-yellow-400 bg-yellow-300 hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2' 
                         : 'bg-gray-300 cursor-not-allowed border-gray-400'
                     }`}
-                  tabIndex={0}
-                  role="button"
-                    onClick={handleCreateRoom}
-                >
-                    <span className={`flex flex-col justify-center items-center h-full font-bold text-xs sm:text-base lg:text-lg ${
-                      isAuthenticated ? 'text-gray-800' : 'text-gray-500'
-                    }`}>
-                    Create a room
-                  </span>
-                </div>
-              </div>
+                onClick={handleJoinRoom}
+                disabled={!isAuthenticated}
+                aria-label={isAuthenticated ? "Join a specific compete room" : "Login required to join room"}
+                aria-describedby={!isAuthenticated ? "login-required" : undefined}
+              >
+                <span className={`flex flex-col justify-center items-center h-full font-bold text-xs sm:text-base lg:text-lg ${
+                  isAuthenticated ? 'text-gray-800' : 'text-gray-500'
+                }`}>
+                  Join a room
+                </span>
+              </button>
+
+              <button
+                className={`flex-grow h-[60px] sm:h-[70px] lg:h-[80px] rounded-lg cursor-pointer select-none
+                  transition-all duration-150 border-b-[1px] shadow ${
+                    isAuthenticated 
+                      ? 'active:translate-y-2 active:[box-shadow:0_0px_0_0_#F7D379,0_0px_0_0_#F7D37941] active:border-b-[0px] [box-shadow:0_10px_0_0_#F7D379,0_15px_0_0_#F7D37941] border-yellow-400 bg-yellow-300 hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2' 
+                      : 'bg-gray-300 cursor-not-allowed border-gray-400'
+                  }`}
+                onClick={handleCreateRoom}
+                disabled={!isAuthenticated}
+                aria-label={isAuthenticated ? "Create a new compete room" : "Login required to create room"}
+                aria-describedby={!isAuthenticated ? "login-required" : undefined}
+              >
+                <span className={`flex flex-col justify-center items-center h-full font-bold text-xs sm:text-base lg:text-lg ${
+                  isAuthenticated ? 'text-gray-800' : 'text-gray-500'
+                }`}>
+                  Create a room
+                </span>
+              </button>
             </div>
-    
-            <div className="max-w-5xl mx-auto w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-              {filteredRooms.length === 0 && (
-                <p className="text-center text-gray-500 col-span-full">
-                  No public rooms available
-                </p>
-              )}
-              {filteredRooms.map((room, i) => (
+          </div>
+          
+          {/* Login required message for screen readers */}
+          {!isAuthenticated && (
+            <div id="login-required" className="sr-only">
+              Login required to access this feature
+            </div>
+          )}
+        </section>
+
+        {/* Rooms Grid Section */}
+        <section aria-labelledby="rooms-heading">
+          <h2 id="rooms-heading" className="sr-only">Available Compete Rooms</h2>
+          <div className="max-w-5xl mx-auto w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8" role="list" aria-label="Available compete rooms">
+            {filteredRooms.length === 0 && (
+              <div className="text-center text-gray-500 col-span-full" role="status" aria-live="polite">
+                <p>No public rooms available</p>
+              </div>
+            )}
+            {filteredRooms.map((room, i) => (
+              <div key={room.callId} role="listitem">
                 <GroupCard
-                  key={room.callId}
                   title={room.roomName}
                   peopleCount={room.members.length}
                   profilePics={room.members}
                   onJoin={() => handleRoomJoin(room.callId)}
                   color={pastelColors[i % pastelColors.length]}
                   isAuthenticated={isAuthenticated ?? undefined}
+                  aria-label={`Join ${room.roomName} room with ${room.members.length} members`}
                 />
-              ))}
-            </div>
-    
-            <MeetingModal
-              isOpen={meetingState === "isJoiningMeeting"}
-              onClose={() => { setMeetingState(undefined); clearCompeteMeetingLink(); }}
-              title="Type the link here"
-              className="text-center"
-              buttonText={isProcessingLink ? "Joining..." : isRateLimited ? "Rate Limited" : "Join Meeting"}
-              handleClick={handleCompeteMeetingLinkSubmit}
-            >
-              <div className="space-y-3">
-                <div className="relative">
-              <Input
-                placeholder="Meeting Link"
-                    onChange={(e) => handleCompeteMeetingLinkChange(e.target.value)}
-                    value={values.link}
-                    className={`border-2 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-[8px] text-center text-xs text-gray-800 transition-colors ${
-                      meetingLinkError
-                        ? 'border-red-400 focus:border-red-500'
-                        : isMeetingLinkValid && values.link.trim()
-                          ? 'border-green-400 focus:border-green-500'
-                          : 'border-gray-200 focus:border-blue-400'
-                    }`}
-                    disabled={isProcessingLink || isRateLimited}
-                  />
-                  {values.link && !isRateLimited && (
-                    <button
-                      onClick={clearCompeteMeetingLink}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                      disabled={isProcessingLink}
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-                {meetingLinkError && (
-                  <div className="text-red-500 text-sm text-center">
-                    {meetingLinkError}
-                  </div>
-                )}
-                {isRateLimited && (
-                  <div className="text-orange-500 text-sm text-center">
-                    Too many attempts. Please wait before trying again.
-                  </div>
-                )}
-                {values.link && !meetingLinkError && isMeetingLinkValid && !isRateLimited && (
-                  <div className="text-green-500 text-sm text-center">
-                    ✓ Valid meeting link
-                  </div>
-                )}
               </div>
-            </MeetingModal>
-      </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Meeting Modal */}
+        <MeetingModal
+          isOpen={meetingState === "isJoiningMeeting"}
+          onClose={() => { setMeetingState(undefined); clearCompeteMeetingLink(); }}
+          title="Type the link here"
+          className="text-center"
+          buttonText={isProcessingLink ? "Joining..." : isRateLimited ? "Rate Limited" : "Join Meeting"}
+          handleClick={handleCompeteMeetingLinkSubmit}
+        >
+          <div className="space-y-3">
+            <div className="relative">
+              <label htmlFor="meeting-link" className="sr-only">
+                Meeting Link
+              </label>
+              <Input
+                id="meeting-link"
+                placeholder="Meeting Link"
+                onChange={(e) => handleCompeteMeetingLinkChange(e.target.value)}
+                value={values.link}
+                className={`border-2 focus-visible:ring-0 focus-visible:ring-offset-0 rounded-[8px] text-center text-xs text-gray-800 transition-colors ${
+                  meetingLinkError
+                    ? 'border-red-400 focus:border-red-500'
+                    : isMeetingLinkValid && values.link.trim()
+                      ? 'border-green-400 focus:border-green-500'
+                      : 'border-gray-200 focus:border-blue-400'
+                }`}
+                disabled={isProcessingLink || isRateLimited}
+                aria-label="Enter meeting link"
+                aria-describedby={meetingLinkError ? "meeting-link-error" : isMeetingLinkValid && values.link.trim() ? "meeting-link-success" : "meeting-link-help"}
+                aria-invalid={!!meetingLinkError}
+              />
+              {values.link && !isRateLimited && (
+                <button
+                  onClick={clearCompeteMeetingLink}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  disabled={isProcessingLink}
+                  aria-label="Clear meeting link"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            {meetingLinkError && (
+              <div id="meeting-link-error" className="text-red-500 text-sm text-center" role="alert" aria-live="polite">
+                {meetingLinkError}
+              </div>
+            )}
+            {isRateLimited && (
+              <div className="text-orange-500 text-sm text-center" role="alert" aria-live="polite">
+                Too many attempts. Please wait before trying again.
+              </div>
+            )}
+            {values.link && !meetingLinkError && isMeetingLinkValid && !isRateLimited && (
+              <div id="meeting-link-success" className="text-green-500 text-sm text-center" role="status" aria-live="polite">
+                ✓ Valid meeting link
+              </div>
+            )}
+            <div id="meeting-link-help" className="sr-only">
+              Enter a valid study-talk.com meeting link
+            </div>
+          </div>
+        </MeetingModal>
+      </main>
     </NextLayout>
   );
 };
