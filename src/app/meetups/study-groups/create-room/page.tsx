@@ -6,6 +6,7 @@ import NextLayout from "@/components/NextLayout";
 import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs';
 import { useStreamVideoClient } from '@stream-io/video-react-sdk';
 import { useToast } from '@/hooks/use-toast';
+import { AlertCircle, RefreshCw, CheckCircle } from 'lucide-react';
 
 // Room name validation configuration
 const ROOM_NAME_CONFIG = {
@@ -43,6 +44,13 @@ export default function CreateRoom() {
   const [attemptCount, setAttemptCount] = useState(0);
   const [lastAttemptTime, setLastAttemptTime] = useState(0);
   const [isRateLimited, setIsRateLimited] = useState(false);
+
+  // Loading and creation state
+  const [isCreating, setIsCreating] = useState(false);
+  const [creationStep, setCreationStep] = useState<'idle' | 'creating' | 'configuring' | 'finalizing'>('idle');
+  const [creationError, setCreationError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [maxRetries] = useState(3);
 
   // Check if user is blocked
   useEffect(() => {
@@ -187,7 +195,7 @@ export default function CreateRoom() {
     return res.json();
   };
 
-    const createMeeting = async () => {
+  const createMeeting = async () => {
     if (!client || !user) return null;
     const id = crypto.randomUUID();
     const call = client.call('default', id);
@@ -216,82 +224,138 @@ export default function CreateRoom() {
       
       if (response.status === 429) {
         // Rate limit exceeded
-        toast({ 
-          title: 'Too Many Attempts',
-          description: errorData.message || 'Please wait before creating another room.',
-          variant: 'destructive'
-        });
-        return null;
+        throw new Error('RATE_LIMIT_EXCEEDED');
       }
       
       // Other server errors
-      toast({ 
-        title: 'Failed to Create Room',
-        description: 'Please try again later.',
-        variant: 'destructive'
-      });
-      return null;
+      throw new Error('SERVER_ERROR');
     }
     
-    toast({ title: 'Meeting Created' });
     return call;
   };
 
-const handleNext = async () => {
-  // Validate room name before proceeding
-  if (!roomSettings.roomName.trim()) {
-    toast({
-      title: 'Room Name Required',
-      description: 'Please enter a room name',
-    });
-    return;
-  }
+  const handleNext = async () => {
+    // Validate room name before proceeding
+    if (!roomSettings.roomName.trim()) {
+      toast({
+        title: 'Room Name Required',
+        description: 'Please enter a room name',
+      });
+      return;
+    }
 
-  if (!isRoomNameValid) {
-    toast({
-      title: 'Invalid Room Name',
-      description: roomNameError || 'Please enter a valid room name',
-    });
-    return;
-  }
+    if (!isRoomNameValid) {
+      toast({
+        title: 'Invalid Room Name',
+        description: roomNameError || 'Please enter a valid room name',
+      });
+      return;
+    }
 
-  // Check rate limiting
-  if (isRateLimited) {
-    toast({
-      title: 'Too Many Attempts',
-      description: 'Please wait before trying again',
-      variant: 'destructive',
-    });
-    return;
-  }
+    // Check rate limiting
+    if (isRateLimited) {
+      toast({
+        title: 'Too Many Attempts',
+        description: 'Please wait before trying again',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-  try {
-    const call = await createMeeting();
-    if (!call) return;
-    const setting = await saveSettings();
-    await fetch(`/api/room-settings/${setting.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ callId: call.id }),
-    });
-    await call.update({
-      custom: {
-        ...call.state.custom,
-        roomName: roomSettings.roomName || call.state.custom.roomName,
-        availability: roomSettings.availability,
-        mic: roomSettings.mic,
-        camera: roomSettings.camera,
-      },
-    });
-    router.push(`/meetups/study-groups/meeting/${call.id}?name=${encodeURIComponent(roomSettings.roomName)}`);
-  } catch (err) {
-    console.error('Failed to create room', err);
-    toast({ 
-      title: 'Failed to create Meeting',
-      variant: 'destructive'
-    });
-  }
-};
+    // Reset error state
+    setCreationError(null);
+    setIsCreating(true);
+
+         try {
+       // Step 1: Create Stream.io call
+       setCreationStep('creating');
+       const call = await createMeeting();
+       
+       if (!call) {
+         throw new Error('Failed to create meeting call');
+       }
+       
+       // Step 2: Save room settings
+       setCreationStep('configuring');
+       const setting = await saveSettings();
+       
+       // Step 3: Update room settings with call ID
+       setCreationStep('finalizing');
+       await fetch(`/api/room-settings/${setting.id}`, {
+         method: 'PUT',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ callId: call.id }),
+       });
+       
+       await call.update({
+         custom: {
+           ...call.state.custom,
+           roomName: roomSettings.roomName || call.state.custom.roomName,
+           availability: roomSettings.availability,
+           mic: roomSettings.mic,
+           camera: roomSettings.camera,
+         },
+       });
+
+       // Success - navigate to room
+       toast({ 
+         title: 'Room Created Successfully!',
+         description: 'Redirecting to your study room...',
+       });
+       
+       router.push(`/meetups/study-groups/meeting/${call.id}?name=${encodeURIComponent(roomSettings.roomName)}`);
+      
+    } catch (err) {
+      console.error('Failed to create room', err);
+      
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      
+      if (errorMessage === 'RATE_LIMIT_EXCEEDED') {
+        setCreationError('Too many room creation attempts. Please wait a few minutes before trying again.');
+        toast({ 
+          title: 'Rate Limit Exceeded',
+          description: 'Please wait before creating another room.',
+          variant: 'destructive'
+        });
+      } else if (errorMessage === 'SERVER_ERROR') {
+        setCreationError('Server error occurred. Please try again.');
+        toast({ 
+          title: 'Server Error',
+          description: 'Failed to create room. Please try again.',
+          variant: 'destructive'
+        });
+      } else {
+        setCreationError('An unexpected error occurred. Please try again.');
+        toast({ 
+          title: 'Failed to Create Room',
+          description: 'Please try again later.',
+          variant: 'destructive'
+        });
+      }
+    } finally {
+      setIsCreating(false);
+      setCreationStep('idle');
+    }
+  };
+
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+    setCreationError(null);
+    handleNext();
+  };
+
+  const getStepMessage = () => {
+    switch (creationStep) {
+      case 'creating':
+        return 'Creating your study room...';
+      case 'configuring':
+        return 'Configuring room settings...';
+      case 'finalizing':
+        return 'Finalizing room setup...';
+      default:
+        return 'Creating Room...';
+    }
+  };
 
   return (
     <NextLayout>
@@ -314,7 +378,7 @@ const handleNext = async () => {
             }`}
             placeholder="Enter room name"
             maxLength={ROOM_NAME_CONFIG.MAX_LENGTH}
-            disabled={isRateLimited}
+            disabled={isRateLimited || isCreating}
             aria-label="Room name input"
             aria-describedby={roomNameError ? "room-name-error" : "room-name-help"}
             aria-invalid={!isRoomNameValid}
@@ -332,14 +396,16 @@ const handleNext = async () => {
         
         {/* Success message */}
         {isRoomNameValid && roomSettings.roomName.trim() && !roomNameError && (
-          <div className="text-green-500 text-sm mt-1">
-            ✓ Valid room name
+          <div className="text-green-500 text-sm mt-1 flex items-center gap-1">
+            <CheckCircle className="w-4 h-4" />
+            Valid room name
           </div>
         )}
         
         {/* Rate limit message */}
         {isRateLimited && (
-          <div className="text-orange-500 text-sm mt-1">
+          <div className="text-orange-500 text-sm mt-1 flex items-center gap-1">
+            <AlertCircle className="w-4 h-4" />
             Too many attempts. Please wait before trying again.
           </div>
         )}
@@ -363,6 +429,7 @@ const handleNext = async () => {
                 roomSettings.mic === mic ? "bg-thanodi-peach text-white" : ""
               }`}
               onClick={() => setValue("mic", mic)}
+              disabled={isCreating}
               aria-label={`Set microphone to ${mic}`}
               aria-pressed={roomSettings.mic === mic}
               role="radio"
@@ -387,6 +454,7 @@ const handleNext = async () => {
                 roomSettings.camera === cam ? "bg-thanodi-peach text-white" : ""
               }`}
               onClick={() => setValue("camera", cam)}
+              disabled={isCreating}
               aria-label={`Set camera to ${cam}`}
               aria-pressed={roomSettings.camera === cam}
               role="radio"
@@ -407,6 +475,7 @@ const handleNext = async () => {
           className="w-full p-2 rounded-[8px]"
           value={roomSettings.availability}
           onChange={(e) => setValue("availability", e.target.value)}
+          disabled={isCreating}
           aria-label="Room availability"
           aria-describedby="availability-help"
         >
@@ -418,13 +487,47 @@ const handleNext = async () => {
         </div>
       </div>
 
+      {/* Error Display */}
+      {creationError && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg" role="alert">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-red-700 text-sm font-medium">Room Creation Failed</p>
+              <p className="text-red-600 text-sm mt-1">{creationError}</p>
+              {retryCount < maxRetries && (
+                <button
+                  onClick={handleRetry}
+                  className="mt-2 inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Try Again ({maxRetries - retryCount} attempts left)
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <button
-        className="w-full bg-orange-300 text-white py-3 rounded-[8px] text-lg font-semibold hover:bg-orange-200 transition-colors"
+        className={`w-full py-3 rounded-[8px] text-lg text-white font-semibold transition-colors ${
+          isCreating
+            ? 'bg-gray-400 cursor-not-allowed'
+            : 'bg-orange-300 hover:bg-orange-200'
+        }`}
         onClick={handleNext}
+        disabled={isCreating || isRateLimited || !isRoomNameValid}
         aria-label="Create study group room"
         aria-describedby="submit-help"
       >
-        NEXT
+        {isCreating ? (
+          <div className="flex items-center justify-center gap-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            {getStepMessage()}
+          </div>
+        ) : (
+          'NEXT'
+        )}
       </button>
       <div id="submit-help" className="sr-only">
         Click to create your study group room with the current settings

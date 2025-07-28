@@ -10,7 +10,7 @@ import { useStreamStudyTimeTracker } from '@/hooks/useStreamStudyTimeTracker';
 import { useStreak } from '@/hooks/useStreak';
 import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs';
 import { useToast } from '@/hooks/use-toast';
-import { AlertCircle, Search, X } from 'lucide-react';
+import { AlertCircle, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const pastelColors = [
   'bg-thanodi-lightPeach',
@@ -149,8 +149,13 @@ const StudyGroups = () => {
     }
   }, [logServerEvent]);
 
-  const groups = useStudyGroups();
-  const filteredGroups = groups.filter(g => g.roomName.toLowerCase().includes(debouncedSearch.toLowerCase()));
+  const [currentPage, setCurrentPage] = useState(1);
+  const { groups, pagination, loading: groupsLoading, error: groupsError, cacheInfo, refresh } = useStudyGroups({
+    page: currentPage,
+    limit: 20,
+    search: debouncedSearch,
+    autoRefresh: true
+  });
 
   // Show 0 for non-authenticated users, or loading state for authenticated users
   const displayHours = isAuthenticated ? (isLoadingHours ? 0 : (dailyHours ?? 0)) : 0;
@@ -572,10 +577,11 @@ const StudyGroups = () => {
     setIsMeetingLinkValid(true);
   }, [values]);
 
-  // Debounce effect
+  // Debounce effect for search
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
+      setCurrentPage(1); // Reset to first page when search changes
     }, 300); // 300ms debounce delay
 
     return () => clearTimeout(timer);
@@ -775,11 +781,34 @@ const StudyGroups = () => {
             </div>
           </div>
         </div>
+        {/* Error Display */}
+        {groupsError && (
+          <div className="max-w-5xl mx-auto w-full text-center py-8" role="alert">
+            <p className="text-red-500 mb-4">{groupsError}</p>
+            <button 
+              onClick={refresh}
+              className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {/* Study Groups Grid */}
         <div className="max-w-5xl mx-auto w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-        {filteredGroups.length === 0 && (
-            <p className="text-center text-gray-500 col-span-full">No rooms available</p>
+          {/* Show loading skeletons on initial load */}
+          {groupsLoading && groups.length === 0 && (
+            <>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="bg-gray-200 rounded-lg h-32 w-full"></div>
+                </div>
+              ))}
+            </>
           )}
-          {filteredGroups.map((group, i) => (
+          
+          {/* Show existing groups while loading new data */}
+          {groups.map((group, i) => (
             <GroupCard
               key={group.callId}
               title={group.roomName}
@@ -800,7 +829,48 @@ const StudyGroups = () => {
               isAuthenticated={isAuthenticated ?? false}
             />
           ))}
+          
+          {/* Show "no rooms" message only when not loading and no groups */}
+          {!groupsLoading && groups.length === 0 && (
+            <p className="text-center text-gray-500 col-span-full">No rooms available</p>
+          )}
         </div>
+
+            {/* Pagination */}
+            {pagination.totalPages > 1 && (
+              <div className="max-w-5xl mx-auto w-full flex justify-center items-center gap-4 mt-8">
+                <button
+                  onClick={() => setCurrentPage(pagination.page - 1)}
+                  disabled={!pagination.hasPrev}
+                  className="flex items-center gap-1 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </button>
+                
+                <span className="text-sm text-gray-600">
+                  Page {pagination.page} of {pagination.totalPages}
+                </span>
+                
+                <button
+                  onClick={() => setCurrentPage(pagination.page + 1)}
+                  disabled={!pagination.hasNext}
+                  className="flex items-center gap-1 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
+                  aria-label="Next page"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Results Info */}
+            {groups.length > 0 && (
+              <div className="max-w-5xl mx-auto w-full text-center mt-4 text-sm text-gray-500">
+                Showing {groups.length} of {pagination.total} study groups
+              </div>
+            )}
 
       <MeetingModal
         isOpen={meetingState === 'isJoiningMeeting'}

@@ -72,6 +72,6 @@ export const STUDY_GROUPS_RATE_LIMIT = {
 };
 
 export const ROOM_CREATION_RATE_LIMIT = {
-  maxAttempts: 15,
+  maxAttempts: 30,
   windowMs: 5 * 60 * 1000, // 5 minutes
 }; 

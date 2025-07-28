@@ -670,7 +670,7 @@ export async function getWeeklyStudyTime(userId: string) {
   }
 }
 
-export async function getLeaderboard(period: 'daily' | 'weekly' = 'weekly') {
+export async function getLeaderboard(period: 'daily' | 'weekly' = 'weekly', limit: number = 20, offset: number = 0) {
   try {
     const endDate = new Date();
     const startDate = new Date();
@@ -708,17 +708,32 @@ export async function getLeaderboard(period: 'daily' | 'weekly' = 'weekly') {
       select: { id: true, name: true, image: true },
     });
     
-    const leaderboard = users.map(user => ({
+    const allLeaderboard = users.map(user => ({
       userId: user.id,
       name: user.name || 'Anonymous',
       image: user.image,
       hours: Math.round((userStats.get(user.id) || 0) / 60 * 100) / 100,
     })).sort((a, b) => b.hours - a.hours);
     
-    return leaderboard;
+    // Apply pagination
+    const paginatedData = allLeaderboard.slice(offset, offset + limit);
+    
+    return {
+      data: paginatedData,
+      total: allLeaderboard.length,
+      page: Math.floor(offset / limit) + 1,
+      limit,
+      totalPages: Math.ceil(allLeaderboard.length / limit)
+    };
   } catch (error) {
     console.error('Error getting leaderboard:', error);
-    return [];
+    return {
+      data: [],
+      total: 0,
+      page: 1,
+      limit,
+      totalPages: 0
+    };
   }
 }
 
