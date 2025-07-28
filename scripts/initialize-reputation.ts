@@ -21,15 +21,12 @@ async function initializeReputation() {
       try {
         console.log(`Processing user: ${user.name || user.email} (${user.id})`);
         
-        const reputation = await calculateUserReputation(user.id);
+        await calculateUserReputation(user.id);
         
-        if (reputation) {
-          console.log(`✅ User ${user.name || user.email}: Reputation = ${reputation.reputationScore}, Bot Probability = ${reputation.botProbability}%`);
-          processed++;
-        } else {
-          console.log(`❌ Failed to calculate reputation for user: ${user.name || user.email}`);
-          errors++;
-        }
+        // If we reach here, the calculation was successful
+        console.log(`✅ Successfully processed user: ${user.name || user.email}`);
+        processed++;
+        
       } catch (error) {
         console.error(`❌ Error processing user ${user.name || user.email}:`, error);
         errors++;

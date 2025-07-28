@@ -7,12 +7,10 @@ export async function POST(req: NextRequest) {
     if (!reporterId || !reportedId || !reason || !reportType) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
-    
     // Either callId or confessionId must be provided
     if (!callId && !confessionId) {
       return NextResponse.json({ error: 'Either callId or confessionId must be provided' }, { status: 400 });
     }
-    
     const report = await prisma.report.create({
       data: {
         reporterId,
@@ -40,6 +38,7 @@ export async function GET(req: NextRequest) {
 
     const where = status && status !== 'ALL' ? { status: status as any } : {};
 
+    // Optimized single query with includes (no reportedUser/confession relation)
     const [reports, total] = await Promise.all([
       prisma.report.findMany({
         where,
@@ -59,50 +58,52 @@ export async function GET(req: NextRequest) {
       prisma.report.count({ where }),
     ]);
 
-    // Get reported user information and confession details
-    const reportsWithDetails = await Promise.all(
-      reports.map(async (report) => {
-        const reportedUser = await prisma.user.findUnique({
-          where: { id: report.reportedId },
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            isBlocked: true,
-          },
-        });
-        
-        // Get confession details if this is a confession report
-        let confession = null;
-        if (report.confessionId) {
-          confession = await prisma.confession.findUnique({
-            where: { id: report.confessionId },
+    // Batch fetch all reported users
+    const reportedUserIds = Array.from(new Set(reports.map(r => r.reportedId)));
+    const reportedUsers = await prisma.user.findMany({
+      where: { id: { in: reportedUserIds } },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        isBlocked: true,
+      },
+    });
+    const reportedUserMap = Object.fromEntries(reportedUsers.map(u => [u.id, u]));
+
+    // Batch fetch all confessions (with author) for reports with confessionId
+    const confessionIds = Array.from(new Set(reports.map(r => r.confessionId).filter((id): id is string => Boolean(id))));
+    let confessionsMap: Record<string, any> = {};
+    if (confessionIds.length > 0) {
+      const confessions = await prisma.confession.findMany({
+        where: { id: { in: confessionIds } },
+        select: {
+          id: true,
+          title: true,
+          content: true,
+          isAnonymous: true,
+          createdAt: true,
+          author: {
             select: {
               id: true,
-              title: true,
-              content: true,
-              isAnonymous: true,
-              createdAt: true,
-              author: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                },
-              },
+              name: true,
+              email: true,
             },
-          });
-        }
-        
-        return {
-          ...report,
-          reportedUser,
-          confession,
-        };
-      })
-    );
+          },
+        },
+      });
+      confessionsMap = Object.fromEntries(confessions.map(c => [c.id, c]));
+    }
 
-    return NextResponse.json({
+    // Attach reportedUser and confession to each report
+    const reportsWithDetails = reports.map(report => ({
+      ...report,
+      reportedUser: reportedUserMap[report.reportedId] || null,
+      confession: report.confessionId ? confessionsMap[report.confessionId] || null : null,
+    }));
+
+    // Add HTTP caching headers
+    const response = NextResponse.json({
       reports: reportsWithDetails,
       pagination: {
         page,
@@ -111,6 +112,8 @@ export async function GET(req: NextRequest) {
         pages: Math.ceil(total / limit),
       },
     });
+    response.headers.set('Cache-Control', 'private, s-maxage=60, stale-while-revalidate=300');
+    return response;
   } catch (error) {
     console.error('Error fetching reports:', error);
     return NextResponse.json({ error: 'Failed to fetch reports' }, { status: 500 });

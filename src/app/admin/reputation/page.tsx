@@ -16,6 +16,8 @@ import { Shield, Users, AlertTriangle, Bot, TrendingUp, Activity, Calendar, BarC
 import NextLayout from '@/components/NextLayout';
 import { BotDetectionPanel } from '@/components/BotDetectionPanel';
 import { useRouter } from 'next/navigation';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { notFound } from 'next/navigation';
 
 interface UserReputation {
   id: string;
@@ -96,6 +98,7 @@ interface UserDetails {
 
 export default function ReputationAdminPage() {
   const router = useRouter();
+  const { user, loading: userLoading } = useCurrentUser();
   const [users, setUsers] = useState<UserReputation[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -112,10 +115,19 @@ export default function ReputationAdminPage() {
   const [loadingUserDetails, setLoadingUserDetails] = useState(false);
   const { toast } = useToast();
 
+  // Add admin authentication check
   useEffect(() => {
-    fetchUsers();
-    fetchStats();
-  }, []);
+    if (!userLoading && (!user || !user.isAdmin)) {
+      notFound();
+    }
+  }, [user, userLoading]);
+
+  useEffect(() => {
+    if (user?.isAdmin) {
+      fetchUsers();
+      fetchStats();
+    }
+  }, [user]);
 
   const fetchUsers = async () => {
     try {
@@ -292,6 +304,27 @@ export default function ReputationAdminPage() {
       default: return 'text-gray-600 bg-gray-100';
     }
   };
+
+  // Show loading state while checking authentication
+  if (userLoading) {
+    return (
+      <NextLayout>
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex justify-center items-center min-h-screen">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading...</p>
+            </div>
+          </div>
+        </div>
+      </NextLayout>
+    );
+  }
+
+  // Redirect non-admin users to not-found page
+  if (!user?.isAdmin) {
+    notFound();
+  }
 
   return (
     <NextLayout>

@@ -15,7 +15,7 @@ import Loader from "@/components/Loader";
 import { Plan } from "@prisma/client";
 import { useToast } from "@/hooks/use-toast";
 import { UniversityAutocomplete } from "@/components/ui/university-autocomplete";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 interface UserInfo {
   id: string;
@@ -46,9 +46,8 @@ export default function AccountPage() {
   // University editing state
   const [isUniversityDialogOpen, setIsUniversityDialogOpen] = useState(false);
   const [selectedUniversity, setSelectedUniversity] = useState("");
-  
 
-
+  // Optimized user info query with caching
   const { data: userInfo, isLoading, error } = useQuery<UserInfo>({
     queryKey: ["user-info", user?.id],
     queryFn: async () => {
@@ -58,6 +57,23 @@ export default function AccountPage() {
       return response.json();
     },
     enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+
+  // Cache universities with React Query
+  const { data: universities } = useQuery({
+    queryKey: ["universities"],
+    queryFn: async () => {
+      const response = await fetch('/api/universities');
+      if (!response.ok) throw new Error('Failed to fetch universities');
+      return response.json();
+    },
+    staleTime: 30 * 60 * 1000, // 30 minutes
+    gcTime: 60 * 60 * 1000, // 1 hour
+    refetchOnWindowFocus: false,
   });
 
   const createPortalSessionMutation = useMutation({
@@ -124,23 +140,52 @@ export default function AccountPage() {
     },
   });
 
-  const formatDate = (dateString: string) => {
+  // Memoized expensive calculations
+  const formatDate = useMemo(() => (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
     });
-  };
+  }, []);
 
-  const getSubscriptionType = () => {
+  const subscriptionType = useMemo(() => {
     if (!userInfo?.subscription) return "Free";
     return userInfo.subscription.plan === "premium" ? "Premium" : "Free";
-  };
+  }, [userInfo?.subscription]);
 
-  const getNextBillingDate = () => {
+  const nextBillingDate = useMemo(() => {
     if (!userInfo?.subscription) return "N/A";
     return formatDate(userInfo.subscription.endDate);
-  };
+  }, [userInfo?.subscription, formatDate]);
+
+  const canChangeUniversity = useMemo(() => {
+    if (!userInfo) return false;
+    
+    // If no university set yet, allow setting
+    if (!userInfo.university) return true;
+    
+    // Check if user has reached the change limit
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    
+    if (userInfo.universityChangeCount >= 2 && 
+        userInfo.universityVerifiedAt && 
+        new Date(userInfo.universityVerifiedAt) > oneYearAgo) {
+      return false;
+    }
+    
+    return true;
+  }, [userInfo]);
+
+  const universityChangeWarning = useMemo(() => {
+    if (!userInfo?.university) {
+      return "Set your university. Note that you can only change it once for a long time.";
+    }
+    
+    const changesLeft = Math.max(0, 2 - userInfo.universityChangeCount);
+    return `You have ${changesLeft} university change${changesLeft !== 1 ? 's' : ''} remaining this year. Choose carefully.`;
+  }, [userInfo]);
 
   const handleUniversityEdit = () => {
     setSelectedUniversity(userInfo?.university || "");
@@ -159,34 +204,6 @@ export default function AccountPage() {
     updateUniversityMutation.mutate(selectedUniversity.trim());
   };
 
-  const canChangeUniversity = () => {
-    if (!userInfo) return false;
-    
-    // If no university set yet, allow setting
-    if (!userInfo.university) return true;
-    
-    // Check if user has reached the change limit
-    const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-    
-    if (userInfo.universityChangeCount >= 2 && 
-        userInfo.universityVerifiedAt && 
-        new Date(userInfo.universityVerifiedAt) > oneYearAgo) {
-      return false;
-    }
-    
-    return true;
-  };
-
-  const getUniversityChangeWarning = () => {
-    if (!userInfo?.university) {
-      return "Set your university. Note that you can only change it once for a long time.";
-    }
-    
-    const changesLeft = Math.max(0, 2 - userInfo.universityChangeCount);
-    return `You have ${changesLeft} university change${changesLeft !== 1 ? 's' : ''} remaining this year. Choose carefully.`;
-  };
-
   const isAuthenticated = !!user?.id;
   const isSubscribed = userInfo?.plan === "premium" && userInfo?.customerId;
   const isValidUser = isAuthenticated && userInfo && !error;
@@ -194,8 +211,6 @@ export default function AccountPage() {
   const handleCancelSubscription = () => {
     createPortalSessionMutation.mutate();
   };
-
-
 
   if (isLoading) {
     return (
@@ -215,8 +230,6 @@ export default function AccountPage() {
       </NextLayout>
     );
   }
-
-
 
   return (
     <NextLayout>
@@ -305,7 +318,7 @@ export default function AccountPage() {
                         placeholder={!isValidUser ? "Not available" : ""}
                       />
                       <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
-                        {isValidUser && canChangeUniversity() && (
+                        {isValidUser && canChangeUniversity && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -331,7 +344,7 @@ export default function AccountPage() {
                     <div className="mt-1 relative">
                       <Input
                         id="subscription"
-                        value={isValidUser ? getSubscriptionType() : ""}
+                        value={isValidUser ? subscriptionType : ""}
                         readOnly
                         className="bg-gray-50 border-gray-200 text-gray-900"
                         placeholder={!isValidUser ? "Not available" : ""}
@@ -359,8 +372,6 @@ export default function AccountPage() {
                     </div>
                   </div>
 
-
-
                   <div>
                     <Label
                       htmlFor="billing-date"
@@ -371,7 +382,7 @@ export default function AccountPage() {
                     <div className="mt-1 relative">
                       <Input
                         id="billing-date"
-                        value={isValidUser ? getNextBillingDate() : ""}
+                        value={isValidUser ? nextBillingDate : ""}
                         readOnly
                         className="bg-gray-50 border-gray-200 text-gray-900"
                         placeholder={!isValidUser ? "Not available" : ""}
@@ -379,8 +390,6 @@ export default function AccountPage() {
                       <CreditCard className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                     </div>
                   </div>
-
-
                 </div>
 
                 <Separator />
@@ -496,7 +505,7 @@ export default function AccountPage() {
             <Alert className="mb-4">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                {getUniversityChangeWarning()}
+                {universityChangeWarning}
               </AlertDescription>
             </Alert>
             
@@ -510,6 +519,7 @@ export default function AccountPage() {
                   onSelect={setSelectedUniversity}
                   placeholder="Type to search universities..."
                   disabled={updateUniversityMutation.isPending}
+                  universities={universities}
                 />
               </div>
             </div>
@@ -539,8 +549,6 @@ export default function AccountPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-
     </NextLayout>
   );
 }

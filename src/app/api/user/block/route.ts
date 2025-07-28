@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/db/prisma';
+import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server';
+import { getUserInfoOptimized } from '@/lib/db-utils';
 
 export async function POST(req: NextRequest) {
   try {
+    // Check authentication
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    // Check if user is admin (for admin actions) or if it's a self-block
+    const userInfo = await getUserInfoOptimized(user.id);
     const { userId, action, reason, blockedBy } = await req.json();
 
     if (!userId || !action || !reason || !blockedBy) {
@@ -11,6 +23,16 @@ export async function POST(req: NextRequest) {
 
     if (!['block', 'unblock'].includes(action)) {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    }
+
+    // If it's an admin action, verify admin status
+    if (blockedBy === 'admin' && !userInfo?.isAdmin) {
+      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+    }
+
+    // If it's a self-block, verify the user is blocking themselves
+    if (blockedBy !== 'admin' && userId !== user.id) {
+      return NextResponse.json({ error: 'Forbidden - Can only block yourself' }, { status: 403 });
     }
 
     const isBlocked = action === 'block';

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Check, ChevronDown, Search } from "lucide-react";
@@ -18,6 +18,7 @@ interface UniversityAutocompleteProps {
   onSelect: (university: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  universities?: University[]; // Pass from parent
 }
 
 export function UniversityAutocomplete({
@@ -25,50 +26,30 @@ export function UniversityAutocomplete({
   onSelect,
   placeholder = "Search for your university...",
   disabled = false,
+  universities = [], // Use passed universities instead of fetching
 }: UniversityAutocompleteProps) {
   const [inputValue, setInputValue] = useState(value);
   const [isOpen, setIsOpen] = useState(false);
-  const [universities, setUniversities] = useState<University[]>([]);
   const [filteredUniversities, setFilteredUniversities] = useState<University[]>([]);
-  const [loading, setLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch universities on component mount
+  // Optimize filtering with useMemo
+  const filtered = useMemo(() => {
+    if (!inputValue.trim()) return [];
+    
+    return universities
+      .filter((uni) =>
+        uni.name.toLowerCase().includes(inputValue.toLowerCase())
+      )
+      .slice(0, 10);
+  }, [inputValue, universities]);
+
   useEffect(() => {
-    const fetchUniversities = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/universities');
-        if (response.ok) {
-          const data = await response.json();
-          setUniversities(data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch universities:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUniversities();
-  }, []);
-
-  // Filter universities based on input
-  useEffect(() => {
-    if (!inputValue.trim()) {
-      setFilteredUniversities([]);
-      return;
-    }
-
-    const filtered = universities.filter((uni) =>
-      uni.name.toLowerCase().includes(inputValue.toLowerCase())
-    ).slice(0, 10); // Limit to 10 results
-
     setFilteredUniversities(filtered);
     setSelectedIndex(-1);
-  }, [inputValue, universities]);
+  }, [filtered]);
 
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,15 +88,12 @@ export function UniversityAutocomplete({
         break;
       case 'ArrowUp':
         e.preventDefault();
-        setSelectedIndex(prev => prev > 0 ? prev - 1 : -1);
+        setSelectedIndex(prev => prev > 0 ? prev - 1 : prev);
         break;
       case 'Enter':
         e.preventDefault();
-        if (selectedIndex >= 0 && filteredUniversities[selectedIndex]) {
+        if (selectedIndex >= 0 && selectedIndex < filteredUniversities.length) {
           handleSelect(filteredUniversities[selectedIndex].name);
-        } else if (inputValue.trim()) {
-          // Allow custom university input
-          handleSelect(inputValue.trim());
         }
         break;
       case 'Escape':
@@ -125,25 +103,23 @@ export function UniversityAutocomplete({
     }
   };
 
-  // Close dropdown when clicking outside
+  // Handle click outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node) &&
-        inputRef.current &&
-        !inputRef.current.contains(event.target as Node)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+        setSelectedIndex(-1);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   return (
-    <div className="relative w-full">
+    <div className="relative" ref={dropdownRef}>
       <div className="relative">
         <Input
           ref={inputRef}
@@ -156,68 +132,30 @@ export function UniversityAutocomplete({
           disabled={disabled}
           className="pr-10"
         />
-        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-          <Search className="h-4 w-4 text-gray-400" />
-        </div>
+        <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
       </div>
 
-      {isOpen && (
-        <div
-          ref={dropdownRef}
-          className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto"
-        >
-          {loading ? (
-            <div className="p-3 text-sm text-gray-500 text-center">
-              Loading universities...
-            </div>
-          ) : filteredUniversities.length > 0 ? (
-            <>
-              {filteredUniversities.map((university, index) => (
-                <button
-                  key={university.id}
-                  className={cn(
-                    "w-full text-left px-3 py-2 text-sm hover:bg-gray-100 flex items-center justify-between",
-                    selectedIndex === index && "bg-gray-100",
-                    university.isVerified && "border-l-4 border-l-green-500"
-                  )}
-                  onClick={() => handleSelect(university.name)}
-                  onMouseEnter={() => setSelectedIndex(index)}
-                >
-                  <span className="flex items-center">
-                    {university.name}
-                    {university.isVerified && (
-                      <Check className="ml-2 h-3 w-3 text-green-600" />
-                    )}
-                  </span>
-                </button>
-              ))}
-              {inputValue.trim() && !filteredUniversities.some(uni => 
-                uni.name.toLowerCase() === inputValue.toLowerCase()
-              ) && (
-                <button
-                  className={cn(
-                    "w-full text-left px-3 py-2 text-sm hover:bg-gray-100 border-t border-gray-200",
-                    selectedIndex === filteredUniversities.length && "bg-gray-100"
-                  )}
-                  onClick={() => handleSelect(inputValue.trim())}
-                  onMouseEnter={() => setSelectedIndex(filteredUniversities.length)}
-                >
-                  Add "{inputValue.trim()}" as new university
-                </button>
-              )}
-            </>
-          ) : inputValue.trim() ? (
+      {isOpen && filteredUniversities.length > 0 && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+          {filteredUniversities.map((university, index) => (
             <button
-              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
-              onClick={() => handleSelect(inputValue.trim())}
+              key={university.id}
+              type="button"
+              className={cn(
+                "w-full px-4 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none",
+                index === selectedIndex && "bg-gray-100",
+                university.name === inputValue && "bg-blue-50"
+              )}
+              onClick={() => handleSelect(university.name)}
             >
-              Add "{inputValue.trim()}" as new university
+              <div className="flex items-center justify-between">
+                <span className="truncate">{university.name}</span>
+                {university.name === inputValue && (
+                  <Check className="w-4 h-4 text-blue-600" />
+                )}
+              </div>
             </button>
-          ) : (
-            <div className="p-3 text-sm text-gray-500 text-center">
-              Start typing to search universities...
-            </div>
-          )}
+          ))}
         </div>
       )}
     </div>

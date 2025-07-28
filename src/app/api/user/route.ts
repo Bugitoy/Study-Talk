@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserInfo } from "@/lib/db-utils";
+import { getUserInfoOptimized } from "@/lib/db-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const userInfo = await getUserInfo(userId);
+    const userInfo = await getUserInfoOptimized(userId);
 
     if (!userInfo) {
       return NextResponse.json(
@@ -22,7 +22,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(userInfo);
+    const response = NextResponse.json(userInfo);
+    response.headers.set('Cache-Control', 'private, s-maxage=300, stale-while-revalidate=600');
+    
+    return response;
   } catch (error) {
     console.error("Error fetching user info:", error);
     return NextResponse.json(

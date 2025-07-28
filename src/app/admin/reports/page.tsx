@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { CheckCircle, XCircle, Eye, Shield, Clock, AlertTriangle } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface Report {
   id: string;
@@ -59,47 +60,40 @@ interface Pagination {
 export default function AdminReportsPage() {
   const { user, loading: userLoading } = useCurrentUser();
   const router = useRouter();
-  const [reports, setReports] = useState<Report[]>([]);
-  const [pagination, setPagination] = useState<Pagination | null>(null);
-  const [loadingReports, setLoadingReports] = useState(false);
+  const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+
+  // React Query for reports
+  const {
+    data,
+    isLoading: loadingReports,
+    refetch,
+  } = useQuery({
+    queryKey: ['admin-reports', currentPage, statusFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: '10',
+        ...(statusFilter !== 'ALL' && { status: statusFilter }),
+      });
+      const res = await fetch(`/api/report?${params}`);
+      if (!res.ok) throw new Error('Failed to fetch reports');
+      return res.json();
+    },
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 60 * 1000, // 1 minute
+  });
+
+  const reports: Report[] = data?.reports || [];
+  const pagination: Pagination | null = data?.pagination || null;
 
   useEffect(() => {
     if (!userLoading && (!user || !user.isAdmin)) {
       router.push('/');
     }
   }, [user, userLoading, router]);
-
-  const fetchReports = async (page = 1, status = statusFilter) => {
-    setLoadingReports(true);
-    try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: '10',
-        ...(status !== 'ALL' && { status }),
-      });
-      
-      const res = await fetch(`/api/report?${params}`);
-      const data = await res.json();
-      
-      if (res.ok) {
-        setReports(data.reports);
-        setPagination(data.pagination);
-      }
-    } catch (error) {
-      console.error('Error fetching reports:', error);
-    } finally {
-      setLoadingReports(false);
-    }
-  };
-
-  useEffect(() => {
-    if (user?.isAdmin) {
-      fetchReports(currentPage, statusFilter);
-    }
-  }, [user, currentPage, statusFilter]);
 
   const updateReportStatus = async (reportId: string, status: string, adminNotes?: string) => {
     try {
@@ -108,9 +102,8 @@ export default function AdminReportsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, adminNotes }),
       });
-      
       if (res.ok) {
-        fetchReports(currentPage, statusFilter);
+        queryClient.invalidateQueries({ queryKey: ['admin-reports'] });
       }
     } catch (error) {
       console.error('Error updating report status:', error);
@@ -123,9 +116,8 @@ export default function AdminReportsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
-      
       if (res.ok) {
-        fetchReports(currentPage, statusFilter);
+        queryClient.invalidateQueries({ queryKey: ['admin-reports'] });
       }
     } catch (error) {
       console.error('Error blocking user:', error);
@@ -142,9 +134,8 @@ export default function AdminReportsPage() {
           unblockedBy: user?.id || 'admin' 
         }),
       });
-      
       if (res.ok) {
-        fetchReports(currentPage, statusFilter);
+        queryClient.invalidateQueries({ queryKey: ['admin-reports'] });
       }
     } catch (error) {
       console.error('Error unblocking user:', error);
@@ -168,7 +159,6 @@ export default function AdminReportsPage() {
       RESOLVED: 'bg-green-100 text-green-800',
       DISMISSED: 'bg-red-100 text-red-800',
     };
-    
     return (
       <Badge className={variants[status as keyof typeof variants] || 'bg-gray-100 text-gray-800'}>
         {status}
@@ -229,7 +219,7 @@ export default function AdminReportsPage() {
                 <SelectItem value="DISMISSED">Dismissed</SelectItem>
               </SelectContent>
             </Select>
-            <Button onClick={() => fetchReports(1, statusFilter)} disabled={loadingReports} className="w-full sm:w-auto">
+            <Button onClick={() => refetch()} disabled={loadingReports} className="w-full sm:w-auto">
               Refresh
             </Button>
           </div>

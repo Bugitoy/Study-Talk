@@ -1395,6 +1395,99 @@ export async function getUniversities() {
   }
 }
 
+// Optimized user info query with selective includes
+export async function getUserInfoOptimized(userId: string) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        image: true,
+        plan: true,
+        customerId: true,
+        university: true,
+        universityVerifiedAt: true,
+        universityChangeCount: true,
+        isAdmin: true,
+        createdAt: true,
+        Subscription: {
+          select: {
+            id: true,
+            plan: true,
+            period: true,
+            startDate: true,
+            endDate: true,
+          }
+        },
+      },
+    });
+
+    if (!user) return null;
+
+    return {
+      ...user,
+      subscription: user.Subscription,
+    };
+  } catch (error) {
+    console.error("Error fetching user info:", error);
+    return null;
+  }
+}
+
+// Optimized university query with single database call
+export async function getUniversitiesOptimized() {
+  try {
+    const universities = await prisma.university.findMany({
+      include: {
+        _count: {
+          select: {
+            confessions: true,
+          },
+        },
+      },
+      orderBy: {
+        confessions: {
+          _count: 'desc',
+        },
+      },
+    });
+
+    // Get additional stats for each university in a single query
+    const universitiesWithStats = await Promise.all(
+      universities.map(async (uni) => {
+        const [votes, uniqueStudents] = await Promise.all([
+          prisma.confessionVote.count({
+            where: {
+              confession: {
+                universityId: uni.id,
+              },
+            },
+          }),
+          prisma.confession.groupBy({
+            by: ['authorId'],
+            where: { universityId: uni.id },
+          }),
+        ]);
+
+        return {
+          ...uni,
+          confessionCount: uni._count.confessions,
+          studentCount: uniqueStudents.length,
+          totalVotes: votes,
+          _count: undefined,
+        };
+      })
+    );
+
+    return universitiesWithStats;
+  } catch (error) {
+    console.error('Error getting universities:', error);
+    throw error;
+  }
+}
+
 export async function updateUserUniversity(userId: string, university: string) {
   try {
     const user = await prisma.user.findUnique({
@@ -1498,8 +1591,23 @@ export async function calculateUserReputation(userId: string): Promise<void> {
         confessions: {
           select: {
             id: true,
+            title: true,
             createdAt: true,
-            hotScore: true
+            hotScore: true,
+            content: true,
+            votes: {
+              select: {
+                id: true,
+                voteType: true
+              }
+            },
+            comments: {
+              select: {
+                id: true,
+                content: true,
+                createdAt: true
+              }
+            }
           }
         },
         confessionVotes: {
@@ -1514,6 +1622,11 @@ export async function calculateUserReputation(userId: string): Promise<void> {
             id: true,
             createdAt: true,
             content: true
+          }
+        },
+        reports: {
+          select: {
+            id: true
           }
         }
       }
@@ -1693,18 +1806,18 @@ function calculateActivityScore(user: any) {
   score += Math.min(accountAgeDays, 365);
   
   // Confession activity (5 points per confession)
-  score += user.confessions.length * 5;
+  score += (user.confessions?.length || 0) * 5;
   
   // Voting activity (1 point per vote)
-  score += user.confessionVotes.length;
+  score += (user.confessionVotes?.length || 0);
   
   // Comment activity (2 points per comment)
-  score += user.confessionComments.length * 2;
+  score += (user.confessionComments?.length || 0) * 2;
   
   // Recent activity bonus (last 7 days)
-  const recentActivity = user.confessions.filter((c: any) => 
+  const recentActivity = (user.confessions?.filter((c: any) => 
     c.createdAt > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-  ).length;
+  ).length || 0);
   score += recentActivity * 3;
   
   return Math.min(score, 1000); // Cap at 1000
@@ -1714,21 +1827,22 @@ function calculateActivityScore(user: any) {
 function calculateQualityScore(user: any) {
   let score = 0;
   
-  if (user.confessions.length === 0) return 0;
+  // Handle case where user has no confessions or confessions is undefined
+  if (!user.confessions || user.confessions.length === 0) return 0;
   
   // Average votes received per confession
   const totalVotesReceived = user.confessions.reduce((sum: number, confession: any) => 
-    sum + confession.votes.length, 0
+    sum + (confession.votes?.length || 0), 0
   );
   const avgVotesPerConfession = totalVotesReceived / user.confessions.length;
   score += avgVotesPerConfession * 10;
   
   // Positive vote ratio (BELIEVE votes vs total votes)
   const totalVotes = user.confessions.reduce((sum: number, confession: any) => 
-    sum + confession.votes.length, 0
+    sum + (confession.votes?.length || 0), 0
   );
   const positiveVotes = user.confessions.reduce((sum: number, confession: any) => 
-    sum + confession.votes.filter((v: any) => v.voteType === 'BELIEVE').length, 0
+    sum + (confession.votes?.filter((v: any) => v.voteType === 'BELIEVE').length || 0), 0
   );
   
   if (totalVotes > 0) {
@@ -1738,14 +1852,14 @@ function calculateQualityScore(user: any) {
   
   // Comment engagement (comments received per confession)
   const totalCommentsReceived = user.confessions.reduce((sum: number, confession: any) => 
-    sum + confession.comments.length, 0
+    sum + (confession.comments?.length || 0), 0
   );
   const avgCommentsPerConfession = totalCommentsReceived / user.confessions.length;
   score += avgCommentsPerConfession * 15;
   
   // Content length quality (longer content gets more points)
   const avgContentLength = user.confessions.reduce((sum: number, confession: any) => 
-    sum + confession.content.length, 0
+    sum + (confession.content?.length || 0), 0
   ) / user.confessions.length;
   score += Math.min(avgContentLength / 10, 50); // Max 50 points for long content
   
@@ -1757,7 +1871,7 @@ function calculateTrustScore(user: any) {
   let score = 0;
   
   // No reports bonus (100 points)
-  if (user.reports.length === 0) {
+  if (!user.reports || user.reports.length === 0) {
     score += 100;
   } else {
     // Penalty for reports (-50 per report)
@@ -1770,9 +1884,9 @@ function calculateTrustScore(user: any) {
   }
   
   // Consistent activity (no long gaps)
-  const recentActivity = user.confessions.filter((c: any) => 
+  const recentActivity = user.confessions?.filter((c: any) => 
     c.createdAt > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-  ).length;
+  ).length || 0;
   if (recentActivity > 0) {
     score += 50;
   }
@@ -1875,16 +1989,21 @@ function hasUnnaturalTiming(confessions: any[]) {
 
 // Check for suspicious patterns
 function hasSuspiciousPatterns(user: any) {
+  // Handle case where user has no confessions
+  if (!user.confessions || user.confessions.length === 0) return false;
+  
   // Check for very short content
   const shortContent = user.confessions.filter((c: any) => 
-    c.content.length < 20
+    c.content && c.content.length < 20
   ).length;
   
-  // Check for generic titles
+  // Check for generic titles (if title exists)
   const genericTitles = user.confessions.filter((c: any) => 
-    c.title.toLowerCase().includes('test') || 
-    c.title.toLowerCase().includes('hello') ||
-    c.title.toLowerCase().includes('hi')
+    c.title && (
+      c.title.toLowerCase().includes('test') || 
+      c.title.toLowerCase().includes('hello') ||
+      c.title.toLowerCase().includes('hi')
+    )
   ).length;
   
   return shortContent > user.confessions.length * 0.5 || genericTitles > 2;
