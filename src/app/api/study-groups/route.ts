@@ -7,9 +7,9 @@ import { createRateLimit, ROOM_CREATION_RATE_LIMIT } from '@/lib/rate-limit';
 const apiKey = process.env.NEXT_PUBLIC_STREAM_API_KEY;
 const apiSecret = process.env.STREAM_SECRET_KEY;
 
-// In-memory cache for room listings (in production, use Redis)
+// Shared cache for room listings (can be invalidated by webhooks)
 const roomCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_DURATION = 30 * 1000; // 30 seconds
+const CACHE_DURATION = 5 * 1000; // 5 seconds for more real-time updates
 
 // Rate limiting for GET requests
 const ROOM_LISTING_RATE_LIMIT = {
@@ -138,6 +138,24 @@ export async function GET(req: NextRequest) {
         await endStudyGroupRoom(callId);
         // Don't include this room in results since it should be ended
         continue;
+      }
+      
+      // Check participant limit - get room settings to see if there's a limit
+      const roomSettings = await prisma.roomSetting.findFirst({
+        where: { callId }
+      });
+      
+      // If room has a participant limit and has reached it, skip this room
+      if (roomSettings?.participants && roomSettings.participants !== null) {
+        const currentParticipants = members.length;
+        const participantLimit = roomSettings.participants;
+        
+        console.log(`Room ${room.roomName} (${callId}): current=${currentParticipants}, limit=${participantLimit}`);
+        
+        if (currentParticipants >= participantLimit) {
+          console.log(`Room ${room.roomName} (${callId}) has reached participant limit (${currentParticipants}/${participantLimit}), skipping`);
+          continue;
+        }
       }
       
       // Additional check: if the call has been inactive for more than 5 minutes, end it

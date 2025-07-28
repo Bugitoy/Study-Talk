@@ -6,7 +6,23 @@ import prisma from '@/db/prisma';
 const apiKey = process.env.NEXT_PUBLIC_STREAM_API_KEY;
 const apiSecret = process.env.STREAM_SECRET_KEY;
 
-// Performance optimization: Only log in development or when explicitly enabled
+// In-memory cache for study groups (shared with study-groups API)
+const studyGroupsCache = new Map<string, { data: any; timestamp: number }>();
+
+// Cache invalidation function for study groups
+const invalidateStudyGroupsCache = () => {
+  console.log('Invalidating study groups cache due to participant change');
+  studyGroupsCache.clear();
+};
+
+// Cache invalidation function for compete rooms
+const invalidateCompeteRoomsCache = () => {
+  console.log('Invalidating compete rooms cache due to participant change');
+  // Note: compete rooms cache is handled by the useCompeteRooms hook
+  // This function is for future use if we implement server-side caching
+};
+
+// Debug mode for development
 const isDebugMode = process.env.NODE_ENV === 'development' || process.env.STREAM_WEBHOOK_DEBUG === 'true';
 
 export async function POST(req: NextRequest) {
@@ -473,6 +489,12 @@ async function handleParticipantJoined(event: any, client: StreamClient) {
         isActive: true,
       },
     });
+    
+    // Invalidate study groups cache to reflect participant count change
+    invalidateStudyGroupsCache();
+    
+    // Invalidate compete rooms cache to reflect participant count change
+    invalidateCompeteRoomsCache();
   } catch (error) {
     console.error('Error handling participant joined event:', error);
   }
@@ -562,6 +584,12 @@ async function handleParticipantLeft(event: any, client: StreamClient) {
       }
       await endCompeteRoom(callId);
     }
+    
+    // Invalidate study groups cache to reflect participant count change
+    invalidateStudyGroupsCache();
+    
+    // Invalidate compete rooms cache to reflect participant count change
+    invalidateCompeteRoomsCache();
   } catch (error) {
     console.error('Error handling participant left event:', error);
   }

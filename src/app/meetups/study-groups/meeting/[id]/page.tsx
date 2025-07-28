@@ -66,6 +66,16 @@ const MeetingPage = () => {
             return;
           }
 
+          if (accessData.isRoomFull) {
+            toast({
+              title: 'Room Full',
+              description: 'This room has reached its participant limit.',
+              variant: 'destructive',
+            });
+            router.push('/meetups/study-groups');
+            return;
+          }
+
           // If we get here, user has access
           setHasAccess(true);
           setIsAccessChecking(false);

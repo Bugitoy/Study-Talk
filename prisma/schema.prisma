@@ -206,7 +206,7 @@ model RoomSetting {
   timePerQuestion Int?
   mic            String
   camera         String
-  participants   Int
+  participants   Int?     // Allow null for unlimited participants
   availability   String
   topicName      String?
   callId         String?

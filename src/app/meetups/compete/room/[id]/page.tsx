@@ -34,11 +34,17 @@ const CallPage = () => {
       try {
         setIsAccessChecking(true);
         
-        // Check if user is globally blocked
-        const blockRes = await fetch(`/api/user/check-block?userId=${user.id}`);
-        if (blockRes.ok) {
-          const blockData = await blockRes.json();
-          if (blockData.isBlocked) {
+        // Single API call for all access checks
+        const accessRes = await fetch('/api/room/access-check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, callId: id })
+        });
+
+        if (accessRes.ok) {
+          const accessData = await accessRes.json();
+          
+          if (accessData.isBlocked) {
             toast({
               title: 'Access Denied',
               description: 'Your account has been blocked by an administrator.',
@@ -47,13 +53,8 @@ const CallPage = () => {
             router.push('/meetups/compete');
             return;
           }
-        }
 
-        // Check if user is banned from this specific room
-        const banRes = await fetch(`/api/room/ban/check?userId=${user.id}&callId=${id}`);
-        if (banRes.ok) {
-          const banData = await banRes.json();
-          if (banData.isBanned) {
+          if (accessData.isBanned) {
             toast({
               title: 'Access Denied',
               description: 'You have been banned from this room.',
@@ -62,11 +63,26 @@ const CallPage = () => {
             router.push('/meetups/compete');
             return;
           }
-        }
 
-        // If we get here, user has access
-        setHasAccess(true);
-        setIsAccessChecking(false);
+          if (accessData.isRoomFull) {
+            toast({
+              title: 'Room Full',
+              description: 'This room has reached its participant limit.',
+              variant: 'destructive',
+            });
+            router.push('/meetups/compete');
+            return;
+          }
+
+          // If we get here, user has access
+          setHasAccess(true);
+          setIsAccessChecking(false);
+        } else {
+          console.error('Access check failed:', accessRes.status);
+          setIsAccessChecking(false);
+          // On error, allow access but log the error
+          setHasAccess(true);
+        }
       } catch (error) {
         console.error('Error checking access:', error);
         setIsAccessChecking(false);

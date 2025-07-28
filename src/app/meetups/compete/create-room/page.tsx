@@ -27,7 +27,7 @@ export default function CreateRoom() {
     timePerQuestion: 5,
     mic: "on",
     camera: "on",
-    participants: 4,
+    participants: 4, // Default to 4 participants
     availability: "public",
   });
 
@@ -192,10 +192,18 @@ export default function CreateRoom() {
     }
 
     try {
+      // Convert unlimited (-1) to null for API
+      const apiParticipants = roomSettings.participants === -1 ? null : roomSettings.participants;
+      
+      const payload = {
+        ...roomSettings,
+        participants: apiParticipants, // Use null for unlimited
+      };
+
       const res = await fetch('/api/room-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(roomSettings),
+        body: JSON.stringify(payload),
       });
       
       if (!res.ok) {
@@ -401,6 +409,7 @@ export default function CreateRoom() {
           {[2, 3, 4, 5, 6, 8].map((n) => (
             <option key={n} value={n}>{`${n}`}</option>
           ))}
+          <option value={-1}>Unlimited</option>
         </select>
         <div id="participants-help" className="sr-only">
           Choose the maximum number of participants for your compete room

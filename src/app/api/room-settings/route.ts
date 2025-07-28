@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     console.log(`Room settings creation attempt: IP=${clientIP}, userId=${user.id}, data=${JSON.stringify(data)}`);
     
     // 3. Input validation - check required fields
-    if (!data.roomName || !data.numQuestions || !data.mic || !data.camera || !data.participants || !data.availability) {
+    if (!data.roomName || !data.numQuestions || !data.mic || !data.camera || data.participants === undefined || !data.availability) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -78,7 +78,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid number of questions' }, { status: 400 });
     }
 
-    if (typeof data.participants !== 'number' || ![2, 3, 4, 5, 6, 8].includes(data.participants)) {
+    // Validate participants - allow null for unlimited, or specific values for limited
+    if (data.participants !== null && (typeof data.participants !== 'number' || ![2, 3, 4, 5, 6, 8].includes(data.participants))) {
       return NextResponse.json({ error: 'Invalid participant count' }, { status: 400 });
     }
 

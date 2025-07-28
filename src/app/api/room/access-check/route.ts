@@ -47,7 +47,8 @@ export async function POST(req: NextRequest) {
           roomName: true,
           mic: true,
           camera: true,
-          availability: true
+          availability: true,
+          participants: true  // Include participants for limit checking
         }
       })
     ]);
@@ -55,12 +56,30 @@ export async function POST(req: NextRequest) {
     // Determine access based on all checks
     const isBlocked = userBlock?.isBlocked || false;
     const isBanned = !!roomBan;
-    const hasAccess = !isBlocked && !isBanned;
+    
+    // Check participant limit if room has one
+    let isRoomFull = false;
+    if (roomSettings?.participants && roomSettings.participants !== null) {
+      // Get current participant count from CallParticipant table
+      const currentParticipants = await prisma.callParticipant.count({
+        where: {
+          callId: callId,
+          isActive: true
+        }
+      });
+      
+      if (currentParticipants >= roomSettings.participants) {
+        isRoomFull = true;
+      }
+    }
+    
+    const hasAccess = !isBlocked && !isBanned && !isRoomFull;
 
     return NextResponse.json({
       hasAccess,
       isBlocked,
       isBanned,
+      isRoomFull,
       roomSettings,
       userId,
       callId

@@ -23,7 +23,7 @@ export function useCompeteRooms() {
       }
     };
     load();
-    const interval = setInterval(load, 15000);
+    const interval = setInterval(load, 5000); // Refresh every 5 seconds for real-time updates
     return () => clearInterval(interval);
   }, []);
 

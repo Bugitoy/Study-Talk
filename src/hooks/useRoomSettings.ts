@@ -8,7 +8,7 @@ export interface RoomSetting {
   timePerQuestion: number | null
   mic: string
   camera: string
-  participants: number
+  participants: number | null  // Allow null for unlimited participants
   availability: string
   allowReview: boolean
   topicName?: string | null

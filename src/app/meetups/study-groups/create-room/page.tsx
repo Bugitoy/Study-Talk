@@ -36,6 +36,7 @@ export default function CreateRoom() {
     mic: "on",
     camera: "on",
     availability: "public",
+    participants: 8, // Default to maximum allowed by API
   });
 
   // Room name validation state
@@ -178,12 +179,23 @@ export default function CreateRoom() {
   };
 
   const saveSettings = async () => {
+    // Convert unlimited (-1) to null for API
+    const apiParticipants = roomSettings.participants === -1 ? null : roomSettings.participants;
+    
+    // Additional validation to ensure we're sending a valid value
+    if (apiParticipants !== null && ![2, 3, 4, 5, 6, 8].includes(apiParticipants)) {
+      console.error('❌ Invalid participants value:', apiParticipants);
+      throw new Error('Invalid participants value');
+    }
+    
     const payload = {
-      ...roomSettings,
-      // defaults required by RoomSetting schema
-      numQuestions: 0,
-      timePerQuestion: null,
-      participants: 50,
+      roomName: roomSettings.roomName,
+      numQuestions: 5, // Minimum valid value for API validation
+      timePerQuestion: null, // Study groups don't have time limits
+      mic: roomSettings.mic,
+      camera: roomSettings.camera,
+      participants: apiParticipants, // Use null for unlimited
+      availability: roomSettings.availability,
     };
 
     const res = await fetch('/api/room-settings', {
@@ -191,8 +203,15 @@ export default function CreateRoom() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Failed to save settings');
-    return res.json();
+    
+    if (!res.ok) {
+      const errorData = await res.json();
+      console.error('❌ Room settings API error:', res.status, errorData);
+      throw new Error(`Failed to save settings: ${errorData.error || 'Unknown error'}`);
+    }
+    
+    const result = await res.json();
+    return result;
   };
 
   const createMeeting = async () => {
@@ -484,6 +503,26 @@ export default function CreateRoom() {
         </select>
         <div id="availability-help" className="sr-only">
           Choose whether your room is public (visible to everyone) or private (invitation only)
+        </div>
+      </div>
+
+      <div className="mb-4">
+        <label className="block mb-2 font-medium">Number of People:</label>
+        <select
+          className="w-full p-2 rounded-[8px]"
+          value={roomSettings.participants}
+          onChange={(e) => setValue("participants", parseInt(e.target.value))}
+          disabled={isCreating}
+          aria-label="Number of participants"
+          aria-describedby="participants-help"
+        >
+          {[2, 3, 4, 5, 6, 8].map((n) => (
+            <option key={n} value={n}>{`${n}`}</option>
+          ))}
+          <option value={-1}>Unlimited</option>
+        </select>
+        <div id="participants-help" className="sr-only">
+          Choose the maximum number of participants for your study group room
         </div>
       </div>
 

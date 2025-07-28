@@ -91,7 +91,7 @@ export function useStudyGroups(options: UseStudyGroupsOptions = {}) {
     
     let interval: NodeJS.Timeout | undefined;
     if (autoRefresh) {
-      interval = setInterval(() => fetchGroups(false), 15000); // Silent refreshes
+      interval = setInterval(() => fetchGroups(false), 5000); // Refresh every 5 seconds for real-time updates
     }
     
     return () => {

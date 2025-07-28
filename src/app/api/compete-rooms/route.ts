@@ -72,6 +72,24 @@ export async function GET(req: NextRequest) {
         continue;
       }
       
+      // Check participant limit - get room settings to see if there's a limit
+      const roomSettings = await prisma.roomSetting.findFirst({
+        where: { callId }
+      });
+      
+      // If room has a participant limit and has reached it, skip this room
+      if (roomSettings?.participants && roomSettings.participants !== null) {
+        const currentParticipants = members.length;
+        const participantLimit = roomSettings.participants;
+        
+        console.log(`Room ${room.roomName} (${callId}): current=${currentParticipants}, limit=${participantLimit}`);
+        
+        if (currentParticipants >= participantLimit) {
+          console.log(`Room ${room.roomName} (${callId}) has reached participant limit (${currentParticipants}/${participantLimit}), skipping`);
+          continue;
+        }
+      }
+      
       // Additional check: if the call has been inactive for more than 5 minutes, end it
       const lastActivity = c.call.updated_at ? new Date(c.call.updated_at) : new Date();
       const now = new Date();

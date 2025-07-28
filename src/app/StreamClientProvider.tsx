@@ -2,7 +2,7 @@
 
 import { StreamVideo, StreamVideoClient } from "@stream-io/video-react-sdk";
 import { tokenProvider } from "actions/stream.actions";
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState, useRef } from 'react';
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import Loader from "@/components/Loader";
 import { useRouter } from 'next/navigation';
@@ -13,26 +13,85 @@ const StreamVideoProvider = ({ children }: { children: ReactNode }) => {
     const [videoClient, setVideoClient] = useState<StreamVideoClient>();
     const { user, isAuthenticated, isLoading } = useKindeBrowserClient();
     const router = useRouter();
+    const initializationAttempted = useRef(false);
 
     useEffect(() => {
-       if (isLoading || !isAuthenticated || !user) return;
-       if (!apiKey) throw new Error('Stream API key missing');
+       // Don't initialize if still loading or not authenticated
+       if (isLoading || !isAuthenticated || !user) {
+         initializationAttempted.current = false;
+         return;
+       }
 
-       const client = new StreamVideoClient({
-        apiKey,
-        user:{
-            id: user.id,
-            name: user.given_name && user.family_name ? `${user.given_name} ${user.family_name}` : user.id,
-            image: user.picture || undefined,
-        },
-         tokenProvider,
-       })
-        // Expose for debugging in browser console
-        if (typeof window !== 'undefined') {
-          (window as any).streamVideoClient = client;
-        }
-        setVideoClient(client);
+       // Prevent multiple initialization attempts
+       if (initializationAttempted.current) return;
+       initializationAttempted.current = true;
+
+       if (!apiKey) {
+         console.error('Stream API key missing');
+         return;
+       }
+
+       // Ensure user ID is properly formatted and consistent
+       const userId = user.id?.toString();
+       if (!userId) {
+         console.error('User ID is missing or invalid:', user);
+         initializationAttempted.current = false;
+         return;
+       }
+
+       // Validate user ID format (should be a non-empty string)
+       if (userId.trim() === '') {
+         console.error('User ID is empty after trimming:', userId);
+         initializationAttempted.current = false;
+         return;
+       }
+
+       // Test token provider before initializing client
+       const testTokenProvider = async () => {
+         try {
+           const token = await tokenProvider();
+           return true;
+         } catch (error) {
+           console.error('Token provider test failed:', error);
+           return false;
+         }
+       };
+
+       testTokenProvider().then((success) => {
+         if (!success) {
+           console.error('Token provider test failed, not initializing Stream client');
+           initializationAttempted.current = false;
+           return;
+         }
+
+         try {
+           const client = new StreamVideoClient({
+            apiKey,
+            user:{
+                id: userId,
+                name: user.given_name && user.family_name ? `${user.given_name} ${user.family_name}` : userId,
+                image: user.picture || undefined,
+            },
+             tokenProvider,
+           })
+            // Expose for debugging in browser console
+            if (typeof window !== 'undefined') {
+              (window as any).streamVideoClient = client;
+            }
+            setVideoClient(client);
+          } catch (error) {
+            console.error('Error initializing Stream client:', error);
+            initializationAttempted.current = false;
+          }
+       });
     }, [user, isAuthenticated, isLoading]);
+
+    // Reset initialization flag when user changes
+    useEffect(() => {
+      if (!user) {
+        initializationAttempted.current = false;
+      }
+    }, [user]);
 
     // For unauthenticated users, just show loading or render children
     // The middleware will handle redirects for protected routes
