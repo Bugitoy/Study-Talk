@@ -28,44 +28,8 @@ const protectedSubroutes = [
   '/meetups/talk'
 ];
 
-// Define routes that should always be accessible (including 404 pages)
-const alwaysAccessibleRoutes = [
-  '/',
-  '/about',
-  '/pricing',
-  '/login',
-  '/not-found',
-  '/404'
-];
-
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
-  // Handle CSS source map requests gracefully
-  if (pathname.endsWith('.css.map') || pathname.includes('.css.map')) {
-    // Return a 200 response with empty content instead of 404
-    return new NextResponse('', { status: 200 });
-  }
-  
-  // Always allow access to homepage and essential pages
-  if (alwaysAccessibleRoutes.includes(pathname)) {
-    return NextResponse.next();
-  }
-  
-  // Allow access to static files and assets
-  if (pathname.startsWith('/_next/') || 
-      pathname.startsWith('/favicon.ico') || 
-      pathname.startsWith('/Images/') ||
-      pathname.startsWith('/public/') ||
-      pathname.startsWith('/robots.txt') ||
-      pathname.startsWith('/sitemap.xml')) {
-    return NextResponse.next();
-  }
-  
-  // Allow access to API routes (except logout)
-  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/logout')) {
-    return NextResponse.next();
-  }
   
   // Check if the current path is a protected subroute
   const isProtectedSubroute = protectedSubroutes.some(route => 
@@ -81,6 +45,19 @@ export async function middleware(request: NextRequest) {
   const isProtectedRoute = protectedRoutes.some(route => 
     pathname.startsWith(route)
   );
+
+  // Allow access to API routes (except logout)
+  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/logout')) {
+    return NextResponse.next();
+  }
+
+  // Allow access to static files
+  if (pathname.startsWith('/_next/') || 
+      pathname.startsWith('/favicon.ico') || 
+      pathname.startsWith('/Images/') ||
+      pathname.startsWith('/public/')) {
+    return NextResponse.next();
+  }
 
   // If it's a protected subroute, require authentication
   if (isProtectedSubroute) {

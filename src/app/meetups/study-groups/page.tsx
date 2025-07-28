@@ -54,7 +54,7 @@ const StudyGroups = () => {
   const { dailyHours, isLoadingHours } = useStreamStudyTimeTracker();
   const { streakData, loading: streakLoading } = useStreak();
   const hoursGoal = 10; // Daily goal in hours
-  const percent = Math.min((dailyHours / hoursGoal) * 100, 100);
+  const percent = Math.min(((dailyHours ?? 0) / hoursGoal) * 100, 100);
   
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -153,9 +153,14 @@ const StudyGroups = () => {
   const filteredGroups = groups.filter(g => g.roomName.toLowerCase().includes(debouncedSearch.toLowerCase()));
 
   // Show 0 for non-authenticated users, or loading state for authenticated users
-  const displayHours = isAuthenticated ? (isLoadingHours ? 0 : dailyHours) : 0;
+  const displayHours = isAuthenticated ? (isLoadingHours ? 0 : (dailyHours ?? 0)) : 0;
   const displayPercent = isAuthenticated ? (isLoadingHours ? 0 : percent) : 0;
-  const displayStreakData = isAuthenticated ? streakData : {
+  const displayStreakData = isAuthenticated ? (streakData ?? {
+    currentStreak: 0,
+    longestStreak: 0,
+    lastStudyDate: null,
+    totalStudyDays: 0,
+  }) : {
     currentStreak: 0,
     longestStreak: 0,
     lastStudyDate: null,
@@ -740,7 +745,7 @@ const StudyGroups = () => {
                 style={{ width: `${displayPercent}%` }}
               />
               <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-700 font-semibold text-xs sm:text-sm lg:text-lg select-none pointer-events-none px-2 whitespace-nowrap">
-                {displayHours.toFixed(1)}h / {hoursGoal}h studied today
+                {(displayHours || 0).toFixed(2)}h / {hoursGoal}h studied today
               </span>
             </div>
           </div>

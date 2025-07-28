@@ -4,7 +4,7 @@ import { Progress } from '@/components/ui/progress';
 import { Trophy, Target, Clock } from 'lucide-react';
 
 interface MobileStudyTimeProgressProps {
-  dailyHours: number;
+  dailyHours?: number;
   dailyGoal?: number;
   isTracking?: boolean;
   className?: string;
@@ -16,14 +16,16 @@ export function MobileStudyTimeProgress({
   isTracking = false, 
   className = '' 
 }: MobileStudyTimeProgressProps) {
-  const percent = Math.min((dailyHours / dailyGoal) * 100, 100);
+  // Ensure dailyHours is always a number
+  const safeDailyHours = dailyHours ?? 0;
+  const percent = Math.min((safeDailyHours / dailyGoal) * 100, 100);
   
   const achievements = [
-    { hours: 1, label: 'First Hour', icon: Clock, unlocked: dailyHours >= 1 },
-    { hours: 3, label: 'Getting Started', icon: Target, unlocked: dailyHours >= 3 },
-    { hours: 5, label: 'Study Warrior', icon: Trophy, unlocked: dailyHours >= 5 },
-    { hours: 8, label: 'Dedication', icon: Trophy, unlocked: dailyHours >= 8 },
-    { hours: 10, label: 'Daily Master', icon: Trophy, unlocked: dailyHours >= 10 },
+    { hours: 1, label: 'First Hour', icon: Clock, unlocked: safeDailyHours >= 1 },
+    { hours: 3, label: 'Getting Started', icon: Target, unlocked: safeDailyHours >= 3 },
+    { hours: 5, label: 'Study Warrior', icon: Trophy, unlocked: safeDailyHours >= 5 },
+    { hours: 8, label: 'Dedication', icon: Trophy, unlocked: safeDailyHours >= 8 },
+    { hours: 10, label: 'Daily Master', icon: Trophy, unlocked: safeDailyHours >= 10 },
   ];
 
   return (
@@ -41,7 +43,7 @@ export function MobileStudyTimeProgress({
         <div className="mb-3 sm:mb-5 md:mb-6">
             <div className="flex justify-between items-center mb-1 sm:mb-2">
             <span className="text-xs sm:text-sm md:text-lg text-[#19232d]">
-                {dailyHours.toFixed(1)}h / {dailyGoal}h
+                {safeDailyHours.toFixed(2)}h / {dailyGoal}h
             </span>
             <span className="text-xs sm:text-sm md:text-lg font-medium text-[#19232d]">
                 {percent.toFixed(0)}%

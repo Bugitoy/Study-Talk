@@ -648,6 +648,38 @@ async function handleSessionEnded(event: any, client: StreamClient) {
       },
     });
     
+    // Get Stream.io duration from the webhook payload
+    let streamDurationSeconds = 0;
+    
+    // Try to get duration from the session data
+    if (event.call?.session) {
+      const session = event.call.session;
+      if (session.started_at && session.ended_at) {
+        const startTime = new Date(session.started_at).getTime();
+        const endTime = new Date(session.ended_at).getTime();
+        streamDurationSeconds = Math.floor((endTime - startTime) / 1000);
+        
+        if (isDebugMode) {
+          console.log('Using duration from webhook payload:', streamDurationSeconds, 'seconds');
+        }
+      }
+    }
+    
+    // If no duration from session, try to get it from call duration
+    if (streamDurationSeconds === 0 && event.call?.duration) {
+      streamDurationSeconds = event.call.duration;
+      if (isDebugMode) {
+        console.log('Using duration from call object:', streamDurationSeconds, 'seconds');
+      }
+    }
+    
+    // If still no duration, calculate manually as fallback
+    if (streamDurationSeconds === 0) {
+      if (isDebugMode) {
+        console.log('No Stream.io duration available, using manual calculation');
+      }
+    }
+    
     // End all active study sessions for this call
     const activeSessions = await prisma.studySession.findMany({
       where: { 
@@ -661,14 +693,15 @@ async function handleSessionEnded(event: any, client: StreamClient) {
     }
 
     for (const session of activeSessions) {
-      const durationSeconds = Math.floor(
-        (new Date().getTime() - session.joinedAt.getTime()) / 1000
-      );
+      // Use Stream.io duration if available, otherwise calculate manually
+      const finalDurationSeconds = streamDurationSeconds > 0 
+        ? streamDurationSeconds 
+        : Math.floor((new Date().getTime() - session.joinedAt.getTime()) / 1000);
       
       await updateStudySessionWithStreamDuration(
         session.userId,
         callId,
-        durationSeconds // Pass seconds directly
+        finalDurationSeconds
       );
     }
   } catch (error) {
@@ -757,15 +790,48 @@ async function handleCallEnded(event: any, client: StreamClient) {
       console.log('Ending', activeSessions.length, 'active study sessions for call:', callId);
     }
 
+    // Get Stream.io duration from the webhook payload
+    let streamDurationSeconds = 0;
+    
+    // Try to get duration from the call object
+    if (event.call?.duration) {
+      streamDurationSeconds = event.call.duration;
+      if (isDebugMode) {
+        console.log('Using duration from call object:', streamDurationSeconds, 'seconds');
+      }
+    }
+    
+    // If no duration from call, try to get it from session data
+    if (streamDurationSeconds === 0 && event.call?.session) {
+      const session = event.call.session;
+      if (session.started_at && session.ended_at) {
+        const startTime = new Date(session.started_at).getTime();
+        const endTime = new Date(session.ended_at).getTime();
+        streamDurationSeconds = Math.floor((endTime - startTime) / 1000);
+        
+        if (isDebugMode) {
+          console.log('Using duration from session data:', streamDurationSeconds, 'seconds');
+        }
+      }
+    }
+    
+    // If still no duration, calculate manually as fallback
+    if (streamDurationSeconds === 0) {
+      if (isDebugMode) {
+        console.log('No Stream.io duration available, using manual calculation');
+      }
+    }
+
     for (const session of activeSessions) {
-      const durationSeconds = Math.floor(
-        (new Date().getTime() - session.joinedAt.getTime()) / 1000
-      );
+      // Use Stream.io duration if available, otherwise calculate manually
+      const finalDurationSeconds = streamDurationSeconds > 0 
+        ? streamDurationSeconds 
+        : Math.floor((new Date().getTime() - session.joinedAt.getTime()) / 1000);
       
       await updateStudySessionWithStreamDuration(
         session.userId,
         callId,
-        durationSeconds // Pass seconds directly
+        finalDurationSeconds
       );
     }
   } catch (error) {

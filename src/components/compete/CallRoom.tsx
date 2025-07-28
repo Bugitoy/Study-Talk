@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef, useCallback, useMemo, startTransition } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo, startTransition, useReducer } from "react";
 import {
   CallControls,
   CallParticipantsList,
@@ -57,15 +57,58 @@ const debounce = <T extends (...args: any[]) => any>(
 const apiCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 30000; // 30 seconds
 
+// Performance optimization: Dialog state reducer
+type DialogState = {
+  showParticipants: boolean;
+  showReportDialog: boolean;
+  showBanDialog: boolean;
+  showTopicModal: boolean;
+};
+
+type DialogAction = 
+  | { type: 'SET_PARTICIPANTS'; payload: boolean }
+  | { type: 'SET_REPORT_DIALOG'; payload: boolean }
+  | { type: 'SET_BAN_DIALOG'; payload: boolean }
+  | { type: 'SET_TOPIC_MODAL'; payload: boolean }
+  | { type: 'RESET_ALL' };
+
+const dialogReducer = (state: DialogState, action: DialogAction): DialogState => {
+  switch (action.type) {
+    case 'SET_PARTICIPANTS':
+      return { ...state, showParticipants: action.payload };
+    case 'SET_REPORT_DIALOG':
+      return { ...state, showReportDialog: action.payload };
+    case 'SET_BAN_DIALOG':
+      return { ...state, showBanDialog: action.payload };
+    case 'SET_TOPIC_MODAL':
+      return { ...state, showTopicModal: action.payload };
+    case 'RESET_ALL':
+      return {
+        showParticipants: false,
+        showReportDialog: false,
+        showBanDialog: false,
+        showTopicModal: false,
+      };
+    default:
+      return state;
+  }
+};
+
 const CallRoom = () => {
   const router = useRouter();
-  const [showParticipants, setShowParticipants] = useState(false);
-  const [showReportDialog, setShowReportDialog] = useState(false);
+  
+  // Performance optimization: Use reducer for dialog state
+  const [dialogState, dispatch] = useReducer(dialogReducer, {
+    showParticipants: false,
+    showReportDialog: false,
+    showBanDialog: false,
+    showTopicModal: false,
+  });
+  
   const [reportReason, setReportReason] = useState('');
   const [selectedReportedId, setSelectedReportedId] = useState('');
   const [otherReportedName, setOtherReportedName] = useState('');
   const [reportType, setReportType] = useState('INAPPROPRIATE_BEHAVIOR');
-  const [showBanDialog, setShowBanDialog] = useState(false);
   const [selectedBanUserId, setSelectedBanUserId] = useState('');
   const [banReason, setBanReason] = useState('');
   
@@ -193,13 +236,59 @@ const CallRoom = () => {
     }
   }, [quizRoom]);
 
-  const reportTypes = [
+  // Performance optimization: Memoize report types
+  const reportTypes = useMemo(() => [
     { value: 'INAPPROPRIATE_BEHAVIOR', label: 'Inappropriate Behavior' },
     { value: 'HARASSMENT', label: 'Harassment' },
     { value: 'SPAM', label: 'Spam' },
     { value: 'INAPPROPRIATE_CONTENT', label: 'Inappropriate Content' },
     { value: 'OTHER', label: 'Other' },
-  ];
+  ], []);
+
+  // Performance optimization: Memoize report submission
+  const handleReportSubmit = useCallback(async () => {
+    const reporterId = call?.state.localParticipant?.userId;
+    const reportedId = selectedReportedId === 'other' ? otherReportedName : selectedReportedId;
+    const callId = call?.id;
+    if (!reporterId || !reportedId || !callId || !reportReason.trim()) {
+      toast({
+        title: "Error",
+        description: "Please fill all fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const res = await fetch('/api/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reporterId, reportedId, callId, reason: reportReason, reportType }),
+      });
+      if (res.ok) {
+        toast({
+          title: "Success",
+          description: "Report submitted successfully!",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to submit report.",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to submit report.",
+        variant: "destructive",
+      });
+    }
+    dispatch({ type: 'SET_REPORT_DIALOG', payload: false });
+    setReportReason('');
+    setSelectedReportedId('');
+    setOtherReportedName('');
+    setReportType('INAPPROPRIATE_BEHAVIOR');
+  }, [call, selectedReportedId, otherReportedName, reportReason, reportType, toast]);
 
 
 // Start tracking when call is joined
@@ -484,25 +573,30 @@ useEffect(() => {
     setShowTopicModal(false);
   }, [currentRoom, call, cachedFetch]);
 
-  useEffect(() => {
+  // Performance optimization: Memoize call state subscription
+  const callStateSubscription = useCallback(() => {
     if (!call) return;
+    
     const sub = call.state.custom$.subscribe((custom: any) => {
       if (custom.quizStarted) setQuizStarted(true);
       if (custom.sessionId) setSessionId(custom.sessionId);
-      if (typeof custom.currentIdx === "number")
-        setCurrentIdx(custom.currentIdx);
+      if (typeof custom.currentIdx === "number") setCurrentIdx(custom.currentIdx);
       if (typeof custom.startTime === "number") {
         setStartTimestamp(custom.startTime);
-        const t = roomSettings?.timePerQuestion ?? currentRoom?.timePerQuestion;
-        if (t !== null && t !== undefined) {
-          const elapsed = Math.floor((Date.now() - custom.startTime) / 1000);
-          setTimeLeft(t === null ? Infinity : Math.max(0, t - elapsed));
-        }
+        const elapsed = Math.floor((Date.now() - custom.startTime) / 1000);
+        const left = timePerQuestion === null || timePerQuestion === undefined ? Infinity : Math.max(0, timePerQuestion - elapsed);
+        setTimeLeft(left);
       }
       if (custom.quizEnded) setQuizEnded(true);
     });
-    return () => sub.unsubscribe();
-  }, [call, roomSettings, currentRoom]);
+    
+    return sub;
+  }, [call, timePerQuestion]);
+
+  useEffect(() => {
+    const sub = callStateSubscription();
+    return () => sub?.unsubscribe();
+  }, [callStateSubscription]);
 
   useEffect(() => {
     if (quizStarted && currentRoom && callingState === CallingState.JOINED) {
@@ -613,6 +707,103 @@ useEffect(() => {
     setSelectedAnswer(null);
   }, [currentIdx, currentRoom]);
 
+  // Performance optimization: Memoize conditional renders
+  const shouldShowQuiz = useMemo(() => 
+    !quizEnded && quizStarted && currentQuestion,
+    [quizEnded, quizStarted, currentQuestion]
+  );
+
+  const shouldShowResults = useMemo(() => 
+    quizEnded && results,
+    [quizEnded, results]
+  );
+
+  const shouldShowControls = useMemo(() => 
+    callingState === CallingState.JOINED,
+    [callingState]
+  );
+
+  const shouldShowStartButton = useMemo(() => 
+    isHost && !quizStarted,
+    [isHost, quizStarted]
+  );
+
+  const shouldShowRestartButton = useMemo(() => 
+    isHost,
+    [isHost]
+  );
+
+  // Performance optimization: Memoize call control handlers
+  const handleMicToggle = useCallback(() => {
+    if (!call) return;
+    if (call.microphone.state.status === 'enabled') {
+      call.microphone.disable();
+    } else {
+      call.microphone.enable();
+    }
+  }, [call]);
+
+  const handleCameraToggle = useCallback(() => {
+    if (!call) return;
+    if (call.camera.state.status === 'enabled') {
+      call.camera.disable();
+    } else {
+      call.camera.enable();
+    }
+  }, [call]);
+
+  const handleLeaveCall = useCallback(() => {
+    router.push(`/meetups/compete`);
+  }, [router]);
+
+  const handleToggleParticipants = useCallback(() => {
+    dispatch({ type: 'SET_PARTICIPANTS', payload: !dialogState.showParticipants });
+  }, [dialogState.showParticipants]);
+
+  const handleOpenReportDialog = useCallback(() => {
+    dispatch({ type: 'SET_REPORT_DIALOG', payload: true });
+  }, []);
+
+  const handleOpenBanDialog = useCallback(() => {
+    dispatch({ type: 'SET_BAN_DIALOG', payload: true });
+  }, []);
+
+  const handleOpenTopicModal = useCallback(() => {
+    dispatch({ type: 'SET_TOPIC_MODAL', payload: true });
+  }, []);
+
+  // Performance optimization: Memoize sorted results
+  const sortedResults = useMemo(() => 
+    results?.users?.sort((a, b) => b.score - a.score) || [],
+    [results?.users]
+  );
+
+  // Performance optimization: Memoize result calculations
+  const resultStats = useMemo(() => 
+    sortedResults.map(u => ({
+      ...u,
+      correctCount: u.answers.filter(a => a.isCorrect).length,
+      wrongCount: u.answers.filter(a => !a.isCorrect).length,
+    })),
+    [sortedResults]
+  );
+
+  // Performance optimization: Add cache cleanup
+  useEffect(() => {
+    const cleanupCache = () => {
+      const now = Date.now();
+      Array.from(apiCache.entries()).forEach(([key, value]) => {
+        if (now - value.timestamp > CACHE_TTL) {
+          apiCache.delete(key);
+        }
+      });
+    };
+    
+    const interval = setInterval(cleanupCache, 60000); // Clean every minute
+    return () => clearInterval(interval);
+  }, []);
+
+  // Early returns must come AFTER all hooks
   if (callHasEnded) return <Alert title="The call has been ended by the host" />;
 
   if (callingState !== CallingState.JOINED) return <Loader />;
@@ -632,7 +823,7 @@ useEffect(() => {
       {/* video layout */}
       <div className="relative flex size-full items-center justify-center pb-32 sm:pb-40 md:pb-48 pt-12 sm:pt-24 lg:pt-0">
         <div className="flex flex-col md:flex-row lg:flex-row xl:flex-row items-center gap-0 sm:gap-2 -space-y-2 sm:space-y-0">
-          {!quizEnded && (
+          {shouldShowQuiz && (
             <>
               {!quizStarted ? (
                 <div className="relative w-full max-w-[25rem] sm:max-w-[30rem] md:max-w-[20rem] lg:max-w-[35rem] xl:max-w-[25rem] 2xl:max-w-[50rem] 3xl:max-w-[60rem] h-[15rem] sm:h-[20rem] md:h-[15rem] lg:h-[40rem] xl:h-[20rem] 2xl:h-[25rem] 3xl:h-[30rem] mx-auto md:mr-[1rem] lg:mr-[2rem] xl:mr-[1rem] flex items-center justify-center p-4">
@@ -759,14 +950,12 @@ useEffect(() => {
               )}
             </>
           )}
-          {quizEnded && (
+          {shouldShowResults && (
             <div className="w-full max-w-[50rem] sm:max-w-[60rem] lg:max-w-[70rem] h-[27rem] sm:h-[25rem] lg:h-[40rem] mx-auto lg:mr-10 p-4 sm:p-10 bg-white/50 rounded-[30px] shadow-md text-gray-700 flex flex-col mb-6 sm:mb-0">
               <h2 className="text-lg sm:text-3xl font-bold mb-4 text-center">Results</h2>
               {results ? (
                 <div className="space-y-2 overflow-y-auto flex-1">
-                  {results.users
-                    .sort((a, b) => b.score - a.score)
-                    .map((u) => (
+                  {resultStats.map((u) => (
                       <div
                         key={u.userId}
                         className="border-t border-gray-300 py-3 sm:py-5"
@@ -777,11 +966,11 @@ useEffect(() => {
                         <div className="flex gap-2 sm:gap-4 ml-2 sm:ml-4 mb-2 sm:mb-4">
                           <p className="font-medium text-green-700 text-xs sm:text-base">
                             Correct:{" "}
-                            {u.answers.filter((a) => a.isCorrect).length}
+                            {u.correctCount}
                           </p>
                           <p className="font-medium text-red-700 text-xs sm:text-base">
                             Wrong:{" "}
-                            {u.answers.filter((a) => !a.isCorrect).length}
+                            {u.wrongCount}
                           </p>
                         </div>
                         <ol className="list-decimal list-inside space-y-1 sm:space-y-2 ml-2 sm:ml-4 text-gray-700 text-xs sm:text-base">
@@ -819,19 +1008,19 @@ useEffect(() => {
           </div>
         </div>
         {/* Background overlay for small screens and tablets */}
-        {showParticipants && (
+        {dialogState.showParticipants && (
           <div 
             className="fixed inset-0 bg-black bg-opacity-50 z-40"
-            onClick={() => setShowParticipants(false)}
+            onClick={() => dispatch({ type: 'SET_PARTICIPANTS', payload: false })}
           />
         )}
         
         <div
           className={cn("h-[calc(100vh-86px)] hidden", {
-            "show-block": showParticipants,
+            "show-block": dialogState.showParticipants,
           })}
         >
-          <CallParticipantsList onClose={() => setShowParticipants(false)} />
+          <CallParticipantsList onClose={() => dispatch({ type: 'SET_PARTICIPANTS', payload: false })} />
         </div>
       </div>
 
@@ -841,13 +1030,7 @@ useEffect(() => {
           {/* Custom call controls based on room settings */}
           {roomSettings?.mic === 'flexible' && call && (
             <button
-              onClick={() => {
-                if (call.microphone.state.status === 'enabled') {
-                  call.microphone.disable();
-                } else {
-                  call.microphone.enable();
-                }
-              }}
+              onClick={handleMicToggle}
               className="cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-[#4c535b] flex items-center justify-center"
             >
               {call.microphone.state.status === 'enabled' ? (
@@ -859,13 +1042,7 @@ useEffect(() => {
           )}
           {roomSettings?.camera === 'flexible' && call && (
             <button
-              onClick={() => {
-                if (call.camera.state.status === 'enabled') {
-                  call.camera.disable();
-                } else {
-                  call.camera.enable();
-                }
-              }}
+              onClick={handleCameraToggle}
               className="cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-[#4c535b] flex items-center justify-center"
             >
               {call.camera.state.status === 'enabled' ? (
@@ -876,7 +1053,7 @@ useEffect(() => {
             </button>
           )}
           <button
-            onClick={() => router.push(`/meetups/compete`)}
+            onClick={handleLeaveCall}
             className="cursor-pointer rounded-2xl bg-red-500 px-2 sm:px-4 py-2 hover:bg-red-600 flex items-center justify-center"
           >
             <PhoneOff size={16} className="sm:w-5 text-white" />
@@ -886,7 +1063,7 @@ useEffect(() => {
         <div className="hidden sm:block md:hidden lg:hidden xl:block">
           <CallStatsButton />
         </div>
-        {isHost && !quizStarted && (
+        {shouldShowStartButton && (
           <button
             onClick={handleStartQuiz}
             className="cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-xs sm:text-sm text-white"
@@ -896,7 +1073,7 @@ useEffect(() => {
           </button>
         )}
 
-        {isHost && (
+        {shouldShowRestartButton && (
           <button
             onClick={handleRestartQuiz}
             className="cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-xs sm:text-sm text-white"
@@ -907,21 +1084,21 @@ useEffect(() => {
           {isHost && (
           <button
             className="cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-[#4c535b] rounded-2xl shadow-md flex items-center justify-center text-xs sm:text-sm text-white"
-            onClick={() => setShowTopicModal(true)}
+            onClick={handleOpenTopicModal}
           >
             <span className="hidden sm:inline md:hidden lg:inline xl:hidden">Choose a topic</span>
             <span className="sm:hidden md:inline lg:hidden xl:inline">Topic</span>
           </button>
         )}
 
-        <button onClick={() => setShowParticipants((prev) => !prev)}>
+        <button onClick={() => dispatch({ type: 'SET_PARTICIPANTS', payload: true })}>
           <div className=" cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-[#4c535b] ">
             <Users size={16} className="sm:w-5 text-white" />
           </div>
         </button>
         
         {/* Report Button */}
-        <button onClick={() => setShowReportDialog(true)}>
+        <button onClick={handleOpenReportDialog}>
           <div className="cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-red-600 ml-2">
             <Flag size={16} className="sm:w-5 text-white" />
           </div>
@@ -929,7 +1106,7 @@ useEffect(() => {
         
         {/* Ban User Button (only for host) */}
         {isHost && (
-          <button onClick={() => setShowBanDialog(true)}>
+          <button onClick={handleOpenBanDialog}>
             <div className="cursor-pointer rounded-2xl bg-[#19232d] px-2 sm:px-4 py-2 hover:bg-red-600 ml-2">
               <Shield size={16} className="sm:w-5 text-white" />
             </div>
@@ -938,7 +1115,7 @@ useEffect(() => {
 
       </div>
 
-      <Dialog open={showTopicModal} onOpenChange={setShowTopicModal}>
+      <Dialog open={dialogState.showTopicModal} onOpenChange={(open) => dispatch({ type: 'SET_TOPIC_MODAL', payload: open })}>
         <DialogPortal>
           <DialogOverlay className="bg-black/50 backdrop-blur-md" />
           <DialogContent className="bg-white max-w-6xl max-h-[80vh] overflow-y-auto rounded-2xl sm:rounded-none">
@@ -989,11 +1166,11 @@ useEffect(() => {
       </Dialog>
 
       {/* Report Dialog */}
-      {showReportDialog && (
+      {dialogState.showReportDialog && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
           onClick={() => {
-            setShowReportDialog(false);
+            dispatch({ type: 'SET_REPORT_DIALOG', payload: false });
             setReportReason('');
             setSelectedReportedId('');
             setOtherReportedName('');
@@ -1055,7 +1232,7 @@ useEffect(() => {
               <button
                 className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-black"
                 onClick={() => {
-                  setShowReportDialog(false);
+                  dispatch({ type: 'SET_REPORT_DIALOG', payload: false });
                   setReportReason('');
                   setSelectedReportedId('');
                   setOtherReportedName('');
@@ -1066,49 +1243,7 @@ useEffect(() => {
               </button>
               <button
                 className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                onClick={async () => {
-                  const reporterId = call?.state.localParticipant?.userId;
-                  const reportedId = selectedReportedId === 'other' ? otherReportedName : selectedReportedId;
-                  const callId = call?.id;
-                  if (!reporterId || !reportedId || !callId || !reportReason.trim()) {
-                    toast({
-                      title: "Error",
-                      description: "Please fill all fields.",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-                  try {
-                    const res = await fetch('/api/report', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ reporterId, reportedId, callId, reason: reportReason, reportType }),
-                    });
-                    if (res.ok) {
-                      toast({
-                        title: "Success",
-                        description: "Report submitted successfully!",
-                      });
-                    } else {
-                      toast({
-                        title: "Error",
-                        description: "Failed to submit report.",
-                        variant: "destructive",
-                      });
-                    }
-                  } catch (err) {
-                    toast({
-                      title: "Error",
-                      description: "Failed to submit report.",
-                      variant: "destructive",
-                    });
-                  }
-                  setShowReportDialog(false);
-                  setReportReason('');
-                  setSelectedReportedId('');
-                  setOtherReportedName('');
-                  setReportType('INAPPROPRIATE_BEHAVIOR');
-                }}
+                onClick={handleReportSubmit}
                 disabled={(!selectedReportedId || (selectedReportedId === 'other' && !otherReportedName.trim()) || !reportReason.trim())}
               >
                 Submit
@@ -1119,11 +1254,11 @@ useEffect(() => {
       )}
 
       {/* Ban User Dialog */}
-      {showBanDialog && (
+      {dialogState.showBanDialog && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
           onClick={() => {
-            setShowBanDialog(false);
+            dispatch({ type: 'SET_BAN_DIALOG', payload: false });
             setSelectedBanUserId('');
             setBanReason('');
           }}
@@ -1162,7 +1297,7 @@ useEffect(() => {
               <button
                 className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-black"
                 onClick={() => {
-                  setShowBanDialog(false);
+                  dispatch({ type: 'SET_BAN_DIALOG', payload: false });
                   setSelectedBanUserId('');
                   setBanReason('');
                 }}
@@ -1341,7 +1476,7 @@ useEffect(() => {
                       variant: "destructive",
                     });
                   }
-                  setShowBanDialog(false);
+                  dispatch({ type: 'SET_BAN_DIALOG', payload: false });
                   setSelectedBanUserId('');
                   setBanReason('');
                 }}
