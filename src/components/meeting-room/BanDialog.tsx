@@ -16,98 +16,17 @@ interface BanDialogProps {
   callId?: string;
   hostId?: string;
   onBanSubmit: (data: any) => void;
+  onShowConfirmation: (data: any) => void;
 }
 
-const BanDialog = ({ isOpen, onClose, participants, callId, hostId, onBanSubmit }: BanDialogProps) => {
+const BanDialog = ({ isOpen, onClose, participants, callId, hostId, onBanSubmit, onShowConfirmation }: BanDialogProps) => {
   const { toast } = useToast();
   const [selectedBanUserId, setSelectedBanUserId] = React.useState('');
   const [banReason, setBanReason] = React.useState('');
-  const [showConfirmation, setShowConfirmation] = React.useState(false);
-  const [confirmationData, setConfirmationData] = React.useState<any>(null);
 
   const banRateLimiter = createRateLimiter(SECURITY_CONFIG.BAN_RATE_LIMIT);
 
-  const handleBanSubmit = async (confirmedData?: any) => {
-    const data = confirmedData || confirmationData;
-    
-    // Rate limiting check
-    if (!banRateLimiter()) {
-      toast({
-        title: "Rate Limited",
-        description: "Too many ban attempts. Please wait before trying again.",
-        variant: "destructive",
-      });
-      return;
-    }
 
-    if (!data?.selectedBanUserId || !callId) {
-      toast({
-        title: "Error",
-        description: "Please select a user to ban.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Sanitize ban reason
-    const sanitizedBanReason = sanitizeInput(data.banReason, SECURITY_CONFIG.MAX_BAN_REASON_LENGTH);
-
-    try {
-      const res = await fetch('/api/room/ban', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          userId: data.selectedBanUserId, 
-          callId: callId,
-          hostId: hostId,
-          reason: sanitizedBanReason.trim() || 'Banned by host'
-        }),
-      });
-
-      if (res.ok) {
-        toast({
-          title: "Success",
-          description: "User banned and removed from room immediately!",
-        });
-        
-        // Also call the force remove endpoint as an additional measure
-        try {
-          const forceRemoveRes = await fetch('/api/room/force-remove', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: data.selectedBanUserId, callId: callId }),
-          });
-          
-          if (forceRemoveRes.ok) {
-            const forceRemoveData = await forceRemoveRes.json();
-          }
-        } catch (forceRemoveError) {
-          console.error('Failed to call force remove:', forceRemoveError);
-        }
-        
-        onBanSubmit(data);
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to ban user from room.",
-          variant: "destructive",
-        });
-      }
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to ban user from room.",
-        variant: "destructive",
-      });
-    }
-
-    // Reset form
-    onClose();
-    setSelectedBanUserId('');
-    setBanReason('');
-    setShowConfirmation(false);
-    setConfirmationData(null);
-  };
 
   const handleBanClick = () => {
     if (!selectedBanUserId) {
@@ -120,13 +39,13 @@ const BanDialog = ({ isOpen, onClose, participants, callId, hostId, onBanSubmit 
     }
     
     // Store data for confirmation
-    setConfirmationData({
+    const confirmationData = {
       selectedBanUserId,
       banReason,
-    });
+    };
     
     // Show confirmation dialog
-    setShowConfirmation(true);
+    onShowConfirmation(confirmationData);
     onClose();
   };
 
@@ -152,7 +71,7 @@ const BanDialog = ({ isOpen, onClose, participants, callId, hostId, onBanSubmit 
         <div className="mb-4">
           <label className="block mb-2 text-[#19232d] font-medium" htmlFor="ban-participant">Who are you banning?</label>
           <Select value={selectedBanUserId} onValueChange={setSelectedBanUserId}>
-            <SelectTrigger className="w-full" id="ban-participant" aria-describedby="ban-participant-help">
+            <SelectTrigger className="w-full text-black" id="ban-participant" aria-describedby="ban-participant-help">
               <SelectValue placeholder="Select a participant" />
             </SelectTrigger>
             <SelectContent>

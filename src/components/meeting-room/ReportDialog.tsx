@@ -136,7 +136,7 @@ const ReportDialog = ({ isOpen, onClose, participants, callId, reporterId }: Rep
         <div className="mb-4">
           <label className="block mb-2 text-[#19232d] font-medium" htmlFor="reported-participant">Who are you reporting?</label>
           <Select value={selectedReportedId} onValueChange={setSelectedReportedId}>
-            <SelectTrigger className="w-full" id="reported-participant" aria-describedby="participant-help">
+            <SelectTrigger className="w-full text-black" id="reported-participant" aria-describedby="participant-help">
               <SelectValue placeholder="Select a participant" />
             </SelectTrigger>
             <SelectContent>
@@ -165,7 +165,7 @@ const ReportDialog = ({ isOpen, onClose, participants, callId, reporterId }: Rep
         <div className="mb-4">
           <label className="block mb-2 text-[#19232d] font-medium" htmlFor="report-type">Type of Report</label>
           <Select value={reportType} onValueChange={setReportType}>
-            <SelectTrigger className="w-full" id="report-type" aria-describedby="report-type-help">
+            <SelectTrigger className="w-full text-black" id="report-type" aria-describedby="report-type-help">
               <SelectValue placeholder="Select report type" />
             </SelectTrigger>
             <SelectContent>
