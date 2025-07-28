@@ -84,75 +84,88 @@ const pricingList: PricingProps[] = [
 export default function PricingPage() {
   return (
     <NextLayout>
-      <section id="pricing" className="container py-24 sm:py-32">
-        <h2 className="text-3xl md:text-4xl font-bold text-center">
-          Get
-          <span className="bg-gradient-to-b from-orange-400 to-orange-600 uppercase text-transparent bg-clip-text">
-            {" "}
-            Unlimited{" "}
-          </span>
-          Access
-        </h2>
-        <h3 className="text-xl text-center text-muted-foreground pt-4 pb-8">
-          Choose the perfect plan for your language learning journey.
-        </h3>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {pricingList.map((pricing: PricingProps) => (
-            <Card
-              key={pricing.title}
-              className={
-                pricing.popular === PopularPlanType.YES
-                  ? "drop-shadow-xl shadow-black/10 dark:shadow-white/10 border-2 border-orange-200"
-                  : ""
-              }
-            >
-              <CardHeader>
-                <CardTitle className="flex item-center justify-between">
-                  {pricing.title}
-                  {pricing.popular === PopularPlanType.YES ? (
-                    <Badge
-                      variant="secondary"
-                      className="text-sm text-primary bg-orange-100 text-orange-700"
-                    >
-                      Most popular
-                    </Badge>
-                  ) : null}
-                </CardTitle>
-                <div>
-                  <span className="text-3xl font-bold">${pricing.price}</span>
-                  <span className="text-muted-foreground">
-                    {" "}
-                    {pricing.billing}
-                  </span>
-                </div>
+      <main id="main-content" role="main" className="container py-24 sm:py-32">
+        {/* Skip to main content link for keyboard users */}
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-blue-600 text-white px-4 py-2 rounded z-50">
+          Skip to main content
+        </a>
 
-                <CardDescription>{pricing.description}</CardDescription>
-              </CardHeader>
+        <section aria-labelledby="pricing-heading" id="pricing">
+          <header className="text-center mb-12">
+            <h1 id="pricing-heading" className="text-3xl md:text-4xl font-bold">
+              Get
+              <span className="bg-gradient-to-b from-orange-400 to-orange-600 uppercase text-transparent bg-clip-text">
+                {" "}
+                Unlimited{" "}
+              </span>
+              Access
+            </h1>
+            <h2 className="text-xl text-center text-muted-foreground pt-4 pb-8">
+              Choose the perfect plan for your language learning journey.
+            </h2>
+          </header>
 
-              <CardContent>
-                <PaymentLink
-                  href={pricing.href}
-                  text={pricing.buttonText}
-                  paymentLink={pricing.paymentLink}
-                />
-              </CardContent>
-
-              <hr className="w-4/5 m-auto mb-4" />
-
-              <CardFooter className="flex">
-                <div className="space-y-4">
-                  {pricing.benefitList.map((benefit: string) => (
-                    <span key={benefit} className="flex">
-                      <Check className="text-orange-500" />
-                      <h3 className="ml-2">{benefit}</h3>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8" role="list" aria-label="Pricing plans">
+            {pricingList.map((pricing: PricingProps) => (
+              <Card
+                key={pricing.title}
+                className={
+                  pricing.popular === PopularPlanType.YES
+                    ? "drop-shadow-xl shadow-black/10 dark:shadow-white/10 border-2 border-orange-200"
+                    : ""
+                }
+                role="listitem"
+                aria-labelledby={`${pricing.title.toLowerCase()}-plan-title`}
+              >
+                <CardHeader>
+                  <CardTitle className="flex item-center justify-between" id={`${pricing.title.toLowerCase()}-plan-title`}>
+                    {pricing.title}
+                    {pricing.popular === PopularPlanType.YES ? (
+                      <Badge
+                        variant="secondary"
+                        className="text-sm text-primary bg-orange-100 text-orange-700"
+                        aria-label="Most popular plan"
+                      >
+                        Most popular
+                      </Badge>
+                    ) : null}
+                  </CardTitle>
+                  <div>
+                    <span className="text-3xl font-bold" aria-label={`${pricing.price} dollars`}>${pricing.price}</span>
+                    <span className="text-muted-foreground">
+                      {" "}
+                      {pricing.billing}
                     </span>
-                  ))}
-                </div>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      </section>
+                  </div>
+
+                  <CardDescription>{pricing.description}</CardDescription>
+                </CardHeader>
+
+                <CardContent>
+                  <PaymentLink
+                    href={pricing.href}
+                    text={pricing.buttonText}
+                    paymentLink={pricing.paymentLink}
+                  />
+                </CardContent>
+
+                <hr className="w-4/5 m-auto mb-4" aria-hidden="true" />
+
+                <CardFooter className="flex">
+                  <div className="space-y-4" role="list" aria-label={`${pricing.title} plan benefits`}>
+                    {pricing.benefitList.map((benefit: string) => (
+                      <span key={benefit} className="flex items-center" role="listitem">
+                        <Check className="text-orange-500" aria-hidden="true" />
+                        <span className="ml-2">{benefit}</span>
+                      </span>
+                    ))}
+                  </div>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        </section>
+      </main>
     </NextLayout>
   );
 }
