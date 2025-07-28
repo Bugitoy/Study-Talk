@@ -110,6 +110,25 @@ export default function ConfessionsPage() {
   const handleCreatePost = async () => {
     if (!user?.id || !newTitle.trim() || !newBody.trim()) return;
     
+    // Client-side validation
+    if (newTitle.trim().length > 200) {
+      toast({
+        title: "Error",
+        description: "Title too long (max 200 characters)",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (newBody.trim().length > 5000) {
+      toast({
+        title: "Error",
+        description: "Content too long (max 5000 characters)",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       await createConfession({
         title: newTitle.trim(),
@@ -127,8 +146,18 @@ export default function ConfessionsPage() {
       
       // Refresh confessions
       refreshConfessions();
+      
+      toast({
+        title: "Success",
+        description: "Confession posted successfully!",
+      });
     } catch (error) {
       console.error("Failed to create confession:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create confession. Please try again.",
+        variant: "destructive",
+      });
     }
   };
   
@@ -217,9 +246,9 @@ export default function ConfessionsPage() {
     const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
     
     if (diffInHours < 1) return "Just now";
-    if (diffInHours < 24) return `${diffInHours} hours ago`;
+    if (diffInHours < 24) return `${diffInHours}h`;
     const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) return `${diffInDays} days ago`;
+    if (diffInDays < 7) return `${diffInDays}d`;
     return date.toLocaleDateString();
   };
   
@@ -582,19 +611,31 @@ export default function ConfessionsPage() {
               <DialogTitle className="text-lg sm:text-xl md:text-2xl font-bold text-center">Create a confession</DialogTitle>
             </DialogHeader>
             <div className="space-y-3 sm:space-y-4 mt-2 sm:mt-4">
+              <div>
               <Input
                 placeholder="Title"
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
-                className="rounded-[8px] text-sm sm:text-base h-10 sm:h-12"
+                  className="rounded-[8px] text-sm sm:text-base h-10 sm:h-12"
+                  maxLength={200}
               />
+                <div className="text-xs text-gray-500 mt-1 text-right">
+                  {newTitle.length}/200 characters
+                </div>
+              </div>
+              <div>
               <Textarea
                 placeholder="Write your confession..."
-                rows={4}
+                  rows={4}
                 value={newBody}
                 onChange={(e) => setNewBody(e.target.value)}
-                className="rounded-[8px] text-sm sm:text-base resize-none"
-              />
+                  className="rounded-[8px] text-sm sm:text-base resize-none"
+                  maxLength={5000}
+                />
+                <div className="text-xs text-gray-500 mt-1 text-right">
+                  {newBody.length}/5000 characters
+                </div>
+              </div>
               <div className="flex items-center gap-2 sm:gap-3 pt-2">
                 <input
                   type="checkbox"

@@ -1,8 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { voteConfession, removeVoteOnConfession } from '@/lib/db-utils';
+import { createRateLimit } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
   try {
+    // Apply rate limiting for voting (very generous)
+    const VOTE_RATE_LIMIT = {
+      maxAttempts: 100, // 100 votes per 5 minutes
+      windowMs: 5 * 60 * 1000, // 5 minutes
+    };
+    
+    const rateLimit = createRateLimit(VOTE_RATE_LIMIT);
+    const rateLimitResult = rateLimit(req);
+    
+    if (rateLimitResult) {
+      return rateLimitResult;
+    }
+
     const { confessionId, userId, voteType, action } = await req.json();
 
     if (!confessionId || !userId) {

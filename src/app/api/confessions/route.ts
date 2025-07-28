@@ -4,6 +4,8 @@ import {
   getConfessions, 
   getOrCreateUniversity
 } from '@/lib/db-utils';
+import { createRateLimit, CONFESSION_RATE_LIMIT } from '@/lib/rate-limit';
+import { sanitizeInput } from '@/lib/security-utils';
 
 export async function GET(req: NextRequest) {
   try {
@@ -34,10 +36,40 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    // Apply rate limiting
+    const rateLimit = createRateLimit(CONFESSION_RATE_LIMIT);
+    const rateLimitResult = rateLimit(req);
+    
+    if (rateLimitResult) {
+      return rateLimitResult;
+    }
+
     const { title, content, authorId, university, isAnonymous } = await req.json();
 
+    // Input validation
     if (!title || !content || !authorId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Sanitize inputs
+    const sanitizedTitle = sanitizeInput(title);
+    const sanitizedContent = sanitizeInput(content);
+
+    // Content length validation
+    if (sanitizedTitle.length > 200) {
+      return NextResponse.json({ error: 'Title too long (max 200 characters)' }, { status: 400 });
+    }
+
+    if (sanitizedContent.length > 5000) {
+      return NextResponse.json({ error: 'Content too long (max 5000 characters)' }, { status: 400 });
+    }
+
+    if (sanitizedTitle.trim().length === 0) {
+      return NextResponse.json({ error: 'Title cannot be empty' }, { status: 400 });
+    }
+
+    if (sanitizedContent.trim().length === 0) {
+      return NextResponse.json({ error: 'Content cannot be empty' }, { status: 400 });
     }
 
     let universityId: string | undefined;
@@ -47,8 +79,8 @@ export async function POST(req: NextRequest) {
     }
 
     const confession = await createConfession({
-      title,
-      content,
+      title: sanitizedTitle,
+      content: sanitizedContent,
       authorId,
       universityId,
       isAnonymous,
