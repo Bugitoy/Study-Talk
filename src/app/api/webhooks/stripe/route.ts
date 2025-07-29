@@ -93,9 +93,7 @@ export async function POST(req: Request) {
         }
         break;
       case "customer.subscription.deleted": {
-        const subscription = await stripe.subscriptions.retrieve(
-          (event.data.object as Stripe.Subscription).id,
-        );
+        const subscription = await stripe.subscriptions.retrieve((event.data.object as Stripe.Subscription).id);
         const user = await prisma.user.findUnique({
           where: { customerId: subscription.customer as string },
         });
