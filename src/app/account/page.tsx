@@ -151,7 +151,14 @@ export default function AccountPage() {
 
   const subscriptionType = useMemo(() => {
     if (!userInfo?.subscription) return "Free";
-    return userInfo.subscription.plan === "premium" ? "Premium" : "Free";
+    switch (userInfo.subscription.plan) {
+      case "premium":
+        return "Premium";
+      case "plus":
+        return "Plus";
+      default:
+        return "Free";
+    }
   }, [userInfo?.subscription]);
 
   const nextBillingDate = useMemo(() => {
@@ -205,7 +212,7 @@ export default function AccountPage() {
   };
 
   const isAuthenticated = !!user?.id;
-  const isSubscribed = userInfo?.plan === "premium" && userInfo?.customerId;
+  const isSubscribed = (userInfo?.plan === "premium" || userInfo?.plan === "plus") && userInfo?.customerId;
   const isValidUser = isAuthenticated && userInfo && !error;
 
   const handleCancelSubscription = () => {
