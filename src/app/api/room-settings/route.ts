@@ -3,6 +3,7 @@ import { createRoomSetting } from '@/lib/db-utils';
 import { createRateLimit, ROOM_CREATION_RATE_LIMIT } from '@/lib/rate-limit';
 import { sanitizeInput } from '@/lib/security-utils';
 import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server';
+import prisma from '@/db/prisma';
 
 export async function POST(req: NextRequest) {
   // 1. Authentication check
@@ -13,7 +14,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // 2. Apply server-side rate limiting
+  // 2. Get user plan for validation
+  const userRecord = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { plan: true }
+  });
+
+  if (!userRecord) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  }
+
+  const isFreeUser = userRecord.plan === 'free';
+  const isPlusUser = userRecord.plan === 'plus';
+
+  // 3. Apply server-side rate limiting
   const rateLimit = createRateLimit(ROOM_CREATION_RATE_LIMIT);
   const rateLimitResult = rateLimit(req);
   
@@ -81,6 +95,22 @@ export async function POST(req: NextRequest) {
     // Validate participants - allow null for unlimited, or specific values for limited
     if (data.participants !== null && (typeof data.participants !== 'number' || ![5, 10, 15, 20, 25, 30].includes(data.participants))) {
       return NextResponse.json({ error: 'Invalid participant count' }, { status: 400 });
+    }
+
+    // Enforce plan-based participant restrictions
+    if (isFreeUser) {
+      if (data.participants !== null && data.participants > 5) {
+        return NextResponse.json({ 
+          error: 'Free users can only create rooms with up to 5 participants. Upgrade to Plus or Premium for larger groups.' 
+        }, { status: 403 });
+      }
+    }
+    
+    // Prevent Plus users from selecting unlimited
+    if (isPlusUser && data.participants === null) {
+      return NextResponse.json({ 
+        error: 'Plus users cannot create unlimited participant rooms. Upgrade to Premium for unlimited participants.' 
+      }, { status: 403 });
     }
 
     // Validate time per question (can be null for unlimited)

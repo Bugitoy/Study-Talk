@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 import NextLayout from "@/components/NextLayout";
 import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs';
 import { useToast } from '@/hooks/use-toast';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 // Room name validation configuration for compete page
 const COMPETE_ROOM_NAME_CONFIG = {
@@ -20,6 +21,7 @@ export default function CreateRoom() {
   const router = useRouter();
   const { user } = useKindeBrowserClient();
   const { toast } = useToast();
+  const { user: userInfo, loading: userLoading } = useCurrentUser();
   
   const [roomSettings, setRoomSettings] = useState({
     roomName: "",
@@ -37,6 +39,10 @@ export default function CreateRoom() {
   const [attemptCount, setAttemptCount] = useState(0);
   const [lastAttemptTime, setLastAttemptTime] = useState(0);
   const [isRateLimited, setIsRateLimited] = useState(false);
+
+  // Check user plan for restrictions
+  const isFreeUser = userInfo?.plan === 'free';
+  const isPlusUser = userInfo?.plan === 'plus';
 
   // Check if user is blocked
   useEffect(() => {
@@ -160,6 +166,26 @@ export default function CreateRoom() {
   }, [sanitizeRoomName, validateRoomName, checkRateLimit]);
 
   const setValue = (key: string, value: any) => {
+    // Prevent free users from selecting more than 5 participants
+    if (key === 'participants' && isFreeUser) {
+      if (value > 5) {
+        toast({
+          title: 'Upgrade Required',
+          description: 'Free users can only create rooms with up to 5 participants. Upgrade to Plus or Premium for larger groups.',
+        });
+        return; // Don't update the value
+      }
+    }
+    
+    // Prevent Plus users from selecting unlimited
+    if (key === 'participants' && isPlusUser && value === -1) {
+      toast({
+        title: 'Upgrade Required',
+        description: 'Plus users cannot create unlimited participant rooms. Upgrade to Premium for unlimited participants.',
+      });
+      return; // Don't update the value
+    }
+    
     setRoomSettings((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -407,13 +433,36 @@ export default function CreateRoom() {
           aria-describedby="participants-help"
         >
           {[5, 10, 15, 20, 25, 30].map((n) => (
-            <option key={n} value={n}>{`${n}`}</option>
+            <option 
+              key={n} 
+              value={n}
+              disabled={isFreeUser && n > 5}
+              className={isFreeUser && n > 5 ? 'text-gray-400' : ''}
+            >
+              {n}
+            </option>
           ))}
-          <option value={-1}>Unlimited</option>
+          <option 
+            value={-1}
+            disabled={isFreeUser || isPlusUser}
+            className={(isFreeUser || isPlusUser) ? 'text-gray-400' : ''}
+          >
+            Unlimited
+          </option>
         </select>
         <div id="participants-help" className="sr-only">
           Choose the maximum number of participants for your compete room
         </div>
+        {isFreeUser && (
+          <div className="mt-2 text-xs text-gray-600">
+            Free users can only create rooms with up to 5 participants. Upgrade to Plus or Premium for larger groups.
+          </div>
+        )}
+        {isPlusUser && (
+          <div className="mt-2 text-xs text-gray-600">
+            Plus users can create rooms with up to 30 participants. Upgrade to Premium for unlimited participants.
+          </div>
+        )}
       </div>
 
       <div className="mb-4">
