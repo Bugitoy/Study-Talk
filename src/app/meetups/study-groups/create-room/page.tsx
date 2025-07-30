@@ -36,7 +36,7 @@ export default function CreateRoom() {
     mic: "on",
     camera: "on",
     availability: "public",
-    participants: 8, // Default to maximum allowed by API
+    participants: 5, // Default to minimum allowed by API
   });
 
   // Room name validation state
@@ -183,7 +183,7 @@ export default function CreateRoom() {
     const apiParticipants = roomSettings.participants === -1 ? null : roomSettings.participants;
     
     // Additional validation to ensure we're sending a valid value
-    if (apiParticipants !== null && ![2, 3, 4, 5, 6, 8].includes(apiParticipants)) {
+    if (apiParticipants !== null && ![5, 10, 15, 20, 25, 30].includes(apiParticipants)) {
       console.error('❌ Invalid participants value:', apiParticipants);
       throw new Error('Invalid participants value');
     }
@@ -516,7 +516,7 @@ export default function CreateRoom() {
           aria-label="Number of participants"
           aria-describedby="participants-help"
         >
-          {[2, 3, 4, 5, 6, 8].map((n) => (
+          {[5, 10, 15, 20, 25, 30].map((n) => (
             <option key={n} value={n}>{`${n}`}</option>
           ))}
           <option value={-1}>Unlimited</option>

@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate participants - allow null for unlimited, or specific values for limited
-    if (data.participants !== null && (typeof data.participants !== 'number' || ![2, 3, 4, 5, 6, 8].includes(data.participants))) {
+    if (data.participants !== null && (typeof data.participants !== 'number' || ![5, 10, 15, 20, 25, 30].includes(data.participants))) {
       return NextResponse.json({ error: 'Invalid participant count' }, { status: 400 });
     }
 

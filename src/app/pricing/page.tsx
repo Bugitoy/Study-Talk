@@ -61,7 +61,7 @@ const pricingList: PricingProps[] = [
     benefitList: [
       "15 hours max study time per day",
       "Access to basic quizzes",
-      "Create 20 custom quizzes",
+      "Create up to 50 custom quizzes",
       "Create up to 50 quiz questions per quiz",
       "30 max study-group participants",
       "30 max compete participants",

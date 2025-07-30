@@ -27,7 +27,7 @@ export default function CreateRoom() {
     timePerQuestion: 5,
     mic: "on",
     camera: "on",
-    participants: 4, // Default to 4 participants
+    participants: 5, // Default to minimum allowed by API
     availability: "public",
   });
 
@@ -406,7 +406,7 @@ export default function CreateRoom() {
           aria-label="Number of participants"
           aria-describedby="participants-help"
         >
-          {[2, 3, 4, 5, 6, 8].map((n) => (
+          {[5, 10, 15, 20, 25, 30].map((n) => (
             <option key={n} value={n}>{`${n}`}</option>
           ))}
           <option value={-1}>Unlimited</option>
