@@ -176,4 +176,61 @@ export async function PUT(
     });
     return NextResponse.json({ error: 'Failed to update user quiz' }, { status: 500 });
   }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get('userId');
+
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    }
+
+    // Rate limiting
+    if (checkRateLimit(userId)) {
+      logSecurityEvent('RATE_LIMIT_EXCEEDED', userId, { endpoint: 'DELETE_QUIZ', quizId: id });
+      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
+
+    // First, verify the quiz belongs to the user
+    const existingQuiz = await prisma.userQuiz.findFirst({
+      where: { 
+        id,
+        userId
+      },
+    });
+
+    if (!existingQuiz) {
+      logSecurityEvent('UNAUTHORIZED_QUIZ_DELETE', userId, { quizId: id });
+      return NextResponse.json({ error: 'Quiz not found or access denied' }, { status: 404 });
+    }
+
+    // Delete the quiz (questions will be deleted automatically due to cascade)
+    await prisma.userQuiz.delete({
+      where: { id },
+    });
+
+    // Log successful deletion
+    logSecurityEvent('QUIZ_DELETED', userId, { 
+      quizId: id,
+      quizTitle: existingQuiz.title
+    });
+
+    return NextResponse.json({ 
+      message: 'Quiz deleted successfully',
+      deletedQuizId: id 
+    });
+  } catch (error) {
+    console.error('Error deleting user quiz:', error);
+    logSecurityEvent('QUIZ_DELETE_ERROR', 'unknown', { 
+      quizId: (await params).id, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+    return NextResponse.json({ error: 'Failed to delete user quiz' }, { status: 500 });
+  }
 } 

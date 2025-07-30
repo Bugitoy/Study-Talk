@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import NextLayout from "@/components/NextLayout";
-import { Plus, ArrowLeft, Loader2 } from "lucide-react";
+import { Plus, ArrowLeft, Loader2, Trash2, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface UserQuiz {
@@ -40,6 +40,9 @@ export default function QuizLibraryPage() {
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [selectedQuizzes, setSelectedQuizzes] = useState<Set<string>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Get the settings parameter to preserve it when navigating back
   const settingsId = searchParams.get('settings');
@@ -154,6 +157,76 @@ export default function QuizLibraryPage() {
     router.push(`/meetups/compete/create-quiz${settingsParam}`);
   }, [settingsId, router]);
 
+  const handleToggleDeleteMode = useCallback(() => {
+    setDeleteMode(prev => !prev);
+    setSelectedQuizzes(new Set());
+  }, []);
+
+  const handleQuizSelection = useCallback((quizId: string, checked: boolean) => {
+    setSelectedQuizzes(prev => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(quizId);
+      } else {
+        newSet.delete(quizId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const handleDeleteSelected = useCallback(async () => {
+    if (selectedQuizzes.size === 0) return;
+
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${selectedQuizzes.size} quiz${selectedQuizzes.size > 1 ? 'es' : ''}? This action cannot be undone.`
+    );
+    
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+    try {
+      const deletePromises = Array.from(selectedQuizzes).map(async (quizId) => {
+        const res = await fetch(`/api/user-quizzes/${quizId}?userId=${user?.id}`, {
+          method: 'DELETE',
+        });
+        
+        if (!res.ok) {
+          throw new Error(`Failed to delete quiz ${quizId}`);
+        }
+        
+        return quizId;
+      });
+
+      const deletedQuizIds = await Promise.all(deletePromises);
+      
+      // Remove deleted quizzes from state
+      setUserQuizzes(prev => prev.filter(quiz => !deletedQuizIds.includes(quiz.id)));
+      
+      // Clear cache for this user
+      const cacheKeysToDelete = Array.from(quizCache.keys()).filter(key => key.includes(user?.id || ''));
+      cacheKeysToDelete.forEach(key => quizCache.delete(key));
+      
+      toast({
+        title: "Success",
+        description: `Successfully deleted ${deletedQuizIds.length} quiz${deletedQuizIds.length > 1 ? 'es' : ''}`,
+      });
+      
+      // Exit delete mode
+      setDeleteMode(false);
+      setSelectedQuizzes(new Set());
+    } catch (error) {
+      console.error('Error deleting quizzes:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete some quizzes. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [selectedQuizzes, user?.id, toast]);
+
   // Memoized header component to prevent re-renders
   const HeaderComponent = useMemo(() => (
     <div className="mb-8">
@@ -169,20 +242,62 @@ export default function QuizLibraryPage() {
         </button>
       </div>
       
-      {/* Title and New Quiz button - on same row */}
+      {/* Title and buttons - on same row */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Your Library</h1>
-        <button
-          onClick={handleCreateNewQuiz}
-          className="flex items-center gap-2 bg-blue-400 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-blue-300 transition-colors w-full sm:w-auto justify-center focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
-          aria-label="Create a new quiz"
-        >
-          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-          <span className="text-sm sm:text-base">New Quiz</span>
-        </button>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+          {deleteMode ? `Delete Mode (${selectedQuizzes.size} selected)` : 'Your Library'}
+        </h1>
+        <div className="flex gap-2 w-full sm:w-auto">
+          {deleteMode ? (
+            <>
+              <button
+                onClick={handleDeleteSelected}
+                disabled={selectedQuizzes.size === 0 || isDeleting}
+                className="flex items-center gap-2 bg-red-500 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto justify-center focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                aria-label="Delete selected quizzes"
+              >
+                {isDeleting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                )}
+                <span className="text-sm sm:text-base">
+                  {isDeleting ? 'Deleting...' : `Delete (${selectedQuizzes.size})`}
+                </span>
+              </button>
+              <button
+                onClick={handleToggleDeleteMode}
+                className="flex items-center gap-2 bg-gray-500 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors w-full sm:w-auto justify-center focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                aria-label="Cancel delete mode"
+              >
+                <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="text-sm sm:text-base">Cancel</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={handleToggleDeleteMode}
+                className="flex items-center gap-2 bg-gray-500 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors w-full sm:w-auto justify-center focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                aria-label="Enter delete mode"
+              >
+                <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="text-sm sm:text-base">Delete</span>
+              </button>
+              <button
+                onClick={handleCreateNewQuiz}
+                className="flex items-center gap-2 bg-blue-400 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-blue-300 transition-colors w-full sm:w-auto justify-center focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+                aria-label="Create a new quiz"
+              >
+                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="text-sm sm:text-base">New Quiz</span>
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
-  ), [router, handleCreateNewQuiz]);
+  ), [router, handleCreateNewQuiz, handleToggleDeleteMode, handleDeleteSelected, deleteMode, selectedQuizzes.size, isDeleting]);
 
   const handleQuizSelect = useCallback(async (quiz: UserQuiz) => {
     // Optimized quiz selection with performance tracking
@@ -225,22 +340,38 @@ export default function QuizLibraryPage() {
     return userQuizzes.map((quiz) => (
       <div
         key={quiz.id}
-        onClick={() => handleQuizSelect(quiz)}
-        className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 hover:shadow-lg transition-shadow cursor-pointer transform hover:scale-[1.02] transition-transform duration-200"
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
+        onClick={() => !deleteMode && handleQuizSelect(quiz)}
+        className={`bg-white border border-gray-200 rounded-lg p-4 sm:p-6 transition-shadow transform transition-transform duration-200 ${
+          deleteMode 
+            ? 'cursor-default' 
+            : 'hover:shadow-lg cursor-pointer hover:scale-[1.02]'
+        } ${deleteMode && selectedQuizzes.has(quiz.id) ? 'ring-2 ring-red-500 bg-red-50' : ''}`}
+        role={deleteMode ? undefined : "button"}
+        tabIndex={deleteMode ? undefined : 0}
+        onKeyDown={deleteMode ? undefined : (e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             handleQuizSelect(quiz);
           }
         }}
-        aria-label={`Select quiz: ${quiz.title}`}
+        aria-label={deleteMode ? `Quiz: ${quiz.title}` : `Select quiz: ${quiz.title}`}
       >
         <div className="flex items-start justify-between mb-3 sm:mb-4">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 line-clamp-2 flex-1 mr-2">
-            {quiz.title}
-          </h3>
+          <div className="flex items-start gap-3 flex-1">
+            {deleteMode && (
+              <input
+                type="checkbox"
+                checked={selectedQuizzes.has(quiz.id)}
+                onChange={(e) => handleQuizSelection(quiz.id, e.target.checked)}
+                onClick={(e) => e.stopPropagation()}
+                className="mt-1 h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                aria-label={`Select ${quiz.title} for deletion`}
+              />
+            )}
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 line-clamp-2 flex-1">
+              {quiz.title}
+            </h3>
+          </div>
           <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded flex-shrink-0">
             {quiz.questionCount} Q
           </span>
@@ -254,7 +385,7 @@ export default function QuizLibraryPage() {
         </div>
       </div>
     ));
-  }, [userQuizzes, handleQuizSelect, formatDate]);
+  }, [userQuizzes, handleQuizSelect, formatDate, deleteMode, selectedQuizzes, handleQuizSelection]);
 
   // Skeleton loading component
   const SkeletonQuizCard = () => (
