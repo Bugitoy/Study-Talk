@@ -100,7 +100,10 @@ export const QuizValidationSchema = z.object({
       .min(1, 'Option D is required')
       .max(SECURITY_CONFIG.OPTION_MAX_LENGTH, `Option D must be ${SECURITY_CONFIG.OPTION_MAX_LENGTH} characters or less`)
       .transform(sanitizeInput),
-    correct: z.enum(['A', 'B', 'C', 'D']),
+    correct: z.string()
+      .min(1, 'Correct answer is required')
+      .max(SECURITY_CONFIG.OPTION_MAX_LENGTH, `Correct answer must be ${SECURITY_CONFIG.OPTION_MAX_LENGTH} characters or less`)
+      .transform(sanitizeInput),
   }))
   .min(SECURITY_CONFIG.MIN_QUESTIONS, `At least ${SECURITY_CONFIG.MIN_QUESTIONS} question is required`)
   .max(SECURITY_CONFIG.MAX_QUESTIONS, `Maximum ${SECURITY_CONFIG.MAX_QUESTIONS} questions allowed`),
@@ -294,16 +297,7 @@ export function validateCSRFToken(token: string, storedToken: string): boolean {
   return token === storedToken;
 }
 
-// Quiz ownership verification
-export async function checkQuizOwnership(quizId: string, userId: string): Promise<boolean> {
-  try {
-    const res = await fetch(`/api/user-quizzes/${quizId}/ownership?userId=${userId}`);
-    return res.ok;
-  } catch (error) {
-    console.error('Error checking quiz ownership:', error);
-    return false;
-  }
-}
+
 
 // Security event logging
 export function logSecurityEvent(event: string, userId: string, data: any): void {

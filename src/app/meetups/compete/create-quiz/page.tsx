@@ -12,7 +12,6 @@ import {
   rateLimiter, 
   generateCSRFToken, 
   validateCSRFToken,
-  checkQuizOwnership,
   logSecurityEvent,
   SECURITY_CONFIG,
   createDebouncedValidator,
@@ -110,18 +109,6 @@ export default function CreateQuizPage() {
       }
 
       try {
-        // Check ownership before fetching
-        const isOwner = await checkQuizOwnership(quizId, user.id);
-        if (!isOwner) {
-          logSecurityEvent('UNAUTHORIZED_QUIZ_ACCESS', user.id, { quizId });
-          toast({
-            title: "Access Denied",
-            description: "You don't have permission to edit this quiz",
-            variant: "destructive",
-          });
-          router.push('/meetups/compete/quiz-library');
-          return;
-        }
 
         const res = await fetch(`/api/user-quizzes/${quizId}?userId=${user.id}`, {
           headers: {
@@ -219,6 +206,7 @@ export default function CreateQuizPage() {
       .replace(/^correct: /, '') // Remove "correct: " prefix
       .replace(/^questions: /, '') // Remove "questions: " prefix
       .replace(/^Invalid enum value\. Expected 'A' \| 'B' \| 'C' \| 'D'/, 'Please select a correct answer')
+      .replace(/^Correct answer is required/, 'Please provide a correct answer')
       .replace(/^Required/, 'This field is required');
   }, []);
 
@@ -593,6 +581,7 @@ export default function CreateQuizPage() {
                     maxLength={SECURITY_CONFIG.TITLE_MAX_LENGTH}
                     aria-describedby="title-character-count"
                     aria-required="true"
+                    spellCheck="false"
                   />
                   <div 
                     id="title-character-count"
@@ -620,6 +609,7 @@ export default function CreateQuizPage() {
                     maxLength={SECURITY_CONFIG.DESCRIPTION_MAX_LENGTH}
                     aria-describedby="description-character-count"
                     aria-required="true"
+                    spellCheck="false"
                   />
                   <div 
                     id="description-character-count"
@@ -700,6 +690,7 @@ export default function CreateQuizPage() {
                     maxLength={SECURITY_CONFIG.QUESTION_MAX_LENGTH}
                     aria-describedby="question-character-count"
                     aria-required="true"
+                    spellCheck="false"
                   />
                   <div 
                     id="question-character-count"
@@ -730,6 +721,7 @@ export default function CreateQuizPage() {
                         maxLength={SECURITY_CONFIG.OPTION_MAX_LENGTH}
                         aria-describedby={`option-${option}-character-count`}
                         aria-required="true"
+                        spellCheck="false"
                       />
                       <div 
                         id={`option-${option}-character-count`}
