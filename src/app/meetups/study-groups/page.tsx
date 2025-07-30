@@ -8,6 +8,7 @@ import MeetingModal from '@/components/MeetingModal';
 import { useStudyGroups } from '@/hooks/useStudyGroups';
 import { useStreamStudyTimeTracker } from '@/hooks/useStreamStudyTimeTracker';
 import { useStreak } from '@/hooks/useStreak';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs';
 import { useToast } from '@/hooks/use-toast';
 import { AlertCircle, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -53,8 +54,14 @@ const MEETING_LINK_CONFIG = {
 const StudyGroups = () => {
   const { dailyHours, isLoadingHours } = useStreamStudyTimeTracker();
   const { streakData, loading: streakLoading } = useStreak();
+  const { user: userInfo, loading: userLoading } = useCurrentUser();
   const hoursGoal = 10; // Daily goal in hours
   const percent = Math.min(((dailyHours ?? 0) / hoursGoal) * 100, 100);
+  
+  // Check if user is on free plan and has reached 3-hour limit
+  const isFreeUser = userInfo?.plan === 'free';
+  const hasReachedFreeLimit = isFreeUser && (dailyHours ?? 0) >= 3;
+  const shouldDisableButtons = isFreeUser && hasReachedFreeLimit && !userLoading;
   
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -694,21 +701,29 @@ const StudyGroups = () => {
             <div className="flex-shrink-0">
               <div
                 className={`button w-28 sm:w-36 lg:w-40 h-[40px] sm:h-[45px] lg:h-[50px] rounded-lg select-none transition-all duration-150 border-b-[1px] shadow ${
-                  isAuthenticated 
-                    ? 'bg-yellow-300 cursor-pointer active:translate-y-2 active:[box-shadow:0_0px_0_0_#F7D379,0_0px_0_0_#F7D37941] active:border-b-[0px] [box-shadow:0_10px_0_0_#F7D379,0_15px_0_0_#F7D37941] border-yellow-400' 
-                    : 'bg-gray-300 cursor-not-allowed border-gray-400'
+                  !isAuthenticated 
+                    ? 'bg-gray-300 cursor-not-allowed border-gray-400'
+                    : shouldDisableButtons
+                    ? 'bg-gray-300 cursor-not-allowed border-gray-400'
+                    : 'bg-yellow-300 cursor-pointer active:translate-y-2 active:[box-shadow:0_0px_0_0_#F7D379,0_0px_0_0_#F7D37941] active:border-b-[0px] [box-shadow:0_10px_0_0_#F7D379,0_15px_0_0_#F7D37941] border-yellow-400'
                 }`}
                 tabIndex={0}
                 role="button"
                 onClick={() => {
-                  if (isAuthenticated) {
-                    setMeetingState('isJoiningMeeting');
-                  } else {
+                  if (!isAuthenticated) {
                     toast({
                       title: 'Login Required',
                       description: 'Please log in to join a study room.',
                       variant: 'destructive',
                     });
+                  } else if (shouldDisableButtons) {
+                    toast({
+                      title: 'Daily Limit Reached',
+                      description: 'Free users can only study for 3 hours per day. Upgrade to Plus or Premium for unlimited study time.',
+                      variant: 'destructive',
+                    });
+                  } else {
+                    setMeetingState('isJoiningMeeting');
                   }
                 }}
               >
@@ -720,21 +735,29 @@ const StudyGroups = () => {
             <div className="flex-shrink-0">
               <div
                 className={`button w-28 sm:w-36 lg:w-40 h-[40px] sm:h-[45px] lg:h-[50px] rounded-lg select-none transition-all duration-150 border-b-[1px] shadow ${
-                  isAuthenticated 
-                    ? 'bg-yellow-300 cursor-pointer active:translate-y-2 active:[box-shadow:0_0px_0_0_#F7D379,0_0px_0_0_#F7D37941] active:border-b-[0px] [box-shadow:0_10px_0_0_#F7D379,0_15px_0_0_#F7D37941] border-yellow-400' 
-                    : 'bg-gray-300 cursor-not-allowed border-gray-400'
+                  !isAuthenticated 
+                    ? 'bg-gray-300 cursor-not-allowed border-gray-400'
+                    : shouldDisableButtons
+                    ? 'bg-gray-300 cursor-not-allowed border-gray-400'
+                    : 'bg-yellow-300 cursor-pointer active:translate-y-2 active:[box-shadow:0_0px_0_0_#F7D379,0_0px_0_0_#F7D37941] active:border-b-[0px] [box-shadow:0_10px_0_0_#F7D379,0_15px_0_0_#F7D37941] border-yellow-400'
                 }`}
                 tabIndex={0}
                 role="button"
                 onClick={() => {
-                  if (isAuthenticated) {
-                    router.push('/meetups/study-groups/create-room');
-                  } else {
+                  if (!isAuthenticated) {
                     toast({
                       title: 'Login Required',
                       description: 'Please log in to create a study room.',
                       variant: 'destructive',
                     });
+                  } else if (shouldDisableButtons) {
+                    toast({
+                      title: 'Daily Limit Reached',
+                      description: 'Free users can only study for 3 hours per day. Upgrade to Plus or Premium for unlimited study time.',
+                      variant: 'destructive',
+                    });
+                  } else {
+                    router.push('/meetups/study-groups/create-room');
                   }
                 }}
               >
@@ -744,6 +767,14 @@ const StudyGroups = () => {
               </div>
             </div>
           </div>
+          {/* Daily limit warning for free users */}
+          {shouldDisableButtons && !userLoading && (
+            <div className="w-full flex justify-center mt-2">
+              <div className="bg-orange-100 border border-orange-300 text-orange-700 px-3 py-2 rounded-lg text-sm">
+                ⚠️ You've reached your daily study limit (3 hours). Upgrade to Plus or Premium for unlimited study time.
+              </div>
+            </div>
+          )}
           <div className="flex-1 flex justify-center sm:justify-end w-full sm:w-auto">
             <div className="relative w-full max-w-3xl h-[40px] sm:h-[45px] lg:h-[50px] bg-white rounded-[8px] overflow-hidden flex items-center">
               <div
@@ -815,14 +846,20 @@ const StudyGroups = () => {
               peopleCount={group.members.length}
               profilePics={group.members}
               onJoin={() => {
-                if (isAuthenticated) {
-                  router.push(`/meetups/study-groups/meeting/${group.callId}`);
-                } else {
+                if (!isAuthenticated) {
                   toast({
                     title: 'Login Required',
                     description: 'Please log in to join this study room.',
                     variant: 'destructive',
                   });
+                } else if (shouldDisableButtons) {
+                  toast({
+                    title: 'Daily Limit Reached',
+                    description: 'Free users can only study for 3 hours per day. Upgrade to Plus or Premium for unlimited study time.',
+                    variant: 'destructive',
+                  });
+                } else {
+                  router.push(`/meetups/study-groups/meeting/${group.callId}`);
                 }
               }}
               color={pastelColors[i % pastelColors.length]}

@@ -39,10 +39,12 @@ const pricingList: PricingProps[] = [
     buttonText: "Get Started",
     benefitList: [
       "3 hours max study time per day",
-      "Basic quizzes updated weekly",
+      "Access to basic quizzes",
+      "Create 3 custom quizzes",
+      "Create up to 20 quiz questions per quiz",
       "5 max study-group participants",
       "5 max compete participants",
-      "5 confessions per day",
+      "1 confession per day"
     ],
     href: "/api/auth/login",
     billing: "/month",
@@ -58,12 +60,12 @@ const pricingList: PricingProps[] = [
     buttonText: "Get Started",
     benefitList: [
       "10 hours max study time per day",
-      "Create custom quizzes",
+      "Access to basic quizzes",
+      "Create 20 custom quizzes",
+      "Create up to 50 quiz questions per quiz",
       "30 max study-group participants",
       "30 max compete participants",
-      "20 confessions per day",
-      "Advanced study features (screen sharing & recording)",
-      "Priority support",
+      "20 max confessions per day"
     ],
     href: "/api/auth/login",
     paymentLink: process.env.NEXT_PUBLIC_STRIPE_PLUS_MONTHLY_PLAN_LINK,
@@ -81,11 +83,13 @@ const pricingList: PricingProps[] = [
     buttonText: "Get Started",
     benefitList: [
       "Unlimited study time",
+      "Access to basic quizzes",
       "Create unlimited study quizzes",
+      "Unlimited quiz questions per quiz",
       "Unlimited study-group participants",
-      "Unlimited confessions per day",
-      "Advanced study features (screen sharing & recording)",
-      "Priority support",
+      "Unlimited compete participants",
+      "Post unlimited confessions",
+      "Priority support"
     ],
     href: "/api/auth/login",
     paymentLink: process.env.NEXT_PUBLIC_STRIPE_PREMIUM_MONTHLY_PLAN_LINK,

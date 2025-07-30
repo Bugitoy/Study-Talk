@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server';
 import prisma from '@/db/prisma';
+import { getDailyStudyTime } from '@/lib/db-utils';
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,11 +25,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Perform all access checks in parallel
-    const [userBlock, roomBan, roomSettings] = await Promise.all([
+    const [userBlock, roomBan, roomSettings, userInfo] = await Promise.all([
       // Check if user is globally blocked
       prisma.user.findUnique({
         where: { id: userId },
-        select: { isBlocked: true }
+        select: { isBlocked: true, plan: true }
       }),
       
       // Check if user is banned from this specific room
@@ -50,8 +51,21 @@ export async function POST(req: NextRequest) {
           availability: true,
           participants: true  // Include participants for limit checking
         }
+      }),
+      
+      // Get user info for plan checking
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, plan: true }
       })
     ]);
+
+    // Check daily study time limit for free users
+    let hasReachedDailyLimit = false;
+    if (userInfo?.plan === 'free') {
+      const dailyStudyTime = await getDailyStudyTime(userId);
+      hasReachedDailyLimit = dailyStudyTime >= 3; // 3 hours limit for free users
+    }
 
     // Determine access based on all checks
     const isBlocked = userBlock?.isBlocked || false;
@@ -73,13 +87,15 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    const hasAccess = !isBlocked && !isBanned && !isRoomFull;
+    const hasAccess = !isBlocked && !isBanned && !isRoomFull && !hasReachedDailyLimit;
 
     return NextResponse.json({
       hasAccess,
       isBlocked,
       isBanned,
       isRoomFull,
+      hasReachedDailyLimit,
+      userPlan: userInfo?.plan,
       roomSettings,
       userId,
       callId

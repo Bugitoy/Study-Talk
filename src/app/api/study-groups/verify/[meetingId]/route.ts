@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server';
 import prisma from '@/db/prisma';
+import { getDailyStudyTime } from '@/lib/db-utils';
 
 // Logging utility
 const logSecurityEvent = (event: string, details: any) => {
@@ -62,10 +63,10 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid meeting ID format' }, { status: 400 });
     }
 
-    // Check if user is blocked
+    // Check if user is blocked and get plan info
     const userRecord = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { isBlocked: true }
+      select: { isBlocked: true, plan: true }
     });
 
     if (userRecord?.isBlocked) {
@@ -74,6 +75,22 @@ export async function GET(
         userId: user.id
       });
       return NextResponse.json({ error: 'User is blocked' }, { status: 403 });
+    }
+
+    // Check daily study time limit for free users
+    if (userRecord?.plan === 'free') {
+      const dailyStudyTime = await getDailyStudyTime(user.id);
+      if (dailyStudyTime >= 3) { // 3 hours limit for free users
+        logSecurityEvent('DAILY_LIMIT_EXCEEDED', {
+          meetingId,
+          userId: user.id,
+          dailyStudyTime,
+          limit: 3
+        });
+        return NextResponse.json({ 
+          error: 'Daily study limit reached. Free users can only study for 3 hours per day. Upgrade to Plus or Premium for unlimited study time.' 
+        }, { status: 403 });
+      }
     }
 
     // Check if meeting exists and is active

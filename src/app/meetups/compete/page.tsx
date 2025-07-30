@@ -8,6 +8,8 @@ import NextLayout from "@/components/NextLayout";
 import GroupCard from "@/components/group";
 import MeetingModal from "@/components/MeetingModal";
 import { useCompeteRooms } from "@/hooks/useCompeteRooms";
+import { useStreamStudyTimeTracker } from '@/hooks/useStreamStudyTimeTracker';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useToast } from '@/hooks/use-toast';
 
 // Simple debounce utility
@@ -84,7 +86,14 @@ const Compete = ({
   const [values, setValues] = useState(initialValues);
   const rooms = useCompeteRooms();
   const { user, isAuthenticated } = useKindeBrowserClient();
+  const { dailyHours, isLoadingHours } = useStreamStudyTimeTracker();
+  const { user: userInfo, loading: userLoading } = useCurrentUser();
   const { toast } = useToast();
+
+  // Check if user is on free plan and has reached 3-hour limit
+  const isFreeUser = userInfo?.plan === 'free';
+  const hasReachedFreeLimit = isFreeUser && (dailyHours ?? 0) >= 3;
+  const shouldDisableButtons = isFreeUser && hasReachedFreeLimit && !userLoading;
 
   // Remove development logging - only log security events
   const logServerEvent = useCallback(async (event: string, details: any) => {
@@ -570,6 +579,15 @@ const Compete = ({
       });
       return;
     }
+
+    if (shouldDisableButtons) {
+      toast({
+        title: 'Daily Limit Reached',
+        description: 'Free users can only study for 3 hours per day. Upgrade to Plus or Premium for unlimited study time.',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     if (filteredRooms.length === 0) return;
     const randomRoom = filteredRooms[Math.floor(Math.random() * filteredRooms.length)];
@@ -581,6 +599,15 @@ const Compete = ({
       toast({
         title: 'Login Required',
         description: 'Please log in to join a room.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (shouldDisableButtons) {
+      toast({
+        title: 'Daily Limit Reached',
+        description: 'Free users can only study for 3 hours per day. Upgrade to Plus or Premium for unlimited study time.',
         variant: 'destructive',
       });
       return;
@@ -597,6 +624,15 @@ const Compete = ({
       });
       return;
     }
+
+    if (shouldDisableButtons) {
+      toast({
+        title: 'Daily Limit Reached',
+        description: 'Free users can only study for 3 hours per day. Upgrade to Plus or Premium for unlimited study time.',
+        variant: 'destructive',
+      });
+      return;
+    }
     router.push("/meetups/compete/create-room");
   };
 
@@ -605,6 +641,15 @@ const Compete = ({
       toast({
         title: 'Login Required',
         description: 'Please log in to join a room.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (shouldDisableButtons) {
+      toast({
+        title: 'Daily Limit Reached',
+        description: 'Free users can only study for 3 hours per day. Upgrade to Plus or Premium for unlimited study time.',
         variant: 'destructive',
       });
       return;
@@ -701,17 +746,19 @@ const Compete = ({
               <button
                 className={`flex-grow h-[60px] sm:h-[70px] lg:h-[80px] rounded-lg cursor-pointer select-none
                           transition-all duration-150 border-b-[1px] shadow ${
-                            isAuthenticated 
-                              ? 'active:translate-y-2 active:[box-shadow:0_0px_0_0_#F7D379,0_0px_0_0_#F7D37941] active:border-b-[0px] [box-shadow:0_10px_0_0_#F7D379,0_15px_0_0_#F7D37941] border-yellow-400 bg-yellow-300 hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2' 
-                              : 'bg-gray-300 cursor-not-allowed border-gray-400'
+                            !isAuthenticated 
+                              ? 'bg-gray-300 cursor-not-allowed border-gray-400'
+                              : shouldDisableButtons
+                              ? 'bg-gray-300 cursor-not-allowed border-gray-400'
+                              : 'active:translate-y-2 active:[box-shadow:0_0px_0_0_#F7D379,0_0px_0_0_#F7D37941] active:border-b-[0px] [box-shadow:0_10px_0_0_#F7D379,0_15px_0_0_#F7D37941] border-yellow-400 bg-yellow-300 hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
                           }`}
                 onClick={joinRandomRoom}
-                disabled={!isAuthenticated}
+                disabled={!isAuthenticated || shouldDisableButtons}
                 aria-label={isAuthenticated ? "Join a random compete room" : "Login required to join random room"}
                 aria-describedby={!isAuthenticated ? "login-required" : undefined}
               >
                 <span className={`flex flex-col justify-center items-center h-full font-bold text-xs sm:text-base lg:text-lg ${
-                  isAuthenticated ? 'text-gray-800' : 'text-gray-500'
+                  isAuthenticated && !shouldDisableButtons ? 'text-gray-800' : 'text-gray-500'
                 }`}>
                   Random room
                 </span>
@@ -720,17 +767,19 @@ const Compete = ({
               <button
                 className={`flex-grow h-[60px] sm:h-[70px] lg:h-[80px] rounded-lg cursor-pointer select-none
                     transition-all duration-150 border-b-[1px] shadow ${
-                      isAuthenticated 
-                        ? 'active:translate-y-2 active:[box-shadow:0_0px_0_0_#F7D379,0_0px_0_0_#F7D37941] active:border-b-[0px] [box-shadow:0_10px_0_0_#F7D379,0_15px_0_0_#F7D37941] border-yellow-400 bg-yellow-300 hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2' 
-                        : 'bg-gray-300 cursor-not-allowed border-gray-400'
+                      !isAuthenticated 
+                        ? 'bg-gray-300 cursor-not-allowed border-gray-400'
+                        : shouldDisableButtons
+                        ? 'bg-gray-300 cursor-not-allowed border-gray-400'
+                        : 'active:translate-y-2 active:[box-shadow:0_0px_0_0_#F7D379,0_0px_0_0_#F7D37941] active:border-b-[0px] [box-shadow:0_10px_0_0_#F7D379,0_15px_0_0_#F7D37941] border-yellow-400 bg-yellow-300 hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
                     }`}
                 onClick={handleJoinRoom}
-                disabled={!isAuthenticated}
+                disabled={!isAuthenticated || shouldDisableButtons}
                 aria-label={isAuthenticated ? "Join a specific compete room" : "Login required to join room"}
                 aria-describedby={!isAuthenticated ? "login-required" : undefined}
               >
                 <span className={`flex flex-col justify-center items-center h-full font-bold text-xs sm:text-base lg:text-lg ${
-                  isAuthenticated ? 'text-gray-800' : 'text-gray-500'
+                  isAuthenticated && !shouldDisableButtons ? 'text-gray-800' : 'text-gray-500'
                 }`}>
                   Join a room
                 </span>
@@ -739,23 +788,34 @@ const Compete = ({
               <button
                 className={`flex-grow h-[60px] sm:h-[70px] lg:h-[80px] rounded-lg cursor-pointer select-none
                   transition-all duration-150 border-b-[1px] shadow ${
-                    isAuthenticated 
-                      ? 'active:translate-y-2 active:[box-shadow:0_0px_0_0_#F7D379,0_0px_0_0_#F7D37941] active:border-b-[0px] [box-shadow:0_10px_0_0_#F7D379,0_15px_0_0_#F7D37941] border-yellow-400 bg-yellow-300 hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2' 
-                      : 'bg-gray-300 cursor-not-allowed border-gray-400'
+                    !isAuthenticated 
+                      ? 'bg-gray-300 cursor-not-allowed border-gray-400'
+                      : shouldDisableButtons
+                      ? 'bg-gray-300 cursor-not-allowed border-gray-400'
+                      : 'active:translate-y-2 active:[box-shadow:0_0px_0_0_#F7D379,0_0px_0_0_#F7D37941] active:border-b-[0px] [box-shadow:0_10px_0_0_#F7D379,0_15px_0_0_#F7D37941] border-yellow-400 bg-yellow-300 hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
                   }`}
                 onClick={handleCreateRoom}
-                disabled={!isAuthenticated}
+                disabled={!isAuthenticated || shouldDisableButtons}
                 aria-label={isAuthenticated ? "Create a new compete room" : "Login required to create room"}
                 aria-describedby={!isAuthenticated ? "login-required" : undefined}
               >
                 <span className={`flex flex-col justify-center items-center h-full font-bold text-xs sm:text-base lg:text-lg ${
-                  isAuthenticated ? 'text-gray-800' : 'text-gray-500'
+                  isAuthenticated && !shouldDisableButtons ? 'text-gray-800' : 'text-gray-500'
                 }`}>
                   Create a room
                 </span>
               </button>
             </div>
           </div>
+          
+          {/* Daily limit warning for free users */}
+          {shouldDisableButtons && !userLoading && (
+            <div className="w-full flex justify-center mt-2">
+              <div className="bg-orange-100 border border-orange-300 text-orange-700 px-3 py-2 rounded-lg text-sm">
+                ⚠️ You've reached your daily study limit (3 hours). Upgrade to Plus or Premium for unlimited study time.
+              </div>
+            </div>
+          )}
           
           {/* Login required message for screen readers */}
           {!isAuthenticated && (

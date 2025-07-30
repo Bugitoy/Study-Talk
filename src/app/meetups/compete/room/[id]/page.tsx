@@ -74,6 +74,16 @@ const CallPage = () => {
             return;
           }
 
+          if (accessData.hasReachedDailyLimit) {
+            toast({
+              title: 'Daily Limit Reached',
+              description: 'Free users can only study for 3 hours per day. Upgrade to Plus or Premium for unlimited study time.',
+              variant: 'destructive',
+            });
+            router.push('/meetups/compete');
+            return;
+          }
+
           // If we get here, user has access
           setHasAccess(true);
           setIsAccessChecking(false);
