@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import NextLayout from "@/components/NextLayout";
 import { User as UserIcon, ThumbsUp, ThumbsDown, MessageCircle, Bookmark, Plus, Flag } from "lucide-react";
 import Image from "next/image";
@@ -41,6 +41,12 @@ export default function ConfessionsPage() {
   const [isAnonymous, setIsAnonymous] = useState(true);
   const [openCommentSections, setOpenCommentSections] = useState<Set<string>>(new Set());
   const [userUniversity, setUserUniversity] = useState<string | null>(null);
+  
+  // User plan and daily confession count tracking
+  const [userInfo, setUserInfo] = useState<any>(null);
+  const [userLoading, setUserLoading] = useState(true);
+  const [dailyConfessionCount, setDailyConfessionCount] = useState(0);
+  const [confessionCountLoading, setConfessionCountLoading] = useState(true);
   
   // Report functionality
   const [showReportDialog, setShowReportDialog] = useState(false);
@@ -107,6 +113,80 @@ export default function ConfessionsPage() {
     fetchUserUniversity();
   }, [user?.id]);
 
+  // Fetch user plan information
+  const fetchUserInfo = useCallback(async () => {
+    if (!user?.id) {
+      setUserLoading(false);
+      return;
+    }
+
+    try {
+      setUserLoading(true);
+      const response = await fetch(`/api/user?userId=${user.id}`);
+      if (response.ok) {
+        const userData = await response.json();
+        setUserInfo(userData);
+      }
+    } catch (error) {
+      console.error('Failed to fetch user info:', error);
+    } finally {
+      setUserLoading(false);
+    }
+  }, [user?.id]);
+
+  // Fetch daily confession count
+  const fetchDailyConfessionCount = useCallback(async () => {
+    if (!user?.id) {
+      setConfessionCountLoading(false);
+      return;
+    }
+
+    try {
+      setConfessionCountLoading(true);
+      const response = await fetch(`/api/user/confession-count?userId=${user.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setDailyConfessionCount(data.dailyCount);
+      }
+    } catch (error) {
+      console.error('Failed to fetch daily confession count:', error);
+    } finally {
+      setConfessionCountLoading(false);
+    }
+  }, [user?.id]);
+
+  // Calculate confession limits and status
+  const confessionLimits = useMemo(() => {
+    if (!userInfo) return { maxConfessions: 1, isFreeUser: true, isPlusUser: false, isPremiumUser: false };
+    
+    const isFreeUser = userInfo.plan === 'free';
+    const isPlusUser = userInfo.plan === 'plus';
+    const isPremiumUser = userInfo.plan === 'premium';
+    
+    // Free users: 1 confession per day
+    // Plus users: 15 confessions per day
+    // Premium users: unlimited
+    const maxConfessions = isFreeUser ? 1 : isPlusUser ? 15 : Infinity;
+    
+    return {
+      maxConfessions,
+      isFreeUser,
+      isPlusUser,
+      isPremiumUser
+    };
+  }, [userInfo]);
+
+  const hasReachedConfessionLimit = useMemo(() => {
+    if (confessionLimits.isPremiumUser) return false;
+    return dailyConfessionCount >= confessionLimits.maxConfessions;
+  }, [dailyConfessionCount, confessionLimits]);
+
+  // Fetch user data on mount
+  useEffect(() => {
+    fetchUserInfo();
+    fetchDailyConfessionCount();
+  }, [fetchUserInfo, fetchDailyConfessionCount]);
+
   const handleCreatePost = async () => {
     if (!user?.id || !newTitle.trim() || !newBody.trim()) return;
     
@@ -144,8 +224,9 @@ export default function ConfessionsPage() {
       setIsAnonymous(true);
       setIsPostModalOpen(false);
       
-      // Refresh confessions
+      // Refresh confessions and daily count
       refreshConfessions();
+      fetchDailyConfessionCount();
       
       toast({
         title: "Success",
@@ -584,25 +665,70 @@ export default function ConfessionsPage() {
           />
                       <Button
               className={`w-full sm:w-auto flex items-center justify-center gap-2 rounded-[12px] px-3 sm:px-4 py-2 font-semibold transition-colors text-sm sm:text-base ${
-                user 
-                  ? 'bg-yellow-300 text-gray-800 hover:bg-yellow-400' 
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                !user 
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                  : hasReachedConfessionLimit
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-yellow-300 text-gray-800 hover:bg-yellow-400'
               }`}
               onClick={() => {
                 if (!user) {
                   toast({ title: 'Login Required', description: 'Please log in to create a post.', variant: 'destructive' });
                   return;
                 }
+                if (hasReachedConfessionLimit) {
+                  toast({ 
+                    title: 'Daily Limit Reached', 
+                    description: `You've reached your daily confession limit. ${confessionLimits.isFreeUser ? 'Free users can post 1 confession per day. Upgrade to Plus or Premium for more.' : 'Plus users can post 15 confessions per day. Upgrade to Premium for unlimited posts.'}`, 
+                    variant: 'destructive' 
+                  });
+                  return;
+                }
                 setIsPostModalOpen(true);
               }}
-              disabled={!user}
+              disabled={!user || hasReachedConfessionLimit || userLoading || confessionCountLoading}
             >
               <Plus className="w-4 h-4 sm:h-8" />
-              Make a post
+              {!user ? 'Make a post' : hasReachedConfessionLimit ? 'Daily Limit Reached' : 'Make a post'}
             </Button>
         </div>
         {/* Content */}
         {renderContent()}
+
+        {/* Warning Banner for Confession Limits */}
+        {user && !confessionLimits.isPremiumUser && (
+          <div className={`mt-4 p-3 rounded-lg border ${
+            hasReachedConfessionLimit 
+              ? 'bg-gray-50 border-gray-200 text-gray-600' 
+              : confessionLimits.isFreeUser 
+                ? 'bg-yellow-50 border-yellow-200 text-yellow-700'
+                : 'bg-blue-50 border-blue-200 text-blue-700'
+          }`}>
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${
+                hasReachedConfessionLimit 
+                  ? 'bg-gray-400' 
+                  : confessionLimits.isFreeUser 
+                    ? 'bg-yellow-500'
+                    : 'bg-blue-500'
+              }`}></div>
+              <span className="text-sm font-medium">
+                {hasReachedConfessionLimit 
+                  ? `Daily limit reached (${dailyConfessionCount}/${confessionLimits.maxConfessions})`
+                  : `${confessionLimits.isFreeUser ? 'Free' : 'Plus'} Plan: ${dailyConfessionCount}/${confessionLimits.maxConfessions} confessions today`
+                }
+              </span>
+            </div>
+            {hasReachedConfessionLimit && (
+              <p className="text-xs mt-1 opacity-90">
+                {confessionLimits.isFreeUser 
+                  ? 'Upgrade to Plus or Premium to post more confessions daily.'
+                  : 'Upgrade to Premium for unlimited daily confessions.'
+                }
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Post Creation Modal */}
         <Dialog open={isPostModalOpen} onOpenChange={setIsPostModalOpen}>

@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { 
   createConfession, 
   getConfessions, 
-  getOrCreateUniversity
+  getOrCreateUniversity,
+  getDailyConfessionCount
 } from '@/lib/db-utils';
 import { createRateLimit, CONFESSION_RATE_LIMIT } from '@/lib/rate-limit';
-import { sanitizeInput } from '@/lib/security-utils';
+import { sanitizeInput, logSecurityEvent } from '@/lib/security-utils';
+import prisma from '@/db/prisma';
 
 export async function GET(req: NextRequest) {
   try {
@@ -49,6 +51,48 @@ export async function POST(req: NextRequest) {
     // Input validation
     if (!title || !content || !authorId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Check user's plan and daily confession limit
+    const user = await prisma.user.findUnique({
+      where: { id: authorId },
+      select: { plan: true }
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Check daily limit for free users (1 confession per day)
+    if (user.plan === 'free') {
+      const dailyCount = await getDailyConfessionCount(authorId);
+      
+      if (dailyCount >= 1) {
+        logSecurityEvent('CONFESSION_LIMIT_EXCEEDED', authorId, { 
+          currentCount: dailyCount, 
+          limit: 1,
+          plan: user.plan 
+        });
+        return NextResponse.json({ 
+          error: 'Daily confession limit reached. Free users can only post 1 confession per day. Upgrade to Plus or Premium to post more.' 
+        }, { status: 403 });
+      }
+    }
+
+    // Check daily limit for plus users (15 confessions per day)
+    if (user.plan === 'plus') {
+      const dailyCount = await getDailyConfessionCount(authorId);
+      
+      if (dailyCount >= 15) {
+        logSecurityEvent('CONFESSION_LIMIT_EXCEEDED', authorId, { 
+          currentCount: dailyCount, 
+          limit: 15,
+          plan: user.plan 
+        });
+        return NextResponse.json({ 
+          error: 'Daily confession limit reached. Plus users can only post 15 confessions per day. Upgrade to Premium for unlimited posts.' 
+        }, { status: 403 });
+      }
     }
 
     // Sanitize inputs

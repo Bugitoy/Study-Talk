@@ -2085,3 +2085,30 @@ function getReputationLevel(reputationScore: number): string {
   if (reputationScore >= 100) return 'REGULAR';
   return 'NEW';
 }
+
+// Get daily confession count for a user
+export async function getDailyConfessionCount(userId: string, date?: Date) {
+  try {
+    const targetDate = date || new Date();
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const count = await prisma.confession.count({
+      where: {
+        authorId: userId,
+        createdAt: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+      },
+    });
+
+    return count;
+  } catch (error) {
+    console.error('Error getting daily confession count:', error);
+    return 0;
+  }
+}
