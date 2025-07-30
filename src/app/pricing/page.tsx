@@ -44,7 +44,8 @@ const pricingList: PricingProps[] = [
       "Create up to 20 quiz questions per quiz",
       "5 max study-group participants",
       "5 max compete participants",
-      "1 confession per day"
+      "1 confession per day",
+      "full access to the talk page"
     ],
     href: "/api/auth/login",
     billing: "/month",
@@ -65,7 +66,8 @@ const pricingList: PricingProps[] = [
       "Create up to 50 quiz questions per quiz",
       "30 max study-group participants",
       "30 max compete participants",
-      "15 max confessions per day"
+      "15 max confessions per day",
+      "full access to the talk page"
     ],
     href: "/api/auth/login",
     paymentLink: process.env.NEXT_PUBLIC_STRIPE_PLUS_MONTHLY_PLAN_LINK,
@@ -89,6 +91,7 @@ const pricingList: PricingProps[] = [
       "Unlimited study-group participants",
       "Unlimited compete participants",
       "Post unlimited confessions",
+      "full access to the talk page",
       "Priority support"
     ],
     href: "/api/auth/login",
@@ -272,9 +275,9 @@ export default function PricingPage() {
                   </CardContent>
 
                   <CardFooter className="pt-6">
-                    <div className="space-y-3 w-full">
+                    <div className="space-y-3 w-full text-center sm:text-center md:text-left">
                       {pricing.benefitList.map((benefit: string) => (
-                        <div key={benefit} className="flex items-start space-x-3">
+                        <div key={benefit} className="flex items-start space-x-3 justify-center sm:justify-center md:justify-start">
                           <Check className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
                           <span className="text-sm text-gray-700">{benefit}</span>
                         </div>

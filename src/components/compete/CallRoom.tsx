@@ -10,7 +10,7 @@ import {
   useCall,
 } from "@stream-io/video-react-sdk";
 import { useRouter, useParams } from "next/navigation";
-import { Users, Mic, MicOff, Video, VideoOff, PhoneOff, Flag, Shield } from "lucide-react";
+import { Users, Mic, MicOff, Video, VideoOff, PhoneOff, Flag, Shield, Clock } from "lucide-react";
 
 import Loader from "@/components/Loader";
 import Alert from "@/components/Alert";
@@ -25,6 +25,7 @@ import { useRoomSettingByCallId } from "@/hooks/useRoomSettings";
 import EndCallButton from "../EndCallButton";
 import { useStreamStudyTimeTracker } from "@/hooks/useStreamStudyTimeTracker";
 import { useToast } from '@/hooks/use-toast';
+import { StudyTimeProgress } from '../StudyTimeProgress';
 import {
   Dialog,
   DialogContent,
@@ -63,6 +64,7 @@ type DialogState = {
   showReportDialog: boolean;
   showBanDialog: boolean;
   showTopicModal: boolean;
+  showStudyProgress: boolean;
 };
 
 type DialogAction = 
@@ -70,6 +72,7 @@ type DialogAction =
   | { type: 'SET_REPORT_DIALOG'; payload: boolean }
   | { type: 'SET_BAN_DIALOG'; payload: boolean }
   | { type: 'SET_TOPIC_MODAL'; payload: boolean }
+  | { type: 'SET_STUDY_PROGRESS'; payload: boolean }
   | { type: 'RESET_ALL' };
 
 const dialogReducer = (state: DialogState, action: DialogAction): DialogState => {
@@ -82,12 +85,15 @@ const dialogReducer = (state: DialogState, action: DialogAction): DialogState =>
       return { ...state, showBanDialog: action.payload };
     case 'SET_TOPIC_MODAL':
       return { ...state, showTopicModal: action.payload };
+    case 'SET_STUDY_PROGRESS':
+      return { ...state, showStudyProgress: action.payload };
     case 'RESET_ALL':
       return {
         showParticipants: false,
         showReportDialog: false,
         showBanDialog: false,
         showTopicModal: false,
+        showStudyProgress: false,
       };
     default:
       return state;
@@ -103,6 +109,7 @@ const CallRoom = () => {
     showReportDialog: false,
     showBanDialog: false,
     showTopicModal: false,
+    showStudyProgress: false,
   });
   
   const [reportReason, setReportReason] = useState('');
@@ -161,7 +168,7 @@ const CallRoom = () => {
     quizEnded ? (sessionId ?? undefined) : undefined,
   );
   const { user } = useKindeBrowserClient();
-  const { startTracking, endTracking, isTracking } = useStreamStudyTimeTracker(call?.id);
+  const { startTracking, endTracking, isTracking, dailyHours } = useStreamStudyTimeTracker(call?.id);
   const [showTopicModal, setShowTopicModal] = useState(false);
 
   // Performance optimization: Memoize current question
@@ -823,6 +830,8 @@ useEffect(() => {
       {/* video layout */}
       <div className="relative flex size-full items-center justify-center pb-32 sm:pb-40 md:pb-48 pt-12 sm:pt-24 lg:pt-0">
         <div className="flex flex-col md:flex-row lg:flex-row xl:flex-row items-center gap-0 sm:gap-2 -space-y-2 sm:space-y-0">
+          
+
           {/* Show waiting message when quiz hasn't started yet */}
           {!quizStarted && !quizEnded && (
             <div className="relative w-full max-w-[25rem] sm:max-w-[30rem] md:max-w-[20rem] lg:max-w-[35rem] xl:max-w-[25rem] 2xl:max-w-[50rem] 3xl:max-w-[60rem] h-[15rem] sm:h-[20rem] md:h-[15rem] lg:h-[40rem] xl:h-[20rem] 2xl:h-[25rem] 3xl:h-[30rem] mx-auto md:mr-[1rem] lg:mr-[2rem] xl:mr-[1rem] flex items-center justify-center p-4">
@@ -1024,6 +1033,8 @@ useEffect(() => {
         </div>
       </div>
 
+
+
       {/* call controls */}
       <div className="fixed bottom-0 left-0 right-0 rounded-t-xl flex w-full items-center justify-center gap-1 sm:gap-2 md:gap-3 lg:gap-4 flex-nowrap p-1 sm:p-2 md:p-4 bg-black/20 backdrop-blur-sm overflow-x-auto">
         <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
@@ -1098,6 +1109,13 @@ useEffect(() => {
           </div>
         </button>
         
+        {/* Study Progress Button */}
+        <button onClick={() => dispatch({ type: 'SET_STUDY_PROGRESS', payload: true })}>
+          <div className="cursor-pointer rounded-2xl bg-[#19232d] px-1 sm:px-2 md:px-4 py-1 sm:py-2 hover:bg-[#4c535b] flex items-center justify-center">
+            <Clock size={14} className="sm:w-4 md:w-5 text-white" />
+          </div>
+        </button>
+        
         {/* Report Button */}
         <button onClick={handleOpenReportDialog}>
           <div className="cursor-pointer rounded-2xl bg-[#19232d] px-1 sm:px-2 md:px-4 py-1 sm:py-2 hover:bg-red-600 flex items-center justify-center">
@@ -1160,6 +1178,40 @@ useEffect(() => {
                       handleClick={() => handleSelectTopic(topic.title)}
                     />
                   ))}
+              </div>
+            </div>
+          </DialogContent>
+        </DialogPortal>
+      </Dialog>
+
+      {/* Study Progress Modal */}
+      <Dialog open={dialogState.showStudyProgress} onOpenChange={(open) => dispatch({ type: 'SET_STUDY_PROGRESS', payload: open })}>
+        <DialogPortal>
+          <DialogOverlay className="bg-black/50 backdrop-blur-md" />
+          <DialogContent className="bg-white max-w-sm sm:max-w-md lg:max-w-lg rounded-lg sm:rounded-lg lg:rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                Daily Study Progress
+              </DialogTitle>
+            </DialogHeader>
+            <div className="p-6">
+              <div className="mb-6">
+                <StudyTimeProgress 
+                  dailyHours={dailyHours} 
+                  isTracking={isTracking}
+                  className="w-full"
+                />
+              </div>
+              <div className="text-sm text-gray-600 space-y-2">
+                <p>• <strong>Free users:</strong> 3 hours per day</p>
+                <p>• <strong>Plus users:</strong> 15 hours per day</p>
+                <p>• <strong>Premium users:</strong> Unlimited</p>
+                {isTracking && (
+                  <p className="text-green-600 font-medium mt-4">
+                    ✓ Currently tracking study time
+                  </p>
+                )}
               </div>
             </div>
           </DialogContent>

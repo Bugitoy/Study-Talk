@@ -26,8 +26,8 @@ const Meetups = () => {
           aria-labelledby="welcome-heading"
           role="banner"
         >
-          {/* GIF Background - Upper Half */}
-          <div className="absolute top-0 left-0 w-full h-1/2 overflow-hidden">
+          {/* GIF Background - Full Container */}
+          <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
             <Image
               src="/Images/meetups/studying-asian.gif"
               alt="Studying animation"
