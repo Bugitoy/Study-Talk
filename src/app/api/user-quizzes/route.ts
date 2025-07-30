@@ -137,6 +137,22 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Check question limit for free and plus users (premium users have unlimited)
+    if (user.plan === 'free' || user.plan === 'plus') {
+      const questionLimit = user.plan === 'free' ? 20 : 50;
+      
+      if (questions.length > questionLimit) {
+        logSecurityEvent('QUESTION_LIMIT_EXCEEDED', userId, { 
+          currentCount: questions.length, 
+          limit: questionLimit,
+          plan: user.plan 
+        });
+        return NextResponse.json({ 
+          error: `Question limit exceeded. ${user.plan === 'free' ? 'Free' : 'Plus'} users can only create ${questionLimit} questions per quiz. ${user.plan === 'free' ? 'Upgrade to Plus or Premium' : 'Upgrade to Premium'} to create more questions.` 
+        }, { status: 403 });
+      }
+    }
+
     // Server-side validation
     const validation = validateQuizData({ title, description, questions });
     if (!validation.isValid) {

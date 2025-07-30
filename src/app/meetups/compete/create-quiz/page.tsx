@@ -52,6 +52,8 @@ export default function CreateQuizPage() {
   const [csrfToken, setCsrfToken] = useState<string>('');
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [securityWarnings, setSecurityWarnings] = useState<string[]>([]);
+  const [userInfo, setUserInfo] = useState<any>(null);
+  const [userLoading, setUserLoading] = useState(true);
   
   // Accessibility refs
   const mainContentRef = useRef<HTMLDivElement>(null);
@@ -86,12 +88,51 @@ export default function CreateQuizPage() {
     setCsrfToken(generateCSRFToken());
   }, []);
 
+  // Fetch user information to check plan and question limits
+  const fetchUserInfo = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      const res = await fetch(`/api/user?userId=${user.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setUserInfo(data);
+      }
+    } catch (error) {
+      console.error('Error fetching user info:', error);
+    } finally {
+      setUserLoading(false);
+    }
+  }, [user?.id]);
+
+  // Calculate question limits based on user plan
+  const questionLimits = useMemo(() => {
+    if (!userInfo) return { maxQuestions: 20, currentQuestions: 1, isFreeUser: true };
+    
+    const isFreeUser = userInfo.plan === 'free';
+    const isPlusUser = userInfo.plan === 'plus';
+    const isPremiumUser = userInfo.plan === 'premium';
+    const maxQuestions = isFreeUser ? 20 : isPlusUser ? 50 : Infinity; // Free: 20, Plus: 50, Premium: unlimited
+    const currentQuestions = formData.questions.length;
+    
+    return { maxQuestions, currentQuestions, isFreeUser, isPlusUser, isPremiumUser };
+  }, [userInfo, formData.questions.length]);
+
+  const hasReachedQuestionLimit = useMemo(() => {
+    return (questionLimits.isFreeUser || questionLimits.isPlusUser) && questionLimits.currentQuestions >= questionLimits.maxQuestions;
+  }, [questionLimits]);
+
   // Focus management for accessibility
   useEffect(() => {
     if (!loading && mainContentRef.current) {
       mainContentRef.current.focus();
     }
   }, [loading]);
+
+  // Fetch user info on component mount
+  useEffect(() => {
+    fetchUserInfo();
+  }, [fetchUserInfo]);
 
   // Memory cleanup on component unmount
   useEffect(() => {
@@ -233,6 +274,16 @@ export default function CreateQuizPage() {
       return;
     }
     
+    // Check plan-based question limit
+    if (hasReachedQuestionLimit) {
+      toast({
+        title: "Question Limit Reached",
+        description: `${questionLimits.isFreeUser ? 'Free' : 'Plus'} users can only create ${questionLimits.maxQuestions} questions. ${questionLimits.isFreeUser ? 'Upgrade to Plus or Premium' : 'Upgrade to Premium'} to create more questions.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (formData.questions.length >= SECURITY_CONFIG.MAX_QUESTIONS) {
       toast({
         title: "Limit Reached",
@@ -258,7 +309,7 @@ export default function CreateQuizPage() {
     }));
     
     setCurrentQuestionIndex(formData.questions.length);
-  }, [formData.questions.length, validateAndShowErrors, toast]);
+  }, [formData.questions.length, validateAndShowErrors, toast, hasReachedQuestionLimit, questionLimits]);
 
   const removeQuestion = useCallback((index: number) => {
     if (formData.questions.length <= SECURITY_CONFIG.MIN_QUESTIONS) {
@@ -625,6 +676,51 @@ export default function CreateQuizPage() {
 
           {/* Question Editor */}
           <section className="lg:col-span-2" aria-labelledby="question-editor-heading">
+            {/* Question limit warning for free and plus users */}
+            {(questionLimits.isFreeUser || questionLimits.isPlusUser) && formData.questions.length > 0 && (
+              <div className={`mb-4 p-3 rounded-lg border ${
+                hasReachedQuestionLimit 
+                  ? 'bg-red-50 border-red-200 text-red-800' 
+                  : questionLimits.isFreeUser 
+                    ? 'bg-yellow-50 border-yellow-200 text-yellow-800'
+                    : 'bg-blue-50 border-blue-200 text-blue-800'
+              }`}>
+                <div className="flex items-start gap-2">
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    hasReachedQuestionLimit 
+                      ? 'bg-red-200' 
+                      : questionLimits.isFreeUser 
+                        ? 'bg-yellow-200'
+                        : 'bg-blue-200'
+                  }`}>
+                    <svg className={`w-2.5 h-2.5 ${
+                      hasReachedQuestionLimit 
+                        ? 'text-red-600' 
+                        : questionLimits.isFreeUser 
+                          ? 'text-yellow-600'
+                          : 'text-blue-600'
+                    }`} fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium">
+                      {hasReachedQuestionLimit 
+                        ? `Question limit reached (${questionLimits.maxQuestions} questions)`
+                        : `${questionLimits.currentQuestions} of ${questionLimits.maxQuestions} questions used`
+                      }
+                    </p>
+                    <p className="text-xs mt-0.5">
+                      {hasReachedQuestionLimit 
+                        ? `${questionLimits.isFreeUser ? 'Free' : 'Plus'} users are limited to ${questionLimits.maxQuestions} questions. ${questionLimits.isFreeUser ? 'Upgrade to Plus or Premium' : 'Upgrade to Premium'} to create more questions.`
+                        : `${questionLimits.isFreeUser ? 'Free' : 'Plus'} users are limited to ${questionLimits.maxQuestions} questions.`
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
               <div className="flex items-center justify-between gap-2 sm:gap-4 mb-6">
                 <h2 id="question-editor-heading" className="text-lg sm:text-xl font-semibold">
@@ -632,17 +728,21 @@ export default function CreateQuizPage() {
                 </h2>
                 <button
                   onClick={addQuestion}
-                  disabled={formData.questions.length >= SECURITY_CONFIG.MAX_QUESTIONS}
-                  className="flex items-center justify-center gap-2 bg-blue-400 text-white px-3 py-2 rounded-lg hover:bg-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                  aria-label="Add new question"
-                  aria-describedby={formData.questions.length >= SECURITY_CONFIG.MAX_QUESTIONS ? 'max-questions-reached' : undefined}
+                  disabled={hasReachedQuestionLimit || formData.questions.length >= SECURITY_CONFIG.MAX_QUESTIONS || userLoading}
+                  className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    hasReachedQuestionLimit || formData.questions.length >= SECURITY_CONFIG.MAX_QUESTIONS || userLoading
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-400 text-white hover:bg-blue-300 focus:ring-blue-500'
+                  }`}
+                  aria-label={hasReachedQuestionLimit ? `Question limit reached. ${questionLimits.isFreeUser ? 'Free' : 'Plus'} users can only create ${questionLimits.maxQuestions} questions.` : "Add new question"}
+                  aria-describedby={hasReachedQuestionLimit || formData.questions.length >= SECURITY_CONFIG.MAX_QUESTIONS ? 'max-questions-reached' : undefined}
                 >
                   <Plus className="w-4 h-4" aria-hidden="true" />
-                  <span>Add Question</span>
+                  <span>{hasReachedQuestionLimit ? 'Question Limit Reached' : 'Add Question'}</span>
                 </button>
-                {formData.questions.length >= SECURITY_CONFIG.MAX_QUESTIONS && (
+                {(hasReachedQuestionLimit || formData.questions.length >= SECURITY_CONFIG.MAX_QUESTIONS) && (
                   <div id="max-questions-reached" className="sr-only">
-                    Maximum number of questions reached
+                    {hasReachedQuestionLimit ? `Question limit reached for ${questionLimits.isFreeUser ? 'free' : 'plus'} users` : 'Maximum number of questions reached'}
                   </div>
                 )}
               </div>

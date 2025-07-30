@@ -65,7 +65,7 @@ const pricingList: PricingProps[] = [
       "Create up to 50 quiz questions per quiz",
       "30 max study-group participants",
       "30 max compete participants",
-      "20 max confessions per day"
+      "15 max confessions per day"
     ],
     href: "/api/auth/login",
     paymentLink: process.env.NEXT_PUBLIC_STRIPE_PLUS_MONTHLY_PLAN_LINK,
