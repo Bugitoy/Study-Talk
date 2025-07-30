@@ -292,15 +292,12 @@ export default function CreateQuizPage() {
     }
   }, [formData.questions.length, currentQuestionIndex, toast]);
 
-  // Performance-optimized input update with debounced sanitization
+  // Performance-optimized input update without real-time sanitization
   const updateQuestion = useCallback((index: number, field: keyof QuizQuestion, value: string) => {
-    // Use debounced sanitization for better performance
-    const sanitizedValue = sanitizeInput(value);
-    
     setFormData(prev => ({
       ...prev,
       questions: prev.questions.map((q, i) => 
-        i === index ? { ...q, [field]: sanitizedValue } : q
+        i === index ? { ...q, [field]: value } : q
       )
     }));
   }, []);
@@ -618,7 +615,7 @@ export default function CreateQuizPage() {
                     value={formData.description}
                     onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                     className="w-full border border-gray-300 rounded-lg px-2 sm:px-3 py-1 sm:py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-800 sm:text-base"
-                    rows={3}
+                    rows={6}
                     placeholder="Enter quiz description"
                     maxLength={SECURITY_CONFIG.DESCRIPTION_MAX_LENGTH}
                     aria-describedby="description-character-count"
@@ -698,7 +695,7 @@ export default function CreateQuizPage() {
                     value={currentQuestion.question}
                     onChange={(e) => updateQuestion(currentQuestionIndex, 'question', e.target.value)}
                     className="w-full border border-gray-300 rounded-lg px-2 sm:px-3 py-1 sm:py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-800 sm:text-base"
-                    rows={3}
+                    rows={6}
                     placeholder="Enter your question"
                     maxLength={SECURITY_CONFIG.QUESTION_MAX_LENGTH}
                     aria-describedby="question-character-count"
@@ -723,12 +720,12 @@ export default function CreateQuizPage() {
                       >
                         Option {option}
                       </label>
-                      <input
+                      <textarea
                         id={`option-${option}`}
-                        type="text"
                         value={currentQuestion[`option${option}` as keyof QuizQuestion] as string}
                         onChange={(e) => updateQuestion(currentQuestionIndex, `option${option}` as keyof QuizQuestion, e.target.value)}
                         className="w-full border border-gray-300 rounded-lg px-2 sm:px-3 py-1 sm:py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-800 sm:text-base"
+                        rows={3}
                         placeholder={`Enter option ${option}`}
                         maxLength={SECURITY_CONFIG.OPTION_MAX_LENGTH}
                         aria-describedby={`option-${option}-character-count`}

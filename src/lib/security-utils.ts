@@ -3,10 +3,10 @@ import { z } from 'zod';
 // Security configuration constants
 export const SECURITY_CONFIG = {
   // Input length limits
-  TITLE_MAX_LENGTH: 100,
-  DESCRIPTION_MAX_LENGTH: 500,
-  QUESTION_MAX_LENGTH: 500,
-  OPTION_MAX_LENGTH: 200,
+  TITLE_MAX_LENGTH: 200,
+  DESCRIPTION_MAX_LENGTH: 2000,
+  QUESTION_MAX_LENGTH: 2000,
+  OPTION_MAX_LENGTH: 1000,
   
   // Content limits
   MAX_QUESTIONS: 50,
