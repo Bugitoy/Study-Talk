@@ -107,6 +107,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
+    // Check user's plan and quiz limits
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { plan: true }
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Check quiz limit for free and plus users (premium users have unlimited)
+    if (user.plan === 'free' || user.plan === 'plus') {
+      const quizCount = await prisma.userQuiz.count({
+        where: { userId }
+      });
+
+      const limit = user.plan === 'free' ? 3 : 50;
+      
+      if (quizCount >= limit) {
+        logSecurityEvent('QUIZ_LIMIT_EXCEEDED', userId, { 
+          currentCount: quizCount, 
+          limit: limit,
+          plan: user.plan 
+        });
+        return NextResponse.json({ 
+          error: `Quiz limit exceeded. ${user.plan === 'free' ? 'Free' : 'Plus'} users can only create ${limit} quizzes. ${user.plan === 'free' ? 'Upgrade to Plus or Premium' : 'Upgrade to Premium'} to create more.` 
+        }, { status: 403 });
+      }
+    }
+
     // Server-side validation
     const validation = validateQuizData({ title, description, questions });
     if (!validation.isValid) {

@@ -43,12 +43,48 @@ export default function QuizLibraryPage() {
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedQuizzes, setSelectedQuizzes] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
+  const [userInfo, setUserInfo] = useState<any>(null);
+  const [userLoading, setUserLoading] = useState(true);
   
   // Get the settings parameter to preserve it when navigating back
   const settingsId = searchParams.get('settings');
 
   // Memoized cache key
   const cacheKey = useMemo(() => `quizzes_${user?.id}_${page}`, [user?.id, page]);
+
+  // Fetch user information to check plan and limits
+  const fetchUserInfo = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      const res = await fetch(`/api/user?userId=${user.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setUserInfo(data);
+      }
+    } catch (error) {
+      console.error('Error fetching user info:', error);
+    } finally {
+      setUserLoading(false);
+    }
+  }, [user?.id]);
+
+  // Calculate quiz limits based on user plan
+  const quizLimits = useMemo(() => {
+    if (!userInfo) return { maxQuizzes: 3, currentQuizzes: 0, isFreeUser: true };
+    
+    const isFreeUser = userInfo.plan === 'free';
+    const isPlusUser = userInfo.plan === 'plus';
+    const isPremiumUser = userInfo.plan === 'premium';
+    const maxQuizzes = isFreeUser ? 3 : isPlusUser ? 50 : Infinity; // Free: 3, Plus: 50, Premium: unlimited
+    const currentQuizzes = userQuizzes.length; // This will be updated as we load more
+    
+    return { maxQuizzes, currentQuizzes, isFreeUser, isPlusUser, isPremiumUser };
+  }, [userInfo, userQuizzes.length]);
+
+  const hasReachedQuizLimit = useMemo(() => {
+    return (quizLimits.isFreeUser || quizLimits.isPlusUser) && quizLimits.currentQuizzes >= quizLimits.maxQuizzes;
+  }, [quizLimits]);
 
   // Optimized fetch function with caching and retry logic
   const fetchUserQuizzes = useCallback(async (pageNum: number = 1, isRetry: boolean = false) => {
@@ -148,14 +184,27 @@ export default function QuizLibraryPage() {
   }, []);
 
   useEffect(() => {
+    fetchUserInfo();
+  }, [fetchUserInfo]);
+
+  useEffect(() => {
     fetchUserQuizzes();
   }, [fetchUserQuizzes]);
 
   const handleCreateNewQuiz = useCallback(() => {
+    if (hasReachedQuizLimit) {
+      toast({
+        title: "Quiz Limit Reached",
+        description: `${quizLimits.isFreeUser ? 'Free' : 'Plus'} users can only create ${quizLimits.maxQuizzes} quizzes. ${quizLimits.isFreeUser ? 'Upgrade to Plus or Premium' : 'Upgrade to Premium'} to create more quizzes.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // Preserve the settings parameter when navigating to create-quiz
     const settingsParam = settingsId ? `?settings=${settingsId}` : '';
     router.push(`/meetups/compete/create-quiz${settingsParam}`);
-  }, [settingsId, router]);
+  }, [settingsId, router, hasReachedQuizLimit, toast]);
 
   const handleToggleDeleteMode = useCallback(() => {
     setDeleteMode(prev => !prev);
@@ -286,18 +335,25 @@ export default function QuizLibraryPage() {
               </button>
               <button
                 onClick={handleCreateNewQuiz}
-                className="flex items-center gap-2 bg-blue-400 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-blue-300 transition-colors w-full sm:w-auto justify-center focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
-                aria-label="Create a new quiz"
+                disabled={hasReachedQuizLimit || userLoading}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                  hasReachedQuizLimit || userLoading
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-400 text-white hover:bg-blue-300 focus:ring-blue-400'
+                }`}
+                aria-label={hasReachedQuizLimit ? "Quiz limit reached. Upgrade to create more quizzes." : "Create a new quiz"}
               >
                 <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="text-sm sm:text-base">New Quiz</span>
+                <span className="text-sm sm:text-base">
+                  {hasReachedQuizLimit ? 'Quiz Limit Reached' : 'New Quiz'}
+                </span>
               </button>
             </>
           )}
         </div>
       </div>
     </div>
-  ), [router, handleCreateNewQuiz, handleToggleDeleteMode, handleDeleteSelected, deleteMode, selectedQuizzes.size, isDeleting]);
+  ), [router, handleCreateNewQuiz, handleToggleDeleteMode, handleDeleteSelected, deleteMode, selectedQuizzes.size, isDeleting, hasReachedQuizLimit, userLoading]);
 
   const handleQuizSelect = useCallback(async (quiz: UserQuiz) => {
     // Optimized quiz selection with performance tracking
@@ -438,6 +494,48 @@ export default function QuizLibraryPage() {
         {/* Header */}
         {HeaderComponent}
 
+        {/* Quiz limit warning for free and plus users (not premium) */}
+        {(quizLimits.isFreeUser || quizLimits.isPlusUser) && userQuizzes.length > 0 && (
+          <div className={`mb-6 p-4 rounded-lg border ${
+            hasReachedQuizLimit 
+              ? 'bg-red-50 border-red-200 text-red-800' 
+              : quizLimits.isFreeUser 
+                ? 'bg-yellow-50 border-yellow-200 text-yellow-800'
+                : 'bg-blue-50 border-blue-200 text-blue-800'
+          }`}>
+            <div className="flex items-start gap-3">
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                hasReachedQuizLimit 
+                  ? 'bg-red-200' 
+                  : quizLimits.isFreeUser 
+                    ? 'bg-yellow-200'
+                    : 'bg-blue-200'
+              }`}>
+                <svg className={`w-3 h-3 ${
+                  hasReachedQuizLimit 
+                    ? 'text-red-600' 
+                    : quizLimits.isFreeUser 
+                      ? 'text-yellow-600'
+                      : 'text-blue-600'
+                }`} fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="font-medium">
+                  {hasReachedQuizLimit ? 'Quiz Limit Reached' : 'Quiz Limit Warning'}
+                </h4>
+                <p className="text-sm mt-1">
+                  {hasReachedQuizLimit 
+                    ? `You've reached the maximum of ${quizLimits.maxQuizzes} quizzes for ${quizLimits.isFreeUser ? 'free' : 'plus'} users. ${quizLimits.isFreeUser ? 'Upgrade to Plus or Premium' : 'Upgrade to Premium'} to create more quizzes.`
+                    : `You've created ${quizLimits.currentQuizzes} of ${quizLimits.maxQuizzes} quizzes. ${quizLimits.isFreeUser ? 'Free' : 'Plus'} users are limited to ${quizLimits.maxQuizzes} quizzes.`
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Content */}
         {error && (
           <div className="text-center py-8">
@@ -481,9 +579,14 @@ export default function QuizLibraryPage() {
               </p>
               <button
                 onClick={handleCreateNewQuiz}
-                className="bg-blue-400 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg hover:bg-blue-300 transition-colors text-sm sm:text-base"
+                disabled={hasReachedQuizLimit || userLoading}
+                className={`px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors text-sm sm:text-base ${
+                  hasReachedQuizLimit || userLoading
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-400 text-white hover:bg-blue-300'
+                }`}
               >
-                Create Your First Quiz
+                {hasReachedQuizLimit ? 'Quiz Limit Reached' : 'Create Your First Quiz'}
               </button>
             </div>
           </div>
