@@ -60,11 +60,15 @@ export async function POST(req: NextRequest) {
       })
     ]);
 
-    // Check daily study time limit for free users
+    // Check daily study time limit for free and plus users
     let hasReachedDailyLimit = false;
-    if (userInfo?.plan === 'free') {
+    if (userInfo?.plan === 'free' || userInfo?.plan === 'plus') {
       const dailyStudyTime = await getDailyStudyTime(userId);
-      hasReachedDailyLimit = dailyStudyTime >= 3; // 3 hours limit for free users
+      if (userInfo?.plan === 'free') {
+        hasReachedDailyLimit = dailyStudyTime >= 3; // 3 hours limit for free users
+      } else if (userInfo?.plan === 'plus') {
+        hasReachedDailyLimit = dailyStudyTime >= 15; // 15 hours limit for plus users
+      }
     }
 
     // Determine access based on all checks

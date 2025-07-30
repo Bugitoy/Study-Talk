@@ -58,10 +58,12 @@ const StudyGroups = () => {
   const hoursGoal = 10; // Daily goal in hours
   const percent = Math.min(((dailyHours ?? 0) / hoursGoal) * 100, 100);
   
-  // Check if user is on free plan and has reached 3-hour limit
+  // Check if user has reached their daily study limit
   const isFreeUser = userInfo?.plan === 'free';
+  const isPlusUser = userInfo?.plan === 'plus';
   const hasReachedFreeLimit = isFreeUser && (dailyHours ?? 0) >= 3;
-  const shouldDisableButtons = isFreeUser && hasReachedFreeLimit && !userLoading;
+  const hasReachedPlusLimit = isPlusUser && (dailyHours ?? 0) >= 15;
+  const shouldDisableButtons = ((isFreeUser && hasReachedFreeLimit) || (isPlusUser && hasReachedPlusLimit)) && !userLoading;
   
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -767,14 +769,14 @@ const StudyGroups = () => {
               </div>
             </div>
           </div>
-          {/* Daily limit warning for free users */}
-          {shouldDisableButtons && !userLoading && (
-            <div className="w-full flex justify-center mt-2">
-              <div className="bg-orange-100 border border-orange-300 text-orange-700 px-3 py-2 rounded-lg text-sm">
-                ⚠️ You've reached your daily study limit (3 hours). Upgrade to Plus or Premium for unlimited study time.
-              </div>
+                  {/* Daily limit warning for free and plus users */}
+        {shouldDisableButtons && !userLoading && (
+          <div className="w-full flex justify-center mt-2">
+            <div className="bg-orange-100 border border-orange-300 text-orange-700 px-3 py-2 rounded-lg text-sm">
+              ⚠️ You've reached your daily study limit ({isFreeUser ? '3 hours' : '15 hours'}). {isFreeUser ? 'Upgrade to Plus or Premium' : 'Upgrade to Premium'} for more study time.
             </div>
-          )}
+          </div>
+        )}
           <div className="flex-1 flex justify-center sm:justify-end w-full sm:w-auto">
             <div className="relative w-full max-w-3xl h-[40px] sm:h-[45px] lg:h-[50px] bg-white rounded-[8px] overflow-hidden flex items-center">
               <div
@@ -853,9 +855,12 @@ const StudyGroups = () => {
                     variant: 'destructive',
                   });
                 } else if (shouldDisableButtons) {
+                  const limitMessage = isFreeUser 
+                    ? 'Free users can only study for 3 hours per day. Upgrade to Plus or Premium for unlimited study time.'
+                    : 'Plus users can only study for 15 hours per day. Upgrade to Premium for unlimited study time.';
                   toast({
                     title: 'Daily Limit Reached',
-                    description: 'Free users can only study for 3 hours per day. Upgrade to Plus or Premium for unlimited study time.',
+                    description: limitMessage,
                     variant: 'destructive',
                   });
                 } else {

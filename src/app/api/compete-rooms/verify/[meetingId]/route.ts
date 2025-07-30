@@ -86,18 +86,30 @@ export async function GET(
       return NextResponse.json({ error: 'User is blocked' }, { status: 403 });
     }
 
-    // Check daily study time limit for free users
-    if (userRecord?.plan === 'free') {
+    // Check daily study time limit for free and plus users
+    if (userRecord?.plan === 'free' || userRecord?.plan === 'plus') {
       const dailyStudyTime = await getDailyStudyTime(user.id);
-      if (dailyStudyTime >= 3) { // 3 hours limit for free users
+      if (userRecord?.plan === 'free' && dailyStudyTime >= 3) { // 3 hours limit for free users
         logCompeteSecurityEvent('COMPETE_DAILY_LIMIT_EXCEEDED', {
           meetingId,
           userId: user.id,
           dailyStudyTime,
-          limit: 3
+          limit: 3,
+          plan: 'free'
         });
         return NextResponse.json({ 
-          error: 'Daily study limit reached. Free users can only study for 3 hours per day. Upgrade to Plus or Premium for unlimited study time.' 
+          error: 'Daily study limit reached. Free users can only study for 3 hours per day. Upgrade to Plus or Premium for more study time.' 
+        }, { status: 403 });
+      } else if (userRecord?.plan === 'plus' && dailyStudyTime >= 15) { // 15 hours limit for plus users
+        logCompeteSecurityEvent('COMPETE_DAILY_LIMIT_EXCEEDED', {
+          meetingId,
+          userId: user.id,
+          dailyStudyTime,
+          limit: 15,
+          plan: 'plus'
+        });
+        return NextResponse.json({ 
+          error: 'Daily study limit reached. Plus users can only study for 15 hours per day. Upgrade to Premium for more study time.' 
         }, { status: 403 });
       }
     }

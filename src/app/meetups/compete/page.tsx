@@ -90,10 +90,12 @@ const Compete = ({
   const { user: userInfo, loading: userLoading } = useCurrentUser();
   const { toast } = useToast();
 
-  // Check if user is on free plan and has reached 3-hour limit
+  // Check if user has reached their daily study limit
   const isFreeUser = userInfo?.plan === 'free';
+  const isPlusUser = userInfo?.plan === 'plus';
   const hasReachedFreeLimit = isFreeUser && (dailyHours ?? 0) >= 3;
-  const shouldDisableButtons = isFreeUser && hasReachedFreeLimit && !userLoading;
+  const hasReachedPlusLimit = isPlusUser && (dailyHours ?? 0) >= 15;
+  const shouldDisableButtons = ((isFreeUser && hasReachedFreeLimit) || (isPlusUser && hasReachedPlusLimit)) && !userLoading;
 
   // Remove development logging - only log security events
   const logServerEvent = useCallback(async (event: string, details: any) => {
@@ -581,9 +583,12 @@ const Compete = ({
     }
 
     if (shouldDisableButtons) {
+      const limitMessage = isFreeUser 
+        ? 'Free users can only study for 3 hours per day. Upgrade to Plus or Premium for more study time.'
+        : 'Plus users can only study for 15 hours per day. Upgrade to Premium for unlimited study time.';
       toast({
         title: 'Daily Limit Reached',
-        description: 'Free users can only study for 3 hours per day. Upgrade to Plus or Premium for unlimited study time.',
+        description: limitMessage,
         variant: 'destructive',
       });
       return;
@@ -605,9 +610,12 @@ const Compete = ({
     }
 
     if (shouldDisableButtons) {
+      const limitMessage = isFreeUser 
+        ? 'Free users can only study for 3 hours per day. Upgrade to Plus or Premium for more study time.'
+        : 'Plus users can only study for 15 hours per day. Upgrade to Premium for unlimited study time.';
       toast({
         title: 'Daily Limit Reached',
-        description: 'Free users can only study for 3 hours per day. Upgrade to Plus or Premium for unlimited study time.',
+        description: limitMessage,
         variant: 'destructive',
       });
       return;
@@ -626,9 +634,12 @@ const Compete = ({
     }
 
     if (shouldDisableButtons) {
+      const limitMessage = isFreeUser 
+        ? 'Free users can only study for 3 hours per day. Upgrade to Plus or Premium for more study time.'
+        : 'Plus users can only study for 15 hours per day. Upgrade to Premium for unlimited study time.';
       toast({
         title: 'Daily Limit Reached',
-        description: 'Free users can only study for 3 hours per day. Upgrade to Plus or Premium for unlimited study time.',
+        description: limitMessage,
         variant: 'destructive',
       });
       return;
@@ -647,9 +658,12 @@ const Compete = ({
     }
 
     if (shouldDisableButtons) {
+      const limitMessage = isFreeUser 
+        ? 'Free users can only study for 3 hours per day. Upgrade to Plus or Premium for more study time.'
+        : 'Plus users can only study for 15 hours per day. Upgrade to Premium for unlimited study time.';
       toast({
         title: 'Daily Limit Reached',
-        description: 'Free users can only study for 3 hours per day. Upgrade to Plus or Premium for unlimited study time.',
+        description: limitMessage,
         variant: 'destructive',
       });
       return;
@@ -808,11 +822,11 @@ const Compete = ({
             </div>
           </div>
           
-          {/* Daily limit warning for free users */}
+          {/* Daily limit warning for free and plus users */}
           {shouldDisableButtons && !userLoading && (
             <div className="w-full flex justify-center mt-2">
               <div className="bg-orange-100 border border-orange-300 text-orange-700 px-3 py-2 rounded-lg text-sm">
-                ⚠️ You've reached your daily study limit (3 hours). Upgrade to Plus or Premium for unlimited study time.
+                ⚠️ You've reached your daily study limit ({isFreeUser ? '3 hours' : '15 hours'}). {isFreeUser ? 'Upgrade to Plus or Premium' : 'Upgrade to Premium'} for more study time.
               </div>
             </div>
           )}
