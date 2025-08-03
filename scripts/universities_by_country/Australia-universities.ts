@@ -1,0 +1,52 @@
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+
+const Australia_universities = [
+
+    // Australia
+
+    { name: "Australian Catholic University", domain: "acu.edu.au", isVerified: true },
+    { name: "Australian University of Theology", domain: null, isVerified: false },
+    { name: "Australian National University", domain: "anu.edu.au", isVerified: true },
+    { name: "Avondale University", domain: "avondale.edu.au", isVerified: true },
+    { name: "Bond University", domain: "bond.edu.au", isVerified: true },
+    { name: "Charles Darwin University", domain: "cdu.edu.au", isVerified: true },
+    { name: "Charles Sturt University", domain: "csu.edu.au", isVerified: true },
+    { name: "CQUniversity", domain: "cqu.edu.au", isVerified: true },
+    { name: "Curtin University", domain: "curtin.edu.au", isVerified: true },
+    { name: "Deakin University", domain: "deakin.edu.au", isVerified: true },
+    { name: "Edith Cowan University", domain: "ecu.edu.au", isVerified: true },
+    { name: "Federation University Australia", domain: "federation.edu.au", isVerified: true },
+    { name: "Flinders University", domain: "flinders.edu.au", isVerified: true },
+    { name: "Griffith University", domain: "griffith.edu.au", isVerified: true },
+    { name: "James Cook University", domain: "jcu.edu.au", isVerified: true },
+    { name: "La Trobe University", domain: "latrobe.edu.au", isVerified: true },
+    { name: "Macquarie University", domain: "mq.edu.au", isVerified: true },
+    { name: "Monash University", domain: "monash.edu.au", isVerified: true },
+    { name: "Murdoch University", domain: "murdoch.edu.au", isVerified: true },
+    { name: "Queensland University of Technology", domain: "qut.edu.au", isVerified: true },
+    { name: "RMIT University", domain: "rmit.edu.au", isVerified: true },
+    { name: "Southern Cross University", domain: "scu.edu.au", isVerified: true },
+    { name: "Swinburne University of Technology", domain: "swinburne.edu.au", isVerified: true },
+    { name: "Torrens University Australia", domain: "torrens.edu.au", isVerified: true },
+    { name: "University of Adelaide", domain: "adelaide.edu.au", isVerified: true },
+    { name: "University of Canberra", domain: "canberra.edu.au", isVerified: true },
+    { name: "University of Divinity", domain: "divinity.edu.au", isVerified: true },
+    { name: "University of Melbourne", domain: "unimelb.edu.au", isVerified: true },
+    { name: "University of New England", domain: "une.edu.au", isVerified: true },
+    { name: "University of New South Wales", domain: "unsw.edu.au", isVerified: true },
+    { name: "University of Newcastle", domain: "newcastle.edu.au", isVerified: true },
+    { name: "University of Notre Dame Australia", domain: "notredame.edu.au", isVerified: true },
+    { name: "University of Queensland", domain: "uq.edu.au", isVerified: true },
+    { name: "University of South Australia", domain: "unisa.edu.au", isVerified: true },
+    { name: "University of Southern Queensland", domain: "usq.edu.au", isVerified: true },
+    { name: "University of Sydney", domain: "sydney.edu.au", isVerified: true },
+    { name: "University of Tasmania", domain: "utas.edu.au", isVerified: true },
+    { name: "University of Technology Sydney", domain: "uts.edu.au", isVerified: true },
+    { name: "University of the Sunshine Coast", domain: "usc.edu.au", isVerified: true },
+    { name: "University of Western Australia", domain: "uwa.edu.au", isVerified: true },
+    { name: "University of Wollongong", domain: "uow.edu.au", isVerified: true },
+    { name: "Victoria University", domain: "vu.edu.au", isVerified: true },
+    { name: "Western Sydney University", domain: "wsu.edu.au", isVerified: true },
+
+]

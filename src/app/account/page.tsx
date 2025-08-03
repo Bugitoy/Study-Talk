@@ -14,7 +14,7 @@ import { X, User, Mail, Calendar, CreditCard, Star, Edit3, AlertTriangle, Shield
 import Loader from "@/components/Loader";
 import { Plan } from "@prisma/client";
 import { useToast } from "@/hooks/use-toast";
-import { UniversityAutocomplete } from "@/components/ui/university-autocomplete";
+import { EnhancedUniversitySelector } from "@/components/ui/enhanced-university-selector";
 import { useState, useMemo } from "react";
 
 interface UserInfo {
@@ -63,18 +63,7 @@ export default function AccountPage() {
     refetchOnMount: false,
   });
 
-  // Cache universities with React Query
-  const { data: universities } = useQuery({
-    queryKey: ["universities"],
-    queryFn: async () => {
-      const response = await fetch('/api/universities');
-      if (!response.ok) throw new Error('Failed to fetch universities');
-      return response.json();
-    },
-    staleTime: 30 * 60 * 1000, // 30 minutes
-    gcTime: 60 * 60 * 1000, // 1 hour
-    refetchOnWindowFocus: false,
-  });
+
 
   const createPortalSessionMutation = useMutation({
     mutationFn: async () => {
@@ -517,18 +506,12 @@ export default function AccountPage() {
             </Alert>
             
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="university-search" className="text-sm font-medium">
-                  Search for your university
-                </Label>
-                <UniversityAutocomplete
-                  value={selectedUniversity}
-                  onSelect={setSelectedUniversity}
-                  placeholder="Type to search universities..."
-                  disabled={updateUniversityMutation.isPending}
-                  universities={universities}
-                />
-              </div>
+              <EnhancedUniversitySelector
+                value={selectedUniversity}
+                onSelect={setSelectedUniversity}
+                placeholder="Select your university..."
+                disabled={updateUniversityMutation.isPending}
+              />
             </div>
           </div>
 

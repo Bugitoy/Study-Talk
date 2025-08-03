@@ -275,6 +275,8 @@ model University {
   name        String @unique
   domain      String? // email domain for verification (e.g., "stanford.edu")
   isVerified  Boolean @default(false) // admin verified university
+  region      String?
+  country     String?
   
   confessions Confession[]
   

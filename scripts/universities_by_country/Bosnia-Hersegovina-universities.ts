@@ -1,0 +1,45 @@
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+
+const Bosnia_Hersegovina_universities = [
+
+    // Bosnia and Herzegovina
+
+    { name: "Univerzitet u Sarajevu", domain: "unsa.ba", isVerified: true },
+    { name: "Sveučilište u Mostaru", domain: "sum.ba", isVerified: true },
+    { name: "Univerzitet u Banjoj Luci", domain: "unibl.org", isVerified: true },
+    { name: "Univerzitet u Tuzli", domain: "untz.ba", isVerified: true },
+    { name: "Univerzitet u Istocnom Sarajevu", domain: "ues.rs.ba", isVerified: true },
+    { name: "Internacionalni univerzitet u Sarajevu", domain: "ius.edu.ba", isVerified: true },
+    { name: "Međunarodni univerzitet Burch", domain: "ibu.edu.ba", isVerified: true },
+    { name: "Univerzitet u Zenici", domain: "unze.ba", isVerified: true },
+    { name: "Univerzitet Džemal Bijedic u Mostaru", domain: "unmo.ba", isVerified: true },
+    { name: "Univerzitet Bijeljina", domain: "ubn.rs.ba", isVerified: true },
+    { name: "Sarajevo School of Science and Technology", domain: "ssst.edu.ba", isVerified: true },
+    { name: "Sveucilište/Univerzitet VITEZ", domain: "unvi.edu.ba", isVerified: true },
+    { name: "Univerzitet u Bihaću", domain: "unbi.ba", isVerified: true },
+    { name: "Panevropski univerzitet Apeiron", domain: "apeiron-uni.eu", isVerified: true },
+    { name: "Evropski univerzitet Brčko distrikt", domain: "eubd.edu.ba", isVerified: true },
+    { name: "Banja Luka College", domain: "blc.edu.ba", isVerified: true },
+    { name: "Univerzitet Sinergija", domain: "sinergija.edu.ba", isVerified: true },
+    { name: "Evropski univerzitet Kallos Tuzla", domain: "eukallos.edu.ba", isVerified: true },
+    { name: "Univerzitet za poslovni inženjering i menadžment", domain: "univerzitetpim.edu.ba", isVerified: true },
+    { name: "Internacionalni univerzitet Travnik", domain: "iu-travnik.com", isVerified: true },
+    { name: "CEPS-Centar za poslovne studije", domain: "ceps.edu.ba", isVerified: true },
+    { name: "Slobomir P Univerzitet", domain: "spu.ba", isVerified: true },
+    { name: "Nezavisni univerzitet Banja Luka", domain: "nubl.org", isVerified: true },
+    { name: "Komunikološki koledž u Banjaluci", domain: "kfbl.edu.ba", isVerified: true },
+    { name: "Univerzitet za poslovne studije", domain: "univerzitetps.com", isVerified: true },
+    { name: "Univerzitet u Travniku", domain: "unt.ba", isVerified: true },
+    { name: "Visoka škola Logos centar", domain: "logos-centar.com", isVerified: true },
+    { name: "Sveučilište Hercegovina", domain: "hercegovina.edu.ba", isVerified: true },
+    { name: "Visoka medicinska škola Prijedor", domain: "vmspd.com", isVerified: true },
+    { name: "Visoka škola za uslužni biznis", domain: "vub.edu.ba", isVerified: true },
+    { name: "Visoka poslovno tehnička škola Doboj", domain: "vpts-doboj.info", isVerified: true },
+    { name: "Visoka škola za turizam i hotelijerstvo Trebinje", domain: "thtrebinje.com", isVerified: true },
+    { name: "Visoka škola za ekonomiju i informatiku Prijedor", domain: "vseip.com", isVerified: true },
+    { name: "Visoka škola za primijenjene i pravne nauke Prometej", domain: "prometejbl.edu.ba", isVerified: true },
+    { name: "Victoria International University", domain: "viu.ba", isVerified: true },
+    { name: "Visoka škola računarstva i informatike eMPIRICOM", domain: "empiricom.ba", isVerified: true },
+    { name: "Internacionalni univerzitet u Goraždu", domain: "iug.ba", isVerified: true },
+]
