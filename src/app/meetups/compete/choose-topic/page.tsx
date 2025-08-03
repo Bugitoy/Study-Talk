@@ -37,8 +37,7 @@ const pastelColors = [
 // Room creation steps
 type CreationStep = 'idle' | 'creating' | 'configuring' | 'finalizing' | 'complete' | 'error';
 
-export default function ChooseTopic({ setIsSetupComplete }: { setIsSetupComplete: (isSetupComplete: boolean) => void 
-}) {
+export default function ChooseTopic() {
   const router = useRouter();
   const client = useStreamVideoClient();
   const { user } = useKindeBrowserClient();

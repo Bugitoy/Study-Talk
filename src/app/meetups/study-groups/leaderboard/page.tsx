@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import NextLayout from '@/components/NextLayout';
 import { User as UserIcon, Trophy, Medal, Award, ChevronLeft, ChevronRight } from 'lucide-react';
+import { formatStudyTime } from '@/lib/utils';
 
 interface LeaderboardEntry {
   userId: string;
@@ -187,7 +188,7 @@ export default function LeaderboardPage() {
                             )}
                             <span>{row.name}</span>
                           </td>
-                          <td className="px-4 py-2 text-center rounded-r-[8px] font-semibold">{row.hours.toFixed(1)}h</td>
+                          <td className="px-4 py-2 text-center rounded-r-[8px] font-semibold">{formatStudyTime(row.hours)}</td>
                         </tr>
                       ))
                     )}

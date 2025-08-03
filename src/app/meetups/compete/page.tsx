@@ -62,11 +62,7 @@ const initialValues = {
   link: "",
 };
 
-const Compete = ({
-  setIsSetupComplete,
-}: {
-  setIsSetupComplete: (isSetupComplete: boolean) => void;
-}) => {
+const Compete = () => {
   const [search, setSearch] = useState("");
   const [meetingLinkError, setMeetingLinkError] = useState<string>("");
   const [isMeetingLinkValid, setIsMeetingLinkValid] = useState(false);

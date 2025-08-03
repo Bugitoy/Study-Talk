@@ -28,6 +28,7 @@ async function clearQuizData() {
     
     await prisma.userQuiz.deleteMany();
     await prisma.userQuizQuestion.deleteMany();
+    await prisma.user.deleteMany();
     
     console.log('✅ Successfully cleared all data collections in correct order.');
   } catch (error) {

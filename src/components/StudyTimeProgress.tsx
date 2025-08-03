@@ -2,6 +2,7 @@
 import React from 'react';
 import { Progress } from '@/components/ui/progress';
 import { Trophy, Target, Clock } from 'lucide-react';
+import { formatStudyTime } from '@/lib/utils';
 
 interface StudyTimeProgressProps {
   dailyHours?: number;
@@ -43,7 +44,7 @@ export function StudyTimeProgress({
       <div className="mb-4">
         <div className="flex justify-between items-center mb-2">
           <span className="text-sm text-[#19232d]">
-            {safeDailyHours.toFixed(2)}h / {dailyGoal}h
+            {formatStudyTime(safeDailyHours)} / {dailyGoal}h
           </span>
           <span className="text-sm font-medium text-[#19232d]">
             {percent.toFixed(0)}%

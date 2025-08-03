@@ -12,6 +12,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs';
 import { useToast } from '@/hooks/use-toast';
 import { AlertCircle, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { formatStudyTime } from '@/lib/utils';
 
 const pastelColors = [
   'bg-thanodi-lightPeach',
@@ -784,7 +785,7 @@ const StudyGroups = () => {
                 style={{ width: `${displayPercent}%` }}
               />
               <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-700 font-semibold text-xs sm:text-sm lg:text-lg select-none pointer-events-none px-2 whitespace-nowrap">
-                {(displayHours || 0).toFixed(2)}h / {hoursGoal}h studied today
+                {formatStudyTime(displayHours || 0)} / {hoursGoal}h studied today
               </span>
             </div>
           </div>
