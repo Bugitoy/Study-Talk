@@ -1,0 +1,48 @@
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+
+const Azerbaijan_universities = [
+
+    // Azerbaijan
+
+    { name: "ADA Universiteti", domain: "ada.edu.az", isVerified: true },
+    { name: "Azerbaycan Dövlet Iqtisad Universiteti", domain: "unec.edu.az", isVerified: true },
+    { name: "Baki Dövlet Universiteti", domain: "bsu.edu.az", isVerified: true },
+    { name: "Xezer Universiteti", domain: "khazar.org", isVerified: true },
+    { name: "Azerbaycan Tibb Universiteti", domain: "amu.edu.az", isVerified: true },
+    { name: "Azerbaycan Diller Universiteti", domain: "adu.edu.az", isVerified: true },
+    { name: "Azerbaycan Texniki Universiteti", domain: "aztu.edu.az", isVerified: true },
+    { name: "Azerbaycan Memarliq ve Insaat Universiteti", domain: "azmiu.edu.az", isVerified: true },
+    { name: "Baki Muhendislik Universiteti", domain: "beu.edu.az", isVerified: true },
+    { name: "M.V. Lomonosov adina Moskva Dövlet Universitetinin Baki", domain: "msu.az", isVerified: true },
+    { name: "Naxcivan Dövlet Universiteti", domain: "ndu.edu.az", isVerified: true },
+    { name: "Qerbi Kaspi Universiteti", domain: "wcu.edu.az", isVerified: true },
+    { name: "Azerbaycan Dövlet Neft ve Senaye Universiteti", domain: "asoiu.edu.az", isVerified: true },
+    { name: "Azerbaycan Dövlet Aqrar Universiteti", domain: "adau.edu.az", isVerified: true },
+    { name: "Azerbaycan Universiteti", domain: "au.edu.az", isVerified: true },
+    { name: "Baki Ali Neft Mektebi", domain: "banm.edu.az", isVerified: true },
+    { name: "Azerbaycan Turizm ve Menecment Universiteti", domain: "atmu.edu.az", isVerified: true },
+    { name: "Azerbaycan Dövlet Pedaqoji Universiteti", domain: "adpu.edu.az", isVerified: true },
+    { name: "Baki Slavyan Universiteti", domain: "bsu-az.org", isVerified: true },
+    { name: "Azerbaycan Dövlet Medeniyyet ve Incesenet Universiteti", domain: "admiu.edu.az", isVerified: true },
+    { name: "Lenkeran Dövlet Universiteti", domain: "lhu.edu.az", isVerified: true },
+    { name: "Odlar Yurdu Universiteti", domain: "oyu.edu.az", isVerified: true },
+    { name: "Gence Dövlet Universiteti", domain: "gsu.az", isVerified: true },
+    { name: "Milli Aviasiya Akademiyasi", domain: "naa.edu.az", isVerified: true },
+    { name: "Baki Biznes Universiteti", domain: "bbu.edu.az", isVerified: true },
+    { name: "Dövlet Idareçilik Akademiyasi", domain: "dia.edu.az", isVerified: true },
+    { name: "Sumqayit Dövlet Universiteti", domain: "sdu.edu.az", isVerified: true },
+    { name: "Azerbaycan Texnologiya Universiteti", domain: "atu.edu.az", isVerified: true },
+    { name: "Baki Musiqi Akademiyasi", domain: "musicacademy.edu.az", isVerified: true },
+    { name: "Azerbaycan Dövlet Deniz Akademiyasi", domain: "adda.edu.az", isVerified: true },
+    { name: "Mingeçevir Dövlet Universiteti", domain: "mdu.edu.az", isVerified: true },
+    { name: "Azerbaycan Dövlet Beden Terbiyesi ve Idman Akademiyasi", domain: "asffa.edu.az", isVerified: true },
+    { name: "Azerbaycan Milli Konservatoriyasi", domain: "conservatory.az", isVerified: true },
+    { name: "Baki Avrasiya Universiteti", domain: "bau.edu.az", isVerified: true },
+    { name: "Azerbaycan Dövlet Ressamliq Akademiyasi", domain: "azara.az", isVerified: true },
+    { name: "Azerbaycan Emek ve Sosial Münasibetler Akademiyasi", domain: "aesma.edu.az", isVerified: true },
+    { name: "I.M. Seçenov adina Birinci Moskva Dövlet Tibb Universitetinin Baki", domain: "1msmu.baku", isVerified: false },
+    { name: "Naxçivan Müellimler İnstitutu", domain: "nmi.edu.az", isVerified: true },
+    { name: "Baki Qizlar Universiteti", domain: "bqu.edu.az", isVerified: true },
+    { name: "Baki İslam Universiteti", domain: "biu.edu.az", isVerified: true },
+]

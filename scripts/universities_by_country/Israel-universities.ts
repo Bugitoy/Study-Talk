@@ -1,0 +1,46 @@
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+
+const Israel_universities = [
+
+    // Israel
+
+    { name: "Tel Aviv University", domain: "tau.ac.il", isVerified: true },
+    { name: "Hebrew University of Jerusalem", domain: "huji.ac.il", isVerified: true },
+    { name: "Weizmann Institute of Science", domain: "weizmann.ac.il", isVerified: true },
+    { name: "Technion - Israel Institute of Technology", domain: "technion.ac.il", isVerified: true },
+    { name: "Ben-Gurion University of the Negev", domain: "bgu.ac.il", isVerified: true },
+    { name: "University of Haifa", domain: "haifa.ac.il", isVerified: true },
+    { name: "Bar-Ilan University", domain: "biu.ac.il", isVerified: true },
+    { name: "Reichman University", domain: "runi.ac.il", isVerified: true },
+    { name: "Ariel University", domain: "ariel.ac.il", isVerified: true },
+    { name: "Bezalel Academy of Arts and Design", domain: "bezalel.ac.il", isVerified: true },
+    { name: "Holon Institute of Technology", domain: "hit.ac.il", isVerified: true },
+    { name: "Jerusalem College of Technology", domain: "jct.ac.il", isVerified: true },
+    { name: "The College of Management - Academic Studies", domain: "colman.ac.il", isVerified: true },
+    { name: "Ono Academic College", domain: "ono.ac.il", isVerified: true },
+    { name: "The Academic College of Tel-Aviv-Yaffo", domain: "mta.ac.il", isVerified: true },
+    { name: "Shenkar College of Engineering and Design", domain: "shenkar.ac.il", isVerified: true },
+    { name: "Sapir College", domain: "sapir.ac.il", isVerified: true },
+    { name: "Ruppin Academic Center", domain: "ruppin.ac.il", isVerified: true },
+    { name: "Tel-Hai Academic College", domain: "telhai.ac.il", isVerified: true },
+    { name: "ORT Braude College", domain: "braude.ac.il", isVerified: true },
+    { name: "Netanya Academic College", domain: "netanya.ac.il", isVerified: true },
+    { name: "Shamoon College of Engineering", domain: "sce.ac.il", isVerified: true },
+    { name: "Kinneret Academic College", domain: "kinneret.ac.il", isVerified: true },
+    { name: "Afeka Tel Aviv Academic College of Engineering", domain: "afeka.ac.il", isVerified: true },
+    { name: "Schechter Institute of Jewish Studies", domain: "schechter.ac.il", isVerified: true },
+    { name: "Western Galilee College", domain: "wgalil.ac.il", isVerified: true },
+    { name: "Max Stern Academic College of Emek Yezreel", domain: "yvc.ac.il", isVerified: true },
+    { name: "Azrieli College of Engineering Jerusalem", domain: "jce.ac.il", isVerified: true },
+    { name: "College of Law and Business", domain: "clb.ac.il", isVerified: true },
+    { name: "Achva Academic College", domain: "achva.ac.il", isVerified: true },
+    { name: "Jerusalem Multidisciplinary College", domain: null, isVerified: false },
+    { name: "The Jerusalem Academy of Music and Dance", domain: "jamd.ac.il", isVerified: true },
+    { name: "Zefat Academic College", domain: "zefat.ac.il", isVerified: true },
+    { name: "Ashkelon Academic College", domain: "aac.ac.il", isVerified: true },
+    { name: "The Academic College of Law and Science", domain: null, isVerified: false },
+    { name: "Shalem College", domain: "shalem.ac.il", isVerified: true },
+    { name: "Peres Academic Center", domain: "pac.ac.il", isVerified: true },
+    { name: "Ramat Gan Academic College", domain: null, isVerified: false },
+]

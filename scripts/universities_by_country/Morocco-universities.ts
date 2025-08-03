@@ -1,0 +1,45 @@
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+
+const Morocco_universities = [
+
+    // Morocco
+  
+    { name: "Université Cadi Ayyad", domain: "uca.ac.ma", isVerified: true },
+    { name: "Université Mohammed V", domain: "um5.ac.ma", isVerified: true },
+    { name: "Université Hassan II de Casablanca", domain: "uh2c.ac.ma", isVerified: true },
+    { name: "Université Al Akhawayn", domain: "aui.ma", isVerified: true },
+    { name: "Université Sidi Mohamed Ben Abdellah", domain: "usmba.ac.ma", isVerified: true },
+    { name: "Université Mohammed VI Polytechnique", domain: "um6p.ma", isVerified: true },
+    { name: "Université Ibn Zohr", domain: "uiz.ac.ma", isVerified: true },
+    { name: "Université Mohammed Premier", domain: "ump.ac.ma", isVerified: true },
+    { name: "Université Ibn Tofail", domain: "uit.ac.ma", isVerified: true },
+    { name: "Université Moulay Ismail", domain: "umi.ac.ma", isVerified: true },
+    { name: "Université Internationale de Rabat", domain: "uir.ac.ma", isVerified: true },
+    { name: "Université Hassan 1er", domain: "uh1.ac.ma", isVerified: true },
+    { name: "Université Abdelmalek Essadi", domain: "uae.ac.ma", isVerified: true },
+    { name: "Université Chouaib Doukkali", domain: "ucd.ac.ma", isVerified: true },
+    { name: "Université Sultan Moulay Slimane", domain: "usms.ma", isVerified: true },
+    { name: "ESCA École de Management", domain: "esca.ma", isVerified: true },
+    { name: "Université Euro-Méditerranéenne de Fès", domain: "uemf.ac.ma", isVerified: true },
+    { name: "HEM Institut des Hautes Etudes de Management", domain: "hem.edu.ma", isVerified: true },
+    { name: "École Centrale Casablanca", domain: "ecac.ma", isVerified: true },
+    { name: "Université Al Quaraouiyine", domain: "univ-alquaraouiyine.ma", isVerified: true },
+    { name: "École Nationale d'Architecture", domain: "ena.ac.ma", isVerified: true },
+    { name: "Université Internationale de Casablanca", domain: "uic.ac.ma", isVerified: true },
+    { name: "HIGH-TECH", domain: "hightech-univ.ac.ma", isVerified: true },
+    { name: "HEC Maroc", domain: "hec.ma", isVerified: true },
+    { name: "Université Mundiapolis", domain: "mundiapolis.ma", isVerified: true },
+    { name: "Université Internationale d'Agadir", domain: "uia.ac.ma", isVerified: true },
+    { name: "École Nationale Supérieure de l'Administration", domain: "ena.ma", isVerified: true },
+    { name: "Université Privée de Marrakech", domain: "upm.ac.ma", isVerified: true },
+    { name: "École Nationale d'Agriculture de Meknes", domain: "ena-meknes.ac.ma", isVerified: true },
+    { name: "International Institute for Higher Education in Morocco", domain: "iihem.ac.ma", isVerified: true },
+    { name: "Université Privée de Fès", domain: "upf.ac.ma", isVerified: true },
+    { name: "Université Internationale Abulcasis des Sciences de la Santé", domain: "uiass.ma", isVerified: true },
+    { name: "École Supérieure en Ingénierie de l'Information, Télécoms, Management et Génie Civil", domain: "esig.ac.ma", isVerified: true },
+    { name: "École Supérieure d'Architecture de Casablanca", domain: "esac.ma", isVerified: true },
+    { name: "Institut Supérieur du Génie Appliqué", domain: "isga.ma", isVerified: true },
+    { name: "École Superieure de Commerce de Marrakech", domain: "escm.ma", isVerified: true },
+    { name: "Université Mohammed VI des Sciences de la Santé", domain: "um6ss.ma", isVerified: true },
+]

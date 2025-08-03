@@ -1,0 +1,47 @@
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+
+const Syria_universities = [
+
+    // Syria
+
+    { name: "Damascus University", domain: "damascusuniversity.edu.sy", isVerified: true },
+    { name: "Homs University", domain: "homs-univ.edu.sy", isVerified: true },
+    { name: "Latakia University", domain: "tishreen.edu.sy", isVerified: true },
+    { name: "Arab International University", domain: "aiu.edu.sy", isVerified: true },
+    { name: "University of Aleppo", domain: "alepuniv.edu.sy", isVerified: true },
+    { name: "University of Kalamoon", domain: "uok.edu.sy", isVerified: true },
+    { name: "Syrian Private University", domain: "spu.edu.sy", isVerified: true },
+    { name: "Al-Wataniya Private University", domain: "wpu.edu.sy", isVerified: true },
+    { name: "Manara University", domain: "manara.edu.sy", isVerified: true },
+    { name: "Al-Sham Private University", domain: "aspu.edu.sy", isVerified: true },
+    { name: "University of Hama", domain: "hama-univ.edu.sy", isVerified: true },
+    { name: "International University of Science and Technology", domain: "iust.edu.sy", isVerified: true },
+    { name: "Wadi International University", domain: "wiu.edu.sy", isVerified: true },
+    { name: "Al-Andalus University for Medical Sciences", domain: "au.edu.sy", isVerified: true },
+    { name: "Ittihad Private University", domain: "ipu.edu.sy", isVerified: true },
+    { name: "Al-Hawash Private University", domain: "hpu.sy", isVerified: true },
+    { name: "Aljazeera Private University", domain: "jude.edu.sy", isVerified: true },
+    { name: "Higher Institute of Business Administration", domain: "hiba.edu.sy", isVerified: true },
+    { name: "Yarmouk Private University", domain: "ypu.edu.sy", isVerified: true },
+    { name: "Idlib University", domain: "idlib.university", isVerified: true },
+    { name: "Institut National d'Administration", domain: "ina.edu.sy", isVerified: true },
+    { name: "Al-Zaytoonah International University", domain: "ziu-university.net", isVerified: true },
+    { name: "Al-Furat University", domain: "alfuratuniv.edu.sy", isVerified: true },
+    { name: "Cordoba Private University", domain: "cpu.edu.sy", isVerified: true },
+    { name: "University of Tartous", domain: "tartous-univ.edu.sy", isVerified: true },
+    { name: "Almaali University", domain: null, isVerified: false },
+    { name: "Ebla Private University", domain: "ebla.edu.sy", isVerified: true },
+    { name: "Bilad Al-Sham University for Sharia Sciences", domain: "shamkuftaro.org", isVerified: true },
+    { name: "Qasyoun University for Science and Technology", domain: "qpu.edu.sy", isVerified: true },
+    { name: "Al-Shamal Private University", domain: "spu-sy.org", isVerified: true },
+    { name: "Antioch Syrian University", domain: "asu.edu.sy", isVerified: true },
+    { name: "International University of Science and Renaissance", domain: null, isVerified: false },
+    { name: "Al-Shahbaa University", domain: "su-aleppo.com", isVerified: true },
+    { name: "Al-Rawad University for Science and Technology", domain: "ru.edu.sy", isVerified: true },
+    { name: "Arab University of Science and Technology", domain: "aust.edu.sy", isVerified: true },
+    { name: "Aram University of Science", domain: null, isVerified: false },
+    { name: "Free Aleppo University", domain: "uoaleppo.net", isVerified: true },
+    { name: "Al Rasheed International Private University for Science and Technology", domain: "ru.edu.sy", isVerified: true },
+    { name: "Islamic University of Syria", domain: null, isVerified: false },
+]

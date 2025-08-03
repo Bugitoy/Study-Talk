@@ -1,0 +1,47 @@
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+
+const Armenia_universities = [
+
+    // Armenia
+
+    { name: "Yerevan State University", domain: "ysu.am", isVerified: true },
+    { name: "American University of Armenia", domain: "aua.am", isVerified: true },
+    { name: "Russian-Armenian University", domain: "rau.am", isVerified: true },
+    { name: "National Polytechnic University of Armenia", domain: "polytech.am", isVerified: true },
+    { name: "Armenian State University of Economics", domain: "asue.am", isVerified: true },
+    { name: "Armenian National Agrarian University", domain: "anau.am", isVerified: true },
+    { name: "Yerevan State Medical University", domain: "ysmu.am", isVerified: true },
+    { name: "Yerevan Brusov State University of Languages and Social Sciences", domain: "brusov.am", isVerified: true },
+    { name: "Armenian State Pedagogical University", domain: "aspu.am", isVerified: true },
+    { name: "National University of Architecture and Construction of Armenia", domain: "nuaca.am", isVerified: true },
+    { name: "Université Française en Arménie", domain: "ufar.am", isVerified: true },
+    { name: "Shirak State University", domain: "shsu.am", isVerified: true },
+    { name: "Eurasia International University", domain: "eiu.am", isVerified: true },
+    { name: "Gavar State University", domain: "gsu.am", isVerified: true },
+    { name: "European University", domain: "eua.am", isVerified: true },
+    { name: "Yerevan Komitas State Conservatory", domain: "konservatoria.am", isVerified: true },
+    { name: "State Academy of Fine Arts of Armenia", domain: "safa.am", isVerified: true },
+    { name: "Vanadzor State University", domain: "vsu.am", isVerified: true },
+    { name: "Yerevan Medical Institute after Mehrabyan", domain: "mehrabyan.am", isVerified: true },
+    { name: "Yerevan Haybusak University", domain: "haybusak.org", isVerified: true },
+    { name: "Armenian State Institute of Physical Culture and Sport", domain: "sportedu.am", isVerified: true },
+    { name: "Yerevan Northern University", domain: "northern.am", isVerified: true },
+    { name: "Yerevan State Theatre and Film Institute", domain: "ystfi.am", isVerified: true },
+    { name: "Goris State University", domain: "gorsu.am", isVerified: true },
+    { name: "Artsakh State University", domain: "asu.am", isVerified: true },
+    { name: "Humanitarian Institute of Hrazdan", domain: "hinstitute.am", isVerified: true },
+    { name: "Mkhitar Gosh Armenian-Russian International University", domain: "mkhitargosh.am", isVerified: true },
+    { name: "Yerevan Gladzor University", domain: "gladzor.am", isVerified: true },
+    { name: "Armenian Medical Institute", domain: "armedin.am", isVerified: true },
+    { name: "University of Traditional Medicine", domain: "utm.am", isVerified: true },
+    { name: "Urartu University of Practical Psychology and Sociology", domain: "urartu.university", isVerified: true },
+    { name: "Progress University of Gyumri", domain: "progressuniversity.net", isVerified: true },
+    { name: "Yerevan Mesrop Mashtots University", domain: "mashtotsuniversity.am", isVerified: true },
+    { name: "Anania Shirakatsi University of International Relations", domain: "shirakatsi.am", isVerified: true },
+    { name: "Yerevan University after Movses Khorenatsi", domain: "mkhu.am", isVerified: true },
+    { name: "GALIK University", domain: "galick.do.am", isVerified: true },
+    { name: "University of International Economic Relations", domain: "uier-edu.am", isVerified: true },
+    { name: "St. Theresa Medical University of Yerevan", domain: "stmu.am", isVerified: true },
+    { name: "University of Economy and Law after Avetik Mkrtchyan", domain: "mtih.am", isVerified: true },
+]
