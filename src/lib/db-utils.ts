@@ -746,30 +746,48 @@ export async function createConfession(data: {
   isAnonymous?: boolean;
 }) {
   try {
-    const confession = await prisma.confession.create({
-      data: {
-        title: data.title,
-        content: data.content,
-        authorId: data.authorId,
-        universityId: data.universityId,
-        isAnonymous: data.isAnonymous ?? true,
-      },
-      include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-        university: true,
+    // Use a transaction to ensure atomicity
+    const confession = await prisma.$transaction(async (tx) => {
+      // Create the confession
+      const newConfession = await tx.confession.create({
+        data: {
+          title: data.title,
+          content: data.content,
+          authorId: data.authorId,
+          universityId: data.universityId,
+          isAnonymous: data.isAnonymous ?? true,
+        },
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+              university: true,
+            },
+          },
+          university: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
         },
-        university: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
+      });
+
+      // Atomically increment the university's confession count
+      if (data.universityId) {
+        await tx.university.update({
+          where: { id: data.universityId },
+          data: {
+            confessionCount: {
+              increment: 1
+            }
+          }
+        });
+      }
+
+      return newConfession;
     });
 
     // Monitor user activity and update reputation

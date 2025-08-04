@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 export interface University {
   id: string;
@@ -28,7 +28,7 @@ export function useUniversities(region?: string, country?: string, search?: stri
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const fetchUniversities = async (reset: boolean = false) => {
+  const fetchUniversities = useCallback(async (reset: boolean = false) => {
     try {
       setLoading(true);
       setError(null);
@@ -47,10 +47,17 @@ export function useUniversities(region?: string, country?: string, search?: stri
       params.append('limit', '50');
 
       const url = `/api/universities/by-country-filter?${params.toString()}`;
-      const response = await fetch(url);
+      
+      // Add cache-busting for development
+      const cacheBuster = process.env.NODE_ENV === 'development' ? `&t=${Date.now()}` : '';
+      const response = await fetch(`${url}${cacheBuster}`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
       
       if (!response.ok) {
-        throw new Error('Failed to fetch universities');
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
@@ -63,17 +70,23 @@ export function useUniversities(region?: string, country?: string, search?: stri
       
       setPagination(data.pagination);
     } catch (err) {
+      console.error('Error fetching universities:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
-  };
+  }, [region, country, search, currentPage]);
 
-  const loadMore = () => {
+  const loadMore = useCallback(() => {
     if (pagination?.hasMore && !loading) {
       setCurrentPage(prev => prev + 1);
     }
-  };
+  }, [pagination?.hasMore, loading]);
+
+  const refresh = useCallback(() => {
+    setCurrentPage(1);
+    fetchUniversities(true);
+  }, [fetchUniversities]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -92,9 +105,6 @@ export function useUniversities(region?: string, country?: string, search?: stri
     loading,
     error,
     loadMore,
-    refresh: () => {
-      setCurrentPage(1);
-      fetchUniversities(true);
-    },
+    refresh,
   };
 } 

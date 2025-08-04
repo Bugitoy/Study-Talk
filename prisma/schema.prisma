@@ -277,6 +277,7 @@ model University {
   isVerified  Boolean @default(false) // admin verified university
   region      String?
   country     String?
+  confessionCount Int @default(0) // Counter for performance optimization
   
   confessions Confession[]
   
