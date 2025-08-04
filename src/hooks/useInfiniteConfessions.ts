@@ -282,18 +282,21 @@ export function useInfiniteConfessions(options: UseInfiniteConfessionsOptions = 
         }
       }
 
-      // Optimistic update
-      setConfessions(prev => prev.map(confession => {
-        if (confession.id === confessionId) {
-          return {
-            ...confession,
-            believeCount: Math.max(0, confession.believeCount + believeChange),
-            doubtCount: Math.max(0, confession.doubtCount + doubtChange),
-            userVote: newUserVote,
-          };
-        }
-        return confession;
-      }));
+      // Immediate optimistic update
+      setConfessions(prev => {
+        const updated = prev.map(confession => {
+          if (confession.id === confessionId) {
+            return {
+              ...confession,
+              believeCount: Math.max(0, confession.believeCount + believeChange),
+              doubtCount: Math.max(0, confession.doubtCount + doubtChange),
+              userVote: newUserVote,
+            };
+          }
+          return confession;
+        });
+        return updated;
+      });
 
       // API call
       const requestBody = action === 'unvote' 

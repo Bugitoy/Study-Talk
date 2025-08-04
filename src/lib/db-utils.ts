@@ -1051,123 +1051,195 @@ export async function getConfessionsInfinite(options: {
 }
 
 export async function voteConfession(confessionId: string, userId: string, voteType: 'BELIEVE' | 'DOUBT') {
-  try {
-    // Use a transaction to ensure atomicity
-    const result = await prisma.$transaction(async (tx) => {
-      // Check if user already voted
-      const existingVote = await tx.confessionVote.findUnique({
-        where: {
-          userId_confessionId: {
-            userId,
-            confessionId,
-          },
-        },
-      });
+  const maxRetries = 3;
+  let lastError;
 
-      let vote;
-      if (existingVote) {
-        // Update existing vote - need to handle counter changes
-        const oldVoteType = existingVote.voteType;
-        
-        // Decrement the old vote type counter
-        if (oldVoteType === 'BELIEVE') {
-          await tx.confession.update({
-            where: { id: confessionId },
-            data: { believeCount: { decrement: 1 } }
-          });
-        } else if (oldVoteType === 'DOUBT') {
-          await tx.confession.update({
-            where: { id: confessionId },
-            data: { doubtCount: { decrement: 1 } }
-          });
-        }
-
-        // Update the vote
-        vote = await tx.confessionVote.update({
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      // Use a transaction to ensure atomicity
+      const result = await prisma.$transaction(async (tx) => {
+        // Check if user already voted
+        const existingVote = await tx.confessionVote.findUnique({
           where: {
             userId_confessionId: {
               userId,
               confessionId,
             },
           },
-          data: {
-            voteType,
-          },
         });
 
-        // Increment the new vote type counter
-        if (voteType === 'BELIEVE') {
-          await tx.confession.update({
-            where: { id: confessionId },
-            data: { believeCount: { increment: 1 } }
+        let vote;
+        if (existingVote) {
+          // Update existing vote - need to handle counter changes
+          const oldVoteType = existingVote.voteType;
+          
+          // Update the vote first
+          vote = await tx.confessionVote.update({
+            where: {
+              userId_confessionId: {
+                userId,
+                confessionId,
+              },
+            },
+            data: {
+              voteType,
+            },
           });
-        } else if (voteType === 'DOUBT') {
-          await tx.confession.update({
-            where: { id: confessionId },
-            data: { doubtCount: { increment: 1 } }
-          });
-        }
-      } else {
-        // Create new vote
-        vote = await tx.confessionVote.create({
-          data: {
-            userId,
-            confessionId,
-            voteType,
-          },
-        });
 
-        // Increment the vote type counter
-        if (voteType === 'BELIEVE') {
+          // Update counters in a single operation to reduce conflicts
+          const updateData: any = {};
+          if (oldVoteType === 'BELIEVE') {
+            updateData.believeCount = { decrement: 1 };
+          } else if (oldVoteType === 'DOUBT') {
+            updateData.doubtCount = { decrement: 1 };
+          }
+          
+          if (voteType === 'BELIEVE') {
+            updateData.believeCount = { increment: 1 };
+          } else if (voteType === 'DOUBT') {
+            updateData.doubtCount = { increment: 1 };
+          }
+
+          // Single update operation
           await tx.confession.update({
             where: { id: confessionId },
-            data: { believeCount: { increment: 1 } }
+            data: updateData
           });
-        } else if (voteType === 'DOUBT') {
+        } else {
+          // Create new vote
+          vote = await tx.confessionVote.create({
+            data: {
+              userId,
+              confessionId,
+              voteType,
+            },
+          });
+
+          // Increment the vote type counter
+          const updateData: any = {};
+          if (voteType === 'BELIEVE') {
+            updateData.believeCount = { increment: 1 };
+          } else if (voteType === 'DOUBT') {
+            updateData.doubtCount = { increment: 1 };
+          }
+
           await tx.confession.update({
             where: { id: confessionId },
-            data: { doubtCount: { increment: 1 } }
+            data: updateData
           });
         }
+
+        return vote;
+      }, {
+        maxWait: 5000, // 5 second max wait
+        timeout: 10000, // 10 second timeout
+      });
+
+      // Monitor user activity and update reputation
+      await monitorUserActivity(userId, 'vote');
+
+      // Update hot score
+      await updateConfessionHotScore(confessionId);
+
+      return result;
+    } catch (error: any) {
+      lastError = error;
+      
+      // If it's a transaction conflict, retry
+      if (error.code === 'P2034' && attempt < maxRetries) {
+        console.log(`Vote transaction conflict, retrying... (attempt ${attempt}/${maxRetries})`);
+        // Add exponential backoff
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 100));
+        continue;
       }
-
-      return vote;
-    });
-
-    // Monitor user activity and update reputation
-    await monitorUserActivity(userId, 'vote');
-
-    // Update hot score
-    await updateConfessionHotScore(confessionId);
-
-    return result;
-  } catch (error) {
-    console.error('Error voting on confession:', error);
-    throw error;
+      
+      // If it's not a conflict or we've exhausted retries, throw the error
+      console.error('Error voting on confession:', error);
+      throw error;
+    }
   }
+
+  // If we get here, all retries failed
+  throw lastError;
 }
 
 export async function removeVoteOnConfession(data: {
   userId: string;
   confessionId: string;
 }) {
-  try {
-    // Delete the vote if it exists
-    const deletedVote = await prisma.confessionVote.deleteMany({
-      where: {
-        userId: data.userId,
-        confessionId: data.confessionId,
-      },
-    });
+  const maxRetries = 3;
+  let lastError;
 
-    // Update confession hot score
-    await updateConfessionHotScore(data.confessionId);
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      // Use a transaction to ensure atomicity
+      const result = await prisma.$transaction(async (tx) => {
+        // Get the vote to know what type it was
+        const existingVote = await tx.confessionVote.findUnique({
+          where: {
+            userId_confessionId: {
+              userId: data.userId,
+              confessionId: data.confessionId,
+            },
+          },
+        });
 
-    return { success: true, deletedCount: deletedVote.count };
-  } catch (error) {
-    console.error('Error removing vote on confession:', error);
-    throw error;
+        if (!existingVote) {
+          return { success: true, deletedCount: 0 };
+        }
+
+        // Delete the vote
+        await tx.confessionVote.delete({
+          where: {
+            userId_confessionId: {
+              userId: data.userId,
+              confessionId: data.confessionId,
+            },
+          },
+        });
+
+        // Decrement the appropriate counter
+        const updateData: any = {};
+        if (existingVote.voteType === 'BELIEVE') {
+          updateData.believeCount = { decrement: 1 };
+        } else if (existingVote.voteType === 'DOUBT') {
+          updateData.doubtCount = { decrement: 1 };
+        }
+
+        await tx.confession.update({
+          where: { id: data.confessionId },
+          data: updateData
+        });
+
+        return { success: true, deletedCount: 1 };
+      }, {
+        maxWait: 5000, // 5 second max wait
+        timeout: 10000, // 10 second timeout
+      });
+
+      // Update confession hot score
+      await updateConfessionHotScore(data.confessionId);
+
+      return result;
+    } catch (error: any) {
+      lastError = error;
+      
+      // If it's a transaction conflict, retry
+      if (error.code === 'P2034' && attempt < maxRetries) {
+        console.log(`Remove vote transaction conflict, retrying... (attempt ${attempt}/${maxRetries})`);
+        // Add exponential backoff
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 100));
+        continue;
+      }
+      
+      // If it's not a conflict or we've exhausted retries, throw the error
+      console.error('Error removing vote on confession:', error);
+      throw error;
+    }
   }
+
+  // If we get here, all retries failed
+  throw lastError;
 }
 
 export async function getConfessionComments(confessionId: string) {
@@ -1322,21 +1394,39 @@ export async function getSavedConfessions(userId: string) {
       where: { userId },
       include: {
         confession: {
-          include: {
+          select: {
+            id: true,
+            title: true,
+            content: true,
+            authorId: true,
+            isAnonymous: true,
+            hotScore: true,
+            commentCount: true,
+            replyCount: true,
+            believeCount: true,
+            doubtCount: true,
+            savedCount: true,
+            createdAt: true,
+            updatedAt: true,
             author: {
-              select: { id: true, name: true, image: true, university: true },
+              select: { 
+                id: true, 
+                name: true, 
+                image: true, 
+                university: true 
+              },
             },
             university: {
-              select: { id: true, name: true },
-            },
-            votes: {
-              select: { voteType: true },
-            },
-            _count: {
-              select: {
-                comments: true,
-                savedBy: true,
+              select: { 
+                id: true, 
+                name: true 
               },
+            },
+            // Only fetch user's vote
+            votes: {
+              where: { userId },
+              select: { voteType: true },
+              take: 1,
             },
           },
         },
@@ -1346,17 +1436,16 @@ export async function getSavedConfessions(userId: string) {
 
     return saved.map(item => {
       const confession = item.confession;
-      const believeCount = confession.votes.filter(v => v.voteType === 'BELIEVE').length;
-      const doubtCount = confession.votes.filter(v => v.voteType === 'DOUBT').length;
+      const userVote = confession.votes?.[0]?.voteType || null;
       
       return {
         ...confession,
-        believeCount,
-        doubtCount,
-        commentCount: confession._count.comments,
-        savedCount: confession._count.savedBy,
-        votes: undefined,
-        _count: undefined,
+        believeCount: confession.believeCount,
+        doubtCount: confession.doubtCount,
+        commentCount: confession.commentCount,
+        savedCount: confession.savedCount,
+        userVote,
+        votes: undefined, // Remove raw votes from response
       };
     });
   } catch (error) {
@@ -1372,22 +1461,34 @@ export async function getConfessionById(confessionId: string, userId?: string) {
         id: confessionId,
         isHidden: false 
       },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        authorId: true,
+        isAnonymous: true,
+        hotScore: true,
+        commentCount: true,
+        replyCount: true,
+        believeCount: true,
+        doubtCount: true,
+        savedCount: true,
+        createdAt: true,
+        updatedAt: true,
         author: {
           select: { id: true, name: true, image: true, university: true },
         },
         university: {
           select: { id: true, name: true },
         },
-        votes: {
-          select: { voteType: true },
-        },
-        _count: {
-          select: {
-            comments: true,
-            savedBy: true,
+        // Only fetch user's vote if userId is provided
+        ...(userId && {
+          votes: {
+            where: { userId },
+            select: { voteType: true },
+            take: 1,
           },
-        },
+        }),
       },
     });
 
@@ -1395,22 +1496,17 @@ export async function getConfessionById(confessionId: string, userId?: string) {
       return null;
     }
 
-    // Calculate vote counts and engagement metrics
-    const believeCount = confession.votes.filter(v => v.voteType === 'BELIEVE').length;
-    const doubtCount = confession.votes.filter(v => v.voteType === 'DOUBT').length;
-    
-    // Find user's vote if userId is provided
-    const userVote = userId ? confession.votes.find(v => (v as any).userId === userId) : null;
+    // Get user's vote if available
+    const userVote = userId && confession.votes ? confession.votes[0]?.voteType || null : null;
     
     return {
       ...confession,
-      believeCount,
-      doubtCount,
-      commentCount: confession._count.comments,
-      savedCount: confession._count.savedBy,
-      userVote: userVote ? userVote.voteType : null,
+      believeCount: confession.believeCount,
+      doubtCount: confession.doubtCount,
+      commentCount: confession.commentCount,
+      savedCount: confession.savedCount,
+      userVote,
       votes: undefined, // Remove raw votes from response
-      _count: undefined,
     };
   } catch (error) {
     console.error('Error getting confession by ID:', error);
@@ -2384,5 +2480,318 @@ export async function getConfessionsInfiniteOptimized(options: {
   } catch (error) {
     console.error('Error getting confessions (optimized):', error);
     throw error;
+  }
+}
+
+// 🚀 ULTRA-FAST MongoDB Aggregation Pipeline for Confessions
+export async function getConfessionsAggregated(options: {
+  cursor?: string;
+  limit?: number;
+  universityId?: string;
+  sortBy?: 'recent' | 'hot';
+  search?: string;
+  userId?: string;
+}) {
+  try {
+    const { cursor, limit = 20, universityId, sortBy = 'recent', search, userId } = options;
+    
+    // Build match stage
+    const matchStage: any = { isHidden: false };
+    
+    if (universityId) {
+      matchStage.universityId = universityId;
+    }
+    
+    if (search) {
+      matchStage.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { content: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    // Build aggregation pipeline
+    const pipeline: any[] = [
+      { $match: matchStage },
+      {
+        $lookup: {
+          from: 'User',
+          localField: 'authorId',
+          foreignField: '_id',
+          as: 'author'
+        }
+      },
+      {
+        $lookup: {
+          from: 'University',
+          localField: 'universityId',
+          foreignField: '_id',
+          as: 'university'
+        }
+      }
+    ];
+    
+    // Add user vote lookup if userId provided
+    if (userId) {
+      pipeline.push({
+        $lookup: {
+          from: 'confessionVote',
+          let: { confessionId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$confessionId', '$$confessionId'] },
+                    { $eq: ['$userId', userId] }
+                  ]
+                }
+              }
+            },
+            { $limit: 1 },
+            { $project: { voteType: 1 } }
+          ],
+          as: 'userVote'
+        }
+      });
+    }
+    
+    // Add sorting
+    const sortStage = sortBy === 'hot' 
+      ? { hotScore: -1, _id: -1 }
+      : { createdAt: -1, _id: -1 };
+    
+    pipeline.push({ $sort: sortStage });
+    pipeline.push({ $limit: limit + 1 });
+    
+    // Add projection stage
+    pipeline.push({
+      $project: {
+        id: '$_id',
+        title: 1,
+        content: 1,
+        authorId: 1,
+        isAnonymous: 1,
+        hotScore: 1,
+        commentCount: 1,
+        replyCount: 1,
+        believeCount: 1,
+        doubtCount: 1,
+        savedCount: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        author: {
+          $arrayElemAt: ['$author', 0]
+        },
+        university: {
+          $arrayElemAt: ['$university', 0]
+        },
+        userVote: {
+          $ifNull: [
+            { $arrayElemAt: ['$userVote.voteType', 0] },
+            null
+          ]
+        }
+      }
+    });
+    
+    // Execute aggregation
+    const result = await prisma.$runCommandRaw({
+      aggregate: 'confession',
+      pipeline,
+      cursor: { batchSize: 1000 }
+    });
+    
+    // Extract results
+    const confessions = (result as any).cursor?.firstBatch || [];
+    
+    // Check if there are more items
+    const hasMore = confessions.length > limit;
+    const items = hasMore ? confessions.slice(0, limit) : confessions;
+    
+    // Generate next cursor
+    let nextCursor: string | null = null;
+    if (hasMore && items.length > 0) {
+      const lastItem = items[items.length - 1];
+      if (sortBy === 'hot') {
+        nextCursor = lastItem.hotScore + '_' + lastItem.id;
+      } else {
+        nextCursor = lastItem.createdAt.toISOString() + '_' + lastItem.id;
+      }
+    }
+    
+    // Transform results to match expected format
+    const processedConfessions = items.map((confession: any) => ({
+      id: confession.id,
+      title: confession.title,
+      content: confession.content,
+      authorId: confession.authorId,
+      isAnonymous: confession.isAnonymous,
+      hotScore: confession.hotScore,
+      commentCount: confession.commentCount,
+      replyCount: confession.replyCount,
+      believeCount: confession.believeCount,
+      doubtCount: confession.doubtCount,
+      savedCount: confession.savedCount,
+      createdAt: confession.createdAt,
+      updatedAt: confession.updatedAt,
+      author: confession.author ? {
+        id: confession.author._id,
+        name: confession.author.name,
+        image: confession.author.image,
+        university: confession.author.university
+      } : null,
+      university: confession.university ? {
+        id: confession.university._id,
+        name: confession.university.name
+      } : null,
+      userVote: confession.userVote
+    }));
+    
+    return {
+      confessions: processedConfessions,
+      nextCursor,
+      hasMore,
+    };
+    
+  } catch (error) {
+    console.error('Error in aggregation pipeline:', error);
+    // Fallback to regular query if aggregation fails
+    console.log('Falling back to regular query...');
+    return getConfessionsInfiniteOptimized(options);
+  }
+}
+
+// 🚀 ULTRA-FAST Aggregated Saved Confessions
+export async function getSavedConfessionsAggregated(userId: string) {
+  try {
+    const pipeline = [
+      {
+        $match: { userId }
+      },
+      {
+        $lookup: {
+          from: 'confession',
+          localField: 'confessionId',
+          foreignField: '_id',
+          as: 'confession'
+        }
+      },
+      {
+        $unwind: '$confession'
+      },
+      {
+        $match: { 'confession.isHidden': false }
+      },
+      {
+        $lookup: {
+          from: 'User',
+          localField: 'confession.authorId',
+          foreignField: '_id',
+          as: 'author'
+        }
+      },
+      {
+        $lookup: {
+          from: 'University',
+          localField: 'confession.universityId',
+          foreignField: '_id',
+          as: 'university'
+        }
+      },
+      {
+        $lookup: {
+          from: 'confessionVote',
+          let: { confessionId: '$confession._id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$confessionId', '$$confessionId'] },
+                    { $eq: ['$userId', userId] }
+                  ]
+                }
+              }
+            },
+            { $limit: 1 },
+            { $project: { voteType: 1 } }
+          ],
+          as: 'userVote'
+        }
+      },
+      {
+        $sort: { createdAt: -1 }
+      },
+      {
+        $project: {
+          id: '$confession._id',
+          title: '$confession.title',
+          content: '$confession.content',
+          authorId: '$confession.authorId',
+          isAnonymous: '$confession.isAnonymous',
+          hotScore: '$confession.hotScore',
+          commentCount: '$confession.commentCount',
+          replyCount: '$confession.replyCount',
+          believeCount: '$confession.believeCount',
+          doubtCount: '$confession.doubtCount',
+          savedCount: '$confession.savedCount',
+          createdAt: '$confession.createdAt',
+          updatedAt: '$confession.updatedAt',
+          author: {
+            $arrayElemAt: ['$author', 0]
+          },
+          university: {
+            $arrayElemAt: ['$university', 0]
+          },
+          userVote: {
+            $ifNull: [
+              { $arrayElemAt: ['$userVote.voteType', 0] },
+              null
+            ]
+          }
+        }
+      }
+    ];
+    
+    const result = await prisma.$runCommandRaw({
+      aggregate: 'savedConfession',
+      pipeline,
+      cursor: { batchSize: 1000 }
+    });
+    
+    const savedConfessions = (result as any).cursor?.firstBatch || [];
+    
+    return savedConfessions.map((confession: any) => ({
+      id: confession.id,
+      title: confession.title,
+      content: confession.content,
+      authorId: confession.authorId,
+      isAnonymous: confession.isAnonymous,
+      hotScore: confession.hotScore,
+      commentCount: confession.commentCount,
+      replyCount: confession.replyCount,
+      believeCount: confession.believeCount,
+      doubtCount: confession.doubtCount,
+      savedCount: confession.savedCount,
+      createdAt: confession.createdAt,
+      updatedAt: confession.updatedAt,
+      author: confession.author ? {
+        id: confession.author._id,
+        name: confession.author.name,
+        image: confession.author.image,
+        university: confession.author.university
+      } : null,
+      university: confession.university ? {
+        id: confession.university._id,
+        name: confession.university.name
+      } : null,
+      userVote: confession.userVote
+    }));
+    
+  } catch (error) {
+    console.error('Error in saved confessions aggregation:', error);
+    // Fallback to regular query
+    console.log('Falling back to regular saved confessions query...');
+    return getSavedConfessions(userId);
   }
 }

@@ -99,6 +99,95 @@ export function useSavedConfessions(userId?: string) {
     return savedIds.has(confessionId);
   };
 
+  const voteOnConfession = async (confessionId: string, voteType: 'BELIEVE' | 'DOUBT') => {
+    if (!userId) return;
+
+    try {
+      // Get current state to determine action
+      const currentConfession = savedConfessions.find(c => c.id === confessionId);
+      if (!currentConfession) return;
+
+      const currentUserVote = currentConfession.userVote;
+      let action: 'vote' | 'unvote';
+      let newUserVote: 'BELIEVE' | 'DOUBT' | null;
+      let believeChange = 0;
+      let doubtChange = 0;
+
+      if (currentUserVote === voteType) {
+        // User clicked the same button - unvote
+        action = 'unvote';
+        newUserVote = null;
+        if (voteType === 'BELIEVE') believeChange = -1;
+        if (voteType === 'DOUBT') doubtChange = -1;
+      } else {
+        // User clicked different button or no previous vote
+        action = 'vote';
+        newUserVote = voteType;
+        
+        if (currentUserVote === 'BELIEVE') {
+          // Had BELIEVE, switching to DOUBT
+          believeChange = -1;
+          doubtChange = 1;
+        } else if (currentUserVote === 'DOUBT') {
+          // Had DOUBT, switching to BELIEVE
+          believeChange = 1;
+          doubtChange = -1;
+        } else {
+          // No previous vote
+          if (voteType === 'BELIEVE') believeChange = 1;
+          if (voteType === 'DOUBT') doubtChange = 1;
+        }
+      }
+
+      // Immediate optimistic update
+      setSavedConfessions(prev => {
+        const updated = prev.map(confession => {
+          if (confession.id === confessionId) {
+            return {
+              ...confession,
+              believeCount: Math.max(0, confession.believeCount + believeChange),
+              doubtCount: Math.max(0, confession.doubtCount + doubtChange),
+              userVote: newUserVote,
+            };
+          }
+          return confession;
+        });
+        return updated;
+      });
+
+      // API call
+      const requestBody = action === 'unvote' 
+        ? { userId, confessionId, action: 'unvote' }
+        : { userId, confessionId, voteType, action: 'vote' };
+
+      const response = await fetch('/api/confessions/vote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        // Revert optimistic update on error
+        setSavedConfessions(prev => prev.map(confession => {
+          if (confession.id === confessionId) {
+            return {
+              ...confession,
+              believeCount: Math.max(0, confession.believeCount - believeChange),
+              doubtCount: Math.max(0, confession.doubtCount - doubtChange),
+              userVote: currentUserVote,
+            };
+          }
+          return confession;
+        }));
+        throw new Error('Failed to vote on confession');
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw error;
+    }
+  };
+
   useEffect(() => {
     if (userId) {
       fetchSavedConfessions();
@@ -113,6 +202,7 @@ export function useSavedConfessions(userId?: string) {
     unsaveConfession,
     toggleSave,
     isConfessionSaved,
+    voteOnConfession,
     refresh: fetchSavedConfessions,
   };
 } 

@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { saveConfession, unsaveConfession, getSavedConfessions } from '@/lib/db-utils';
+import { 
+  saveConfession, 
+  unsaveConfession, 
+  getSavedConfessions,
+  getSavedConfessionsAggregated
+} from '@/lib/db-utils';
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,6 +15,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
     }
 
+    // Temporarily use the working method until aggregation is fixed
     const savedConfessions = await getSavedConfessions(userId);
     return NextResponse.json(savedConfessions);
   } catch (error) {

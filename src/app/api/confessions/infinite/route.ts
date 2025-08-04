@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { 
-  getConfessionsInfiniteOptimized
+  getConfessionsInfiniteOptimized,
+  getConfessionsAggregated
 } from '@/lib/db-utils';
 
 export const dynamic = 'force-dynamic';
@@ -15,6 +16,7 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get('search') || undefined;
     const userId = searchParams.get('userId') || undefined;
     
+    // Temporarily use the working method until aggregation is fixed
     const result = await getConfessionsInfiniteOptimized({
       cursor,
       limit,

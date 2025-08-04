@@ -91,7 +91,8 @@ export default function ConfessionsPage() {
     savedConfessions, 
     loading: savedLoading,
     toggleSave,
-    isConfessionSaved 
+    isConfessionSaved,
+    voteOnConfession: voteOnSavedConfession
   } = useSavedConfessions(user?.id);
   
   const { universities, pagination, loading: universitiesLoading, loadMore: loadMoreUniversities } = useUniversities(
@@ -249,15 +250,26 @@ export default function ConfessionsPage() {
     }
   };
   
-  const handleVote = async (confessionId: string, voteType: 'BELIEVE' | 'DOUBT') => {
+  const handleVote = useCallback(async (confessionId: string, voteType: 'BELIEVE' | 'DOUBT') => {
     if (!user?.id) return;
     
+    // Immediately call the vote function without await to make it instant
     try {
-      await voteOnConfession(confessionId, voteType);
+      if (activeTab === "saved") {
+        // Use saved confessions vote function for saved section
+        voteOnSavedConfession(confessionId, voteType).catch(error => {
+          console.error("Failed to vote on saved confession:", error);
+        });
+      } else {
+        // Use main confessions vote function for posts/hottest sections
+        voteOnConfession(confessionId, voteType).catch(error => {
+          console.error("Failed to vote on confession:", error);
+        });
+      }
     } catch (error) {
       console.error("Failed to vote:", error);
     }
-  };
+  }, [user?.id, activeTab, voteOnConfession, voteOnSavedConfession]);
   
   const handleToggleSave = async (confessionId: string) => {
     if (!user?.id) return;
@@ -417,6 +429,7 @@ export default function ConfessionsPage() {
               <div className="flex items-center justify-start flex-1 gap-3 sm:gap-4">
                 <button 
                   onClick={(e) => {
+                    e.preventDefault();
                     e.stopPropagation();
                     if (!user) {
                       toast({ title: 'Login Required', description: 'Please log in to vote.', variant: 'destructive' });
@@ -425,7 +438,7 @@ export default function ConfessionsPage() {
                     handleVote(post.id, 'BELIEVE');
                   }}
                   disabled={!user}
-                  className={`flex items-center gap-1 transition-colors ${
+                  className={`flex items-center gap-1 ${
                     post.userVote === 'BELIEVE' 
                       ? 'text-green-600 font-semibold' 
                       : 'text-gray-600 hover:text-green-600'
@@ -439,6 +452,7 @@ export default function ConfessionsPage() {
                 
                 <button 
                   onClick={(e) => {
+                    e.preventDefault();
                     e.stopPropagation();
                     if (!user) {
                       toast({ title: 'Login Required', description: 'Please log in to vote.', variant: 'destructive' });
@@ -447,7 +461,7 @@ export default function ConfessionsPage() {
                     handleVote(post.id, 'DOUBT');
                   }}
                   disabled={!user}
-                  className={`flex items-center gap-1 transition-colors ${
+                  className={`flex items-center gap-1 ${
                     post.userVote === 'DOUBT' 
                       ? 'text-red-600 font-semibold' 
                       : 'text-gray-600 hover:text-red-600'

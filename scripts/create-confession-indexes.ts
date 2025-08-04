@@ -39,6 +39,11 @@ db.confessionVote.createIndex({ "userId": 1 })
 db.confessionVote.createIndex({ "userId_confessionId": 1 }, { unique: true })
 db.confessionVote.createIndex({ "confessionId": 1, "voteType": 1 })
 
+// Additional indexes to reduce transaction conflicts
+db.confessionVote.createIndex({ "confessionId": 1, "userId": 1, "voteType": 1 })
+db.confession.createIndex({ "id": 1, "believeCount": 1 })
+db.confession.createIndex({ "id": 1, "doubtCount": 1 })
+
 db.confessionComment.createIndex({ "confessionId": 1 })
 db.confessionComment.createIndex({ "authorId": 1 })
 db.confessionComment.createIndex({ "parentId": 1 })
@@ -48,7 +53,7 @@ db.savedConfession.createIndex({ "userId": 1 })
 db.savedConfession.createIndex({ "confessionId": 1 })
 db.savedConfession.createIndex({ "userId_confessionId": 1 }, { unique: true })
 
-✅ These indexes will dramatically improve confession query performance!
+✅ These indexes will dramatically improve confession query performance and reduce transaction conflicts!
     `);
   } catch (error) {
     console.error('❌ Error creating indexes:', error);
