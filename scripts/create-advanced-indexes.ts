@@ -1,6 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 
-const prismaAdvanced = new PrismaClient();
+const prismaAdvancedIndexes = new PrismaClient();
 
 async function createAdvancedIndexes() {
   console.log('🚀 Creating advanced MongoDB indexes for ultra-fast performance...');
@@ -185,6 +185,32 @@ async function createAdvancedIndexes() {
           name: 'confessionComment_author',
           background: true
         }
+      },
+      // Aggregation pipeline optimization index
+      {
+        collection: 'confessionComment',
+        index: {
+          confessionId: 1,
+          parentId: 1,
+          createdAt: -1,
+          authorId: 1
+        },
+        options: {
+          name: 'confessionComment_aggregation',
+          background: true
+        }
+      },
+      // Threading optimization index
+      {
+        collection: 'confessionComment',
+        index: {
+          parentId: 1,
+          createdAt: -1
+        },
+        options: {
+          name: 'confessionComment_threading',
+          background: true
+        }
       }
     ];
 
@@ -295,9 +321,9 @@ async function createAdvancedIndexes() {
 
   } catch (error) {
     console.error('❌ Error creating advanced indexes:', error);
-  } finally {
-    await prismaAdvanced.$disconnect();
-  }
+            } finally {
+            await prismaAdvancedIndexes.$disconnect();
+          }
 }
 
 if (require.main === module) {

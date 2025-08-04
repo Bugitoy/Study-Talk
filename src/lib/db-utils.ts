@@ -2795,3 +2795,87 @@ export async function getSavedConfessionsAggregated(userId: string) {
     return getSavedConfessions(userId);
   }
 }
+
+// �� ULTRA-FAST MongoDB Aggregation Pipeline for Comments
+export async function getConfessionCommentsAggregated(confessionId: string) {
+  try {
+    const pipeline = [
+      {
+        $match: { confessionId: confessionId }
+      },
+      {
+        $lookup: {
+          from: 'User', // Fixed: uppercase
+          localField: 'authorId',
+          foreignField: '_id',
+          as: 'author'
+        }
+      },
+      {
+        $addFields: {
+          author: {
+            $arrayElemAt: ['$author', 0]
+          }
+        }
+      },
+      {
+        $sort: {
+          parentId: 1, // Top-level comments first (null parentId)
+          createdAt: -1 // Then by creation time
+        }
+      },
+      {
+        $project: {
+          id: '$_id',
+          content: 1,
+          authorId: 1,
+          confessionId: 1,
+          parentId: 1,
+          isAnonymous: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          author: {
+            id: '$author._id',
+            name: '$author.name',
+            image: '$author.image'
+          }
+        }
+      }
+    ];
+
+    const result = await prisma.$runCommandRaw({
+      aggregate: 'ConfessionComment',
+      pipeline,
+      cursor: { batchSize: 1000 }
+    });
+
+    const allComments = (result as any).cursor?.firstBatch || [];
+
+    // Separate top-level comments and replies
+    const topLevelComments = allComments.filter((comment: any) => !comment.parentId);
+    const replies = allComments.filter((comment: any) => comment.parentId);
+
+    // Create a map of replies by parent ID for O(1) lookup
+    const repliesMap = new Map();
+    replies.forEach((reply: any) => {
+      if (!repliesMap.has(reply.parentId)) {
+        repliesMap.set(reply.parentId, []);
+      }
+      repliesMap.get(reply.parentId).push(reply);
+    });
+
+    // Attach replies to their parent comments
+    const commentsWithReplies = topLevelComments.map((comment: any) => ({
+      ...comment,
+      replies: repliesMap.get(comment.id) || [],
+    }));
+
+    return commentsWithReplies;
+
+  } catch (error) {
+    console.error('Error in comments aggregation pipeline:', error);
+    // Fallback to regular query if aggregation fails
+    console.log('Falling back to regular comments query...');
+    return getConfessionCommentsOptimized(confessionId);
+  }
+}

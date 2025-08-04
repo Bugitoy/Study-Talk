@@ -15,9 +15,9 @@ export async function GET(
     
     const response = NextResponse.json(comments);
     
-    // Add caching headers for better performance
-    response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600'); // 5 minutes
-    response.headers.set('CDN-Cache-Control', 'public, s-maxage=300');
+    // Add aggressive caching headers for better performance
+    response.headers.set('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=1200'); // 10 minutes
+    response.headers.set('CDN-Cache-Control', 'public, s-maxage=600');
     
     return response;
   } catch (error) {

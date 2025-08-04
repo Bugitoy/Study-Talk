@@ -10,7 +10,7 @@ type UniversityData = {
 };
 
 const universities: UniversityData[] = [
-
+  
 ];
 
 async function seedUniversities() {

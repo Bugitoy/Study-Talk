@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface Comment {
   id: string;
@@ -31,114 +32,164 @@ interface CommentSectionProps {
 
 export function CommentSection({ confessionId, isVisible, onClose, updateCommentCount, user }: CommentSectionProps) {
   const { user: kindeUser } = useKindeBrowserClient();
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState('');
-  const [submitting, setSubmitting] = useState(false);
 
-  const fetchComments = async () => {
-    if (!isVisible) return;
-    
-    setLoading(true);
-    try {
+  // React Query for comments with aggressive caching
+  const { data: comments = [], isLoading: loading, refetch } = useQuery({
+    queryKey: ['comments', confessionId],
+    queryFn: async () => {
       const response = await fetch(`/api/confessions/${confessionId}/comments`);
-      if (response.ok) {
-        const data = await response.json();
-        setComments(data);
-      }
-    } catch (error) {
-      console.error('Error fetching comments:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      if (!response.ok) throw new Error('Failed to fetch comments');
+      return response.json();
+    },
+    enabled: isVisible, // Only fetch when visible
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
 
-  const handleSubmitComment = async () => {
+  // Optimistic comment mutation
+  const commentMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const response = await fetch(`/api/confessions/${confessionId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: content.trim(),
+          authorId: user?.id,
+          isAnonymous: false,
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to submit comment');
+      return response.json();
+    },
+    onMutate: async (content) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['comments', confessionId] });
+      
+      // Snapshot previous value
+      const previousComments = queryClient.getQueryData(['comments', confessionId]);
+      
+      // Optimistically update
+      const optimisticComment = {
+        id: `temp-${Date.now()}`,
+        content: content.trim(),
+        authorId: user?.id,
+        isAnonymous: false,
+        createdAt: new Date().toISOString(),
+        author: {
+          id: user?.id,
+          name: user?.name,
+          image: user?.image,
+        },
+        replies: [],
+      };
+      
+      queryClient.setQueryData(['comments', confessionId], (old: any) => [optimisticComment, ...(old || [])]);
+      
+      return { previousComments };
+    },
+    onError: (err, content, context) => {
+      // Rollback on error
+      if (context?.previousComments) {
+        queryClient.setQueryData(['comments', confessionId], context.previousComments);
+      }
+    },
+    onSettled: () => {
+      // Always refetch after error or success
+      queryClient.invalidateQueries({ queryKey: ['comments', confessionId] });
+    },
+    onSuccess: () => {
+      setNewComment('');
+      updateCommentCount(confessionId, comments.length + 1);
+    },
+  });
+
+  // Optimistic reply mutation
+  const replyMutation = useMutation({
+    mutationFn: async ({ content, parentId }: { content: string; parentId: string }) => {
+      const response = await fetch(`/api/confessions/${confessionId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: content.trim(),
+          authorId: user?.id,
+          isAnonymous: false,
+          parentId,
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to submit reply');
+      return response.json();
+    },
+    onMutate: async ({ content, parentId }) => {
+      await queryClient.cancelQueries({ queryKey: ['comments', confessionId] });
+      
+      const previousComments = queryClient.getQueryData(['comments', confessionId]);
+      
+      const optimisticReply = {
+        id: `temp-reply-${Date.now()}`,
+        content: content.trim(),
+        authorId: user?.id,
+        isAnonymous: false,
+        parentId,
+        createdAt: new Date().toISOString(),
+        author: {
+          id: user?.id,
+          name: user?.name,
+          image: user?.image,
+        },
+      };
+      
+      queryClient.setQueryData(['comments', confessionId], (old: any) => 
+        old?.map((comment: any) => 
+          comment.id === parentId 
+            ? { ...comment, replies: [...(comment.replies || []), optimisticReply] }
+            : comment
+        )
+      );
+      
+      return { previousComments };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousComments) {
+        queryClient.setQueryData(['comments', confessionId], context.previousComments);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['comments', confessionId] });
+    },
+    onSuccess: () => {
+      setReplyContent('');
+      setReplyingTo(null);
+      const totalComments = comments.reduce((acc: number, c: any) => acc + 1 + (c.replies?.length || 0), 0) + 1;
+      updateCommentCount(confessionId, totalComments);
+    },
+  });
+
+  const handleSubmitComment = () => {
     if (!user?.id || !newComment.trim()) return;
 
-    // Client-side validation
     if (newComment.trim().length > 1000) {
       alert('Comment too long (max 1000 characters)');
       return;
     }
 
-    setSubmitting(true);
-    try {
-      const response = await fetch(`/api/confessions/${confessionId}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: newComment.trim(),
-          authorId: user.id,
-          isAnonymous: false,
-        }),
-      });
-
-      if (response.ok) {
-        const newCommentData = await response.json();
-        setComments(prev => [newCommentData, ...prev]);
-        setNewComment('');
-        updateCommentCount(confessionId, comments.length + 1);
-      } else {
-        const errorData = await response.json();
-        alert(errorData.error || 'Failed to submit comment');
-      }
-    } catch (error) {
-      console.error('Error submitting comment:', error);
-      alert('Failed to submit comment. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
+    commentMutation.mutate(newComment);
   };
 
-  const handleSubmitReply = async (parentId: string) => {
+  const handleSubmitReply = (parentId: string) => {
     if (!user?.id || !replyContent.trim()) return;
 
-    // Client-side validation
     if (replyContent.trim().length > 1000) {
       alert('Reply too long (max 1000 characters)');
       return;
     }
 
-    setSubmitting(true);
-    try {
-      const response = await fetch(`/api/confessions/${confessionId}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: replyContent.trim(),
-          authorId: user.id,
-          isAnonymous: false,
-          parentId,
-        }),
-      });
-
-      if (response.ok) {
-        const newReply = await response.json();
-        setComments(prev =>
-          prev.map(comment =>
-            comment.id === parentId
-              ? { ...comment, replies: [...(comment.replies || []), newReply] }
-              : comment
-          )
-        );
-        setReplyContent('');
-        setReplyingTo(null);
-        // Note: A reply also increases the total comment count
-        const totalComments = comments.reduce((acc, c) => acc + 1 + (c.replies?.length || 0), 0) + 1;
-        updateCommentCount(confessionId, totalComments);
-      } else {
-        const errorData = await response.json();
-        alert(errorData.error || 'Failed to submit reply');
-      }
-    } catch (error) {
-      console.error('Error submitting reply:', error);
-      alert('Failed to submit reply. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
+    replyMutation.mutate({ content: replyContent, parentId });
   };
 
   const formatTimeAgo = (dateString: string) => {
@@ -154,8 +205,8 @@ export function CommentSection({ confessionId, isVisible, onClose, updateComment
   };
 
   useEffect(() => {
-    fetchComments();
-  }, [isVisible, confessionId]);
+    refetch();
+  }, [isVisible, confessionId, refetch]);
 
   if (!isVisible) return null;
 
@@ -185,12 +236,12 @@ export function CommentSection({ confessionId, isVisible, onClose, updateComment
                 placeholder="Write a comment..."
                 className="flex-1 min-h-[36px] max-h-[120px] resize-none border-gray-300 focus:border-gray-400 text-black text-[10px] sm:text-sm"
                 rows={1}
-                disabled={submitting}
+                                 disabled={commentMutation.isPending}
                 maxLength={1000}
               />
               <Button
                 onClick={handleSubmitComment}
-                disabled={submitting || !newComment.trim()}
+                disabled={commentMutation.isPending || !newComment.trim()}
                 className="ml-2 px-3 py-2 bg-blue-400 text-white rounded-lg hover:bg-blue-300 transition-colors"
               >
                 <Send className="w-4 h-4" />
@@ -212,7 +263,7 @@ export function CommentSection({ confessionId, isVisible, onClose, updateComment
           </div>
         ) : (
           <div className="space-y-4">
-            {comments.map((comment) => (
+            {comments.map((comment: Comment) => (
               <div key={comment.id} className="bg-white rounded-lg p-4 border border-gray-200">
                 {/* Main Comment */}
                 <div className="flex items-start gap-3">
@@ -258,12 +309,12 @@ export function CommentSection({ confessionId, isVisible, onClose, updateComment
                       placeholder="Write a reply..."
                       className="flex-1 min-h-[32px] max-h-[80px] resize-none border-gray-300 focus:border-gray-400 text-black text-[10px] sm:text-sm"
                       rows={1}
-                      disabled={submitting}
+                                             disabled={replyMutation.isPending}
                       maxLength={1000}
                     />
                     <Button
                       onClick={() => handleSubmitReply(comment.id)}
-                      disabled={submitting || !replyContent.trim()}
+                      disabled={replyMutation.isPending || !replyContent.trim()}
                       className="px-2 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >
                       <Reply className="w-4 h-4" />
@@ -274,7 +325,7 @@ export function CommentSection({ confessionId, isVisible, onClose, updateComment
                 {/* Replies */}
                 {comment.replies && comment.replies.length > 0 && (
                   <div className="mt-4 ml-11 space-y-3">
-                    {comment.replies.map((reply) => (
+                    {comment.replies.map((reply: Comment) => (
                       <div key={reply.id} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                         <div className="flex items-start gap-3">
                           {reply.author?.image && !reply.isAnonymous ? (
