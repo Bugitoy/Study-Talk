@@ -13,6 +13,7 @@ import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { useInfiniteConfessions, Confession } from "@/hooks/useInfiniteConfessions";
 import { useSavedConfessions } from "@/hooks/useSavedConfessions";
 import { useUniversities } from "@/hooks/useUniversities";
+import { useRegions } from "@/hooks/useRegions";
 import { useRouter } from "next/navigation";
 import { InfiniteScrollContainer } from "@/components/InfiniteScrollContainer";
 import { ConfessionListSkeleton } from "@/components/ConfessionSkeleton";
@@ -35,6 +36,7 @@ export default function ConfessionsPage() {
   
   const [activeTab, setActiveTab] = useState<string>("posts");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedRegion, setSelectedRegion] = useState<string>("all");
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newBody, setNewBody] = useState("");
@@ -92,7 +94,12 @@ export default function ConfessionsPage() {
     isConfessionSaved 
   } = useSavedConfessions(user?.id);
   
-  const { universities, loading: universitiesLoading } = useUniversities();
+  const { universities, pagination, loading: universitiesLoading, loadMore: loadMoreUniversities } = useUniversities(
+    activeTab === "universities" ? selectedRegion : undefined,
+    undefined, // country - not used for now
+    activeTab === "universities" ? searchQuery : undefined
+  );
+  const { regions, loading: regionsLoading } = useRegions();
 
   // Fetch user's university information
   useEffect(() => {
@@ -575,17 +582,25 @@ export default function ConfessionsPage() {
         );
         
       case "universities":
-        if (universitiesLoading) {
+        if (universitiesLoading || regionsLoading) {
           return <div className="mt-6 text-center text-gray-600">Loading universities...</div>;
         }
         
-        const filteredUniversities = universities.filter(uni =>
-          uni.name.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-        
         return (
-          <div className="mt-4 sm:mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {filteredUniversities.map((uni) => (
+          <div className="mt-4 sm:mt-6">
+            <div className="mb-4 text-sm text-gray-600">
+              {universities.length === 0 
+                ? "No universities found" 
+                : `Found ${pagination?.total || universities.length} universities${selectedRegion !== "all" ? ` in ${selectedRegion}` : ""}`
+              }
+              {pagination && (
+                <span className="ml-2 text-gray-500">
+                  (Showing {universities.length} of {pagination.total})
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {universities.map((uni) => (
               <div
                 key={uni.id}
                 className="rounded-[12px] border border-gray-300 bg-white p-4 sm:p-6 lg:p-8 shadow-sm hover:shadow-md h-48 sm:h-64 lg:h-72 flex flex-col cursor-pointer"
@@ -603,7 +618,21 @@ export default function ConfessionsPage() {
                     <div>{formatNumber(uni.totalVotes)} votes</div>
                   </div>
                 </div>
-            ))}
+              ))}
+            </div>
+            
+            {/* Load More Button */}
+            {pagination?.hasMore && (
+              <div className="mt-6 text-center">
+                <Button
+                  onClick={loadMoreUniversities}
+                  disabled={universitiesLoading}
+                  className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300"
+                >
+                  {universitiesLoading ? "Loading..." : "Load More Universities"}
+                </Button>
+              </div>
+            )}
           </div>
         );
         
@@ -640,7 +669,14 @@ export default function ConfessionsPage() {
           {tabs.map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => {
+                setActiveTab(tab.key);
+                // Reset search and region filter when switching away from universities tab
+                if (tab.key !== "universities") {
+                  setSearchQuery("");
+                  setSelectedRegion("all");
+                }
+              }}
               className={clsx(
                 "py-2 text-sm sm:text-base lg:text-lg font-medium whitespace-nowrap transition-colors",
                 activeTab === tab.key ? "border-b-4 border-black text-gray-900" : "text-gray-500 hover:text-gray-800"
@@ -650,20 +686,44 @@ export default function ConfessionsPage() {
             </button>
           ))}
         </div>
-        {/* Search Bar + Make Post Button */}
+        {/* Search Bar + Country Filter + Make Post Button */}
         <div className="flex flex-col sm:flex-row items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-4">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={
-              activeTab === "universities"
-                ? "Search for a university"
-                : "Search for a post"
-            }
-            className="w-full sm:flex-1 min-w-[200px] px-3 sm:px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none text-base sm:text-lg shadow-sm transition-colors"
-          />
-                      <Button
+          <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 w-full sm:flex-1">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={
+                activeTab === "universities"
+                  ? "Search for a university"
+                  : "Search for a post"
+              }
+              className="w-full sm:flex-1 min-w-[200px] px-3 sm:px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none text-base sm:text-lg shadow-sm transition-colors"
+            />
+            
+            {activeTab === "universities" && (
+              <select
+                value={selectedRegion}
+                onChange={(e) => {
+                  setSelectedRegion(e.target.value);
+                  setSearchQuery(""); // Reset search when changing region
+                }}
+                className="w-full sm:w-auto px-3 sm:px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none text-base sm:text-lg shadow-sm transition-colors bg-white"
+                disabled={regionsLoading}
+              >
+                <option value="all">
+                  {regionsLoading ? "Loading regions..." : "All Regions"}
+                </option>
+                {!regionsLoading && regions.map((region) => (
+                  <option key={region.region} value={region.region}>
+                    {region.region} ({region._count.region})
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          
+          <Button
               className={`w-full sm:w-auto flex items-center justify-center gap-2 rounded-[12px] px-3 sm:px-4 py-2 font-semibold transition-colors text-sm sm:text-base ${
                 !user 
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 

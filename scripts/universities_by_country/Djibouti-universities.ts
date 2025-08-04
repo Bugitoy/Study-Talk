@@ -5,5 +5,5 @@ const Djibouti_universities = [
 
     // Djibouti
 
-    { name: "Université de Djibouti", domain: "univ.edu.dj", isVerified: true },
+    { name: "Université de Djibouti", domain: "univ.edu.dj", region: "Africa", country: "Djibouti", isVerified: true },
 ]

@@ -5,5 +5,5 @@ const San_Marino_universities = [
 
    // San Marino
 
-   { name: "Universita' degli Studi di San Marino", domain: "unirsm.sm", isVerified: true },
+   { name: "Universita' degli Studi di San Marino", domain: "unirsm.sm", region: "Europe", country: "San Marino", isVerified: true },
 ]

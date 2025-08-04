@@ -5,5 +5,5 @@ const Luxembourg_universities = [
 
    // Luxembourg
 
-   { name: "Université du Luxembourg", domain: "uni.lu", isVerified: true },
+   { name: "Université du Luxembourg", domain: "uni.lu", region: "Europe", country: "Luxembourg", isVerified: true },
 ]

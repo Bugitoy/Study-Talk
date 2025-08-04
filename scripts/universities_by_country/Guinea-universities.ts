@@ -5,5 +5,5 @@ const Guinea_universities = [
 
      // Guinea
   
-    { name: "Université Kofi Annan de Guinée", domain: "ukaguinee.org", isVerified: true },
+    { name: "Université Kofi Annan de Guinée", domain: "ukaguinee.org", region: "Africa", country: "Guinea", isVerified: true },
 ]

@@ -5,5 +5,5 @@ const Andorra_universities = [
 
      // Andorra
 
-     { name: "Universitat d'Andorra", domain: "uda.ad", isVerified: true },
+     { name: "Universitat d'Andorra", domain: "uda.ad", region: "Europe", country: "Andorra", isVerified: true },
 ]

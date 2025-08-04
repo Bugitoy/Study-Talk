@@ -5,6 +5,6 @@ const Gambia_universities = [
 
     // Gambia
 
-    { name: "University of the Gambia", domain: "ug.edu.gm", isVerified: true },
-    { name: "American International University West Africa", domain: "aiu.edu.gm", isVerified: true }, 
+    { name: "University of the Gambia", domain: "ug.edu.gm", region: "Africa", country: "Gambia", isVerified: true },
+    { name: "American International University West Africa", domain: "aiu.edu.gm", region: "Africa", country: "Gambia", isVerified: true }, 
 ]

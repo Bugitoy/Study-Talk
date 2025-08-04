@@ -5,11 +5,11 @@ const Iceland_universities = [
 
    // Iceland
 
-   { name: "Háskóli Íslands", domain: "hi.is", isVerified: true },
-   { name: "Háskólinn í Reykjavík", domain: "ru.is", isVerified: true },
-   { name: "Háskólinn á Akureyri", domain: "unak.is", isVerified: true },
-   { name: "Listaháskóli Íslands", domain: "lhi.is", isVerified: true },
-   { name: "Háskólinn á Bifröst", domain: "bifrost.is", isVerified: true },
-   { name: "Agricultural University of Iceland", domain: "lbhi.is", isVerified: true },
-   { name: "Háskólinn á Hólum", domain: "holar.is", isVerified: true },
+   { name: "Háskóli Íslands", domain: "hi.is", region: "Europe", country: "Iceland", isVerified: true },
+   { name: "Háskólinn í Reykjavík", domain: "ru.is", region: "Europe", country: "Iceland", isVerified: true },
+   { name: "Háskólinn á Akureyri", domain: "unak.is", region: "Europe", country: "Iceland", isVerified: true },
+   { name: "Listaháskóli Íslands", domain: "lhi.is", region: "Europe", country: "Iceland", isVerified: true },
+   { name: "Háskólinn á Bifröst", domain: "bifrost.is", region: "Europe", country: "Iceland", isVerified: true },
+   { name: "Agricultural University of Iceland", domain: "lbhi.is", region: "Europe", country: "Iceland", isVerified: true },
+   { name: "Háskólinn á Hólum", domain: "holar.is", region: "Europe", country: "Iceland", isVerified: true },
 ]

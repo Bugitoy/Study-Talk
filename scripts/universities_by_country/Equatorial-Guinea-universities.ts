@@ -5,5 +5,5 @@ const Equatorial_Guinea_universities = [
 
     // Equatorial Guinea
 
-    { name: "Universidad Nacional de Guinea Ecuatorial", domain: "ungecampus.com", isVerified: true },
+    { name: "Universidad Nacional de Guinea Ecuatorial", domain: "ungecampus.com", region: "Africa", country: "Equatorial Guinea", isVerified: true },
 ]

@@ -1,6 +1,6 @@
 const { PrismaClient: PrismaClientType } = require('@prisma/client');
-const fsUtil = require('fs');
-const pathUtil = require('path');
+const fsSeed = require('fs');
+const pathSeed = require('path');
 
 const prismaClient = new PrismaClientType();
 
@@ -16,7 +16,7 @@ type UniversityData = {
 // Function to read and parse university files
 function readUniversityFile(filePath: string): UniversityData[] {
   try {
-    const content = fsUtil.readFileSync(filePath, 'utf8');
+    const content = fsSeed.readFileSync(filePath, 'utf8');
     console.log(`📖 Reading file: ${filePath}`);
     console.log(`📄 File size: ${content.length} characters`);
     
@@ -62,11 +62,12 @@ async function seedUniversitiesFromFiles() {
     console.log('🗑️  Clearing existing universities...');
     await prismaClient.university.deleteMany({});
     
-    // Define the files to process
-    const universityFiles = [
-      { path: 'scripts/universities_by_country/US-universities.ts', region: 'North America', country: 'United States' },
-      { path: 'scripts/universities_by_country/UK-universities.ts', region: 'Europe', country: 'United Kingdom' },
-    ];
+    // Get all university files from the directory
+    const directoryPath = 'scripts/universities_by_country';
+    const files = fsSeed.readdirSync(directoryPath);
+    const universityFiles = files
+      .filter((file: string) => file.endsWith('-universities.ts'))
+      .map((file: string) => ({ path: pathSeed.join(directoryPath, file) }));
     
     let totalCount = 0;
     

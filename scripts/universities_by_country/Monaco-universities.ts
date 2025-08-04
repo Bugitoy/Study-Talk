@@ -5,5 +5,5 @@ const Monaco_universities = [
 
    // Monaco
    
-   { name: "International University of Monaco", domain: "monaco.edu", isVerified: true },
+   { name: "International University of Monaco", domain: "monaco.edu", region: "Europe", country: "Monaco", isVerified: true },
 ]

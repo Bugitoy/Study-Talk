@@ -5,5 +5,5 @@ const Maldives_universities = [
 
     // Maldives
 
-    { name: "The Maldives National University", domain: "mnu.edu.mv", isVerified: true },
+    { name: "The Maldives National University", domain: "mnu.edu.mv", region: "Asia", country: "Maldives", isVerified: true },
 ]
