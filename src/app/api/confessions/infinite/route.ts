@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { 
-  getConfessionsInfinite
+  getConfessionsInfiniteOptimized
 } from '@/lib/db-utils';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,10 +13,9 @@ export async function GET(req: NextRequest) {
     const universityId = searchParams.get('universityId') || undefined;
     const sortBy = (searchParams.get('sortBy') as 'recent' | 'hot') || 'recent';
     const search = searchParams.get('search') || undefined;
-
     const userId = searchParams.get('userId') || undefined;
     
-    const result = await getConfessionsInfinite({
+    const result = await getConfessionsInfiniteOptimized({
       cursor,
       limit,
       universityId,
@@ -23,7 +24,13 @@ export async function GET(req: NextRequest) {
       userId,
     });
 
-    return NextResponse.json(result);
+    const response = NextResponse.json(result);
+    
+    // Add caching headers for better performance
+    response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600'); // 5 minutes
+    response.headers.set('CDN-Cache-Control', 'public, s-maxage=300');
+    
+    return response;
   } catch (error) {
     console.error('Error fetching confessions (infinite):', error);
     return NextResponse.json({ error: 'Failed to fetch confessions' }, { status: 500 });

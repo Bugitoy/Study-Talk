@@ -1052,40 +1052,87 @@ export async function getConfessionsInfinite(options: {
 
 export async function voteConfession(confessionId: string, userId: string, voteType: 'BELIEVE' | 'DOUBT') {
   try {
-    // Check if user already voted
-    const existingVote = await prisma.confessionVote.findUnique({
-      where: {
-        userId_confessionId: {
-          userId,
-          confessionId,
-        },
-      },
-    });
-
-    let vote;
-    if (existingVote) {
-      // Update existing vote
-      vote = await prisma.confessionVote.update({
+    // Use a transaction to ensure atomicity
+    const result = await prisma.$transaction(async (tx) => {
+      // Check if user already voted
+      const existingVote = await tx.confessionVote.findUnique({
         where: {
           userId_confessionId: {
             userId,
             confessionId,
           },
         },
-        data: {
-          voteType,
-        },
       });
-    } else {
-      // Create new vote
-      vote = await prisma.confessionVote.create({
-        data: {
-          userId,
-          confessionId,
-          voteType,
-        },
-      });
-    }
+
+      let vote;
+      if (existingVote) {
+        // Update existing vote - need to handle counter changes
+        const oldVoteType = existingVote.voteType;
+        
+        // Decrement the old vote type counter
+        if (oldVoteType === 'BELIEVE') {
+          await tx.confession.update({
+            where: { id: confessionId },
+            data: { believeCount: { decrement: 1 } }
+          });
+        } else if (oldVoteType === 'DOUBT') {
+          await tx.confession.update({
+            where: { id: confessionId },
+            data: { doubtCount: { decrement: 1 } }
+          });
+        }
+
+        // Update the vote
+        vote = await tx.confessionVote.update({
+          where: {
+            userId_confessionId: {
+              userId,
+              confessionId,
+            },
+          },
+          data: {
+            voteType,
+          },
+        });
+
+        // Increment the new vote type counter
+        if (voteType === 'BELIEVE') {
+          await tx.confession.update({
+            where: { id: confessionId },
+            data: { believeCount: { increment: 1 } }
+          });
+        } else if (voteType === 'DOUBT') {
+          await tx.confession.update({
+            where: { id: confessionId },
+            data: { doubtCount: { increment: 1 } }
+          });
+        }
+      } else {
+        // Create new vote
+        vote = await tx.confessionVote.create({
+          data: {
+            userId,
+            confessionId,
+            voteType,
+          },
+        });
+
+        // Increment the vote type counter
+        if (voteType === 'BELIEVE') {
+          await tx.confession.update({
+            where: { id: confessionId },
+            data: { believeCount: { increment: 1 } }
+          });
+        } else if (voteType === 'DOUBT') {
+          await tx.confession.update({
+            where: { id: confessionId },
+            data: { doubtCount: { increment: 1 } }
+          });
+        }
+      }
+
+      return vote;
+    });
 
     // Monitor user activity and update reputation
     await monitorUserActivity(userId, 'vote');
@@ -1093,7 +1140,7 @@ export async function voteConfession(confessionId: string, userId: string, voteT
     // Update hot score
     await updateConfessionHotScore(confessionId);
 
-    return vote;
+    return result;
   } catch (error) {
     console.error('Error voting on confession:', error);
     throw error;
@@ -1180,24 +1227,53 @@ export async function createConfessionComment(data: {
   isAnonymous?: boolean;
 }) {
   try {
-    const comment = await prisma.confessionComment.create({
-      data: {
-        content: data.content,
-        authorId: data.authorId,
-        confessionId: data.confessionId,
-        parentId: data.parentId,
-        isAnonymous: data.isAnonymous ?? true,
-      },
-          include: {
-            author: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-            university: true,
+    // Use a transaction to ensure atomicity
+    const comment = await prisma.$transaction(async (tx) => {
+      // Create the comment
+      const newComment = await tx.confessionComment.create({
+        data: {
+          content: data.content,
+          authorId: data.authorId,
+          confessionId: data.confessionId,
+          parentId: data.parentId,
+          isAnonymous: data.isAnonymous ?? true,
+        },
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+              university: true,
+            },
           },
         },
-      },
+      });
+
+      // Atomically increment the confession's comment/reply counters
+      if (data.parentId) {
+        // This is a reply - increment reply count
+        await tx.confession.update({
+          where: { id: data.confessionId },
+          data: {
+            replyCount: {
+              increment: 1
+            }
+          }
+        });
+      } else {
+        // This is a top-level comment - increment comment count
+        await tx.confession.update({
+          where: { id: data.confessionId },
+          data: {
+            commentCount: {
+              increment: 1
+            }
+          }
+        });
+      }
+
+      return newComment;
     });
 
     // Monitor user activity and update reputation
@@ -2128,5 +2204,185 @@ export async function getDailyConfessionCount(userId: string, date?: Date) {
   } catch (error) {
     console.error('Error getting daily confession count:', error);
     return 0;
+  }
+}
+
+export async function getConfessionCommentsOptimized(confessionId: string) {
+  try {
+    // Single query to get all comments with their replies in one go
+    const allComments = await prisma.confessionComment.findMany({
+      where: {
+        confessionId,
+      },
+      include: {
+        author: {
+          select: { id: true, name: true, image: true },
+        },
+      },
+      orderBy: [
+        { parentId: 'asc' }, // Top-level comments first (parentId is null)
+        { createdAt: 'desc' } // Then by creation time
+      ],
+    });
+
+    // Separate top-level comments and replies
+    const topLevelComments = allComments.filter(comment => !comment.parentId);
+    const replies = allComments.filter(comment => comment.parentId);
+
+    // Create a map of replies by parent ID for O(1) lookup
+    const repliesMap = new Map();
+    replies.forEach(reply => {
+      if (!repliesMap.has(reply.parentId)) {
+        repliesMap.set(reply.parentId, []);
+      }
+      repliesMap.get(reply.parentId).push(reply);
+    });
+
+    // Attach replies to their parent comments
+    const commentsWithReplies = topLevelComments.map(comment => ({
+      ...comment,
+      replies: repliesMap.get(comment.id) || [],
+    }));
+
+    return commentsWithReplies;
+  } catch (error) {
+    console.error('Error fetching confession comments:', error);
+    throw error;
+  }
+}
+
+export async function getConfessionsInfiniteOptimized(options: {
+  cursor?: string;
+  limit?: number;
+  universityId?: string;
+  sortBy?: 'recent' | 'hot';
+  search?: string;
+  userId?: string;
+}) {
+  try {
+    const { cursor, limit = 20, universityId, sortBy = 'recent', search, userId } = options;
+
+    const where: any = {
+      isHidden: false,
+    };
+
+    if (universityId) {
+      where.universityId = universityId;
+    }
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { content: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    // Simplified cursor logic for better performance
+    if (cursor) {
+      if (sortBy === 'hot') {
+        const [hotScore, id] = cursor.split('_');
+        where.AND = [
+          { OR: [
+            { hotScore: { lt: parseFloat(hotScore) } },
+            { hotScore: parseFloat(hotScore), id: { lt: id } }
+          ]}
+        ];
+      } else {
+        const [createdAt, id] = cursor.split('_');
+        where.AND = [
+          { OR: [
+            { createdAt: { lt: new Date(createdAt) } },
+            { createdAt: new Date(createdAt), id: { lt: id } }
+          ]}
+        ];
+      }
+    }
+
+    const orderBy = sortBy === 'hot' 
+      ? [{ hotScore: 'desc' as const }, { id: 'desc' as const }]
+      : [{ createdAt: 'desc' as const }, { id: 'desc' as const }];
+
+    // Lightning-fast query with aggregated fields
+    const confessions = await prisma.confession.findMany({
+      where,
+      orderBy,
+      take: limit + 1,
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        authorId: true,
+        isAnonymous: true,
+        hotScore: true,
+        commentCount: true,
+        replyCount: true,
+        believeCount: true,
+        doubtCount: true,
+        savedCount: true,
+        createdAt: true,
+        updatedAt: true,
+        author: {
+          select: { 
+            id: true, 
+            name: true, 
+            image: true, 
+            university: true 
+          },
+        },
+        university: {
+          select: { 
+            id: true, 
+            name: true 
+          },
+        },
+        // Only fetch user's vote if userId is provided
+        ...(userId && {
+          votes: {
+            where: { userId },
+            select: { voteType: true },
+            take: 1,
+          },
+        }),
+      },
+    });
+
+    // Check if there are more items
+    const hasMore = confessions.length > limit;
+    const items = hasMore ? confessions.slice(0, limit) : confessions;
+
+    // Generate next cursor
+    let nextCursor: string | null = null;
+    if (hasMore && items.length > 0) {
+      const lastItem = items[items.length - 1];
+      if (sortBy === 'hot') {
+        nextCursor = `${lastItem.hotScore}_${lastItem.id}`;
+      } else {
+        nextCursor = `${lastItem.createdAt.toISOString()}_${lastItem.id}`;
+      }
+    }
+
+    // Process confessions with aggregated data
+    const processedConfessions = items.map(confession => {
+      const userVote = confession.votes?.[0]?.voteType || null;
+      
+      return {
+        ...confession,
+        believeCount: confession.believeCount,
+        doubtCount: confession.doubtCount,
+        commentCount: confession.commentCount,
+        savedCount: confession.savedCount,
+        userVote,
+        votes: undefined, // Remove raw votes from response
+      };
+    });
+
+    return {
+      confessions: processedConfessions,
+      nextCursor,
+      hasMore,
+    };
+  } catch (error) {
+    console.error('Error getting confessions (optimized):', error);
+    throw error;
   }
 }

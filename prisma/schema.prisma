@@ -292,18 +292,16 @@ model Confession {
   authorId    String
   universityId String? @db.ObjectId
   isAnonymous Boolean @default(true)
-  
-  // Engagement metrics
-  hotScore    Float @default(0) // calculated hotness score
-  
-  // Content moderation
-  isReported  Boolean @default(false)
   isHidden    Boolean @default(false)
-  moderatedAt DateTime?
+  hotScore    Float @default(0)
+  commentCount Int @default(0) // Counter for performance optimization
+  replyCount Int @default(0)   // Counter for reply performance optimization
+  believeCount Int @default(0) // Counter for BELIEVE votes
+  doubtCount Int @default(0)   // Counter for DOUBT votes
+  savedCount Int @default(0)   // Counter for saved confessions
   
   author      User @relation(fields: [authorId], references: [id])
   university  University? @relation(fields: [universityId], references: [id])
-  
   votes       ConfessionVote[]
   comments    ConfessionComment[]
   savedBy     SavedConfession[]
@@ -313,8 +311,14 @@ model Confession {
   
   @@index([authorId])
   @@index([universityId])
+  @@index([isHidden])
   @@index([hotScore])
   @@index([createdAt])
+  @@index([commentCount])
+  @@index([replyCount])
+  @@index([believeCount])
+  @@index([doubtCount])
+  @@index([savedCount])
 }
 
 enum VoteType {

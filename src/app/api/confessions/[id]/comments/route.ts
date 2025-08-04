@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getConfessionComments, createConfessionComment } from '@/lib/db-utils';
+import { getConfessionCommentsOptimized, createConfessionComment } from '@/lib/db-utils';
 import { createRateLimit } from '@/lib/rate-limit';
 import { sanitizeInput } from '@/lib/security-utils';
 
@@ -11,8 +11,15 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const comments = await getConfessionComments(id);
-    return NextResponse.json(comments);
+    const comments = await getConfessionCommentsOptimized(id);
+    
+    const response = NextResponse.json(comments);
+    
+    // Add caching headers for better performance
+    response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600'); // 5 minutes
+    response.headers.set('CDN-Cache-Control', 'public, s-maxage=300');
+    
+    return response;
   } catch (error) {
     console.error('Error fetching comments:', error);
     return NextResponse.json({ error: 'Failed to fetch comments' }, { status: 500 });

@@ -1,5 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-import { calculateUserReputation } from '../src/lib/db-utils';
+const { PrismaClient } = require('@prisma/client');
+const { calculateUserReputation } = require('../src/lib/db-utils');
 
 const prisma = new PrismaClient();
 
