@@ -62,7 +62,8 @@ export async function checkAuthStatus() {
             email: user.email!,
             name: user.given_name + " " + user.family_name,
             image: user.picture,
-            // customerId will be null by default
+            // Don't set customerId - let it be undefined/null by default
+            // customerId will only be set when user purchases subscription via webhook
           },
         });
         console.log('✅ New user created successfully');
@@ -94,15 +95,14 @@ export async function checkAuthStatus() {
       try {
         // Try to find and update existing user by email
         const existingUser = await prisma.user.findUnique({ 
-          where: { email: user.email } 
+          where: { email: user.email! } 
         });
         
         if (existingUser) {
           console.log('✅ Found existing user by email, updating...');
           await prisma.user.update({
-            where: { email: user.email },
+            where: { email: user.email! },
             data: {
-              id: user.id, // Update to current Kinde ID
               name: user.given_name + " " + user.family_name,
               image: user.picture,
             },

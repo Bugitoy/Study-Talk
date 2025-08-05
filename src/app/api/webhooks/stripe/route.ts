@@ -40,6 +40,16 @@ export async function POST(req: NextRequest) {
           if (!user) throw new Error("User not found");
 
           if (!user.customerId) {
+            // Check if this customerId is already used by another user
+            const existingUserWithCustomerId = await prisma.user.findFirst({
+              where: { customerId }
+            });
+            
+            if (existingUserWithCustomerId) {
+              console.error(`CustomerId ${customerId} already exists for user ${existingUserWithCustomerId.email}`);
+              throw new Error(`CustomerId already exists for another user`);
+            }
+            
             await prisma.user.update({
               where: { id: user.id },
               data: { customerId },
