@@ -46,21 +46,42 @@ export function useUniversities(region?: string, country?: string, search?: stri
       params.append('page', currentPage.toString());
       params.append('limit', '50');
 
-      const url = `/api/universities/by-country-filter?${params.toString()}`;
-      
-      // Add cache-busting for development
-      const cacheBuster = process.env.NODE_ENV === 'development' ? `&t=${Date.now()}` : '';
-      const response = await fetch(`${url}${cacheBuster}`, {
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // Try optimized endpoint first, fallback to simple endpoint
+      const endpoints = [
+        `/api/universities/stats-optimized?${params.toString()}`,
+        `/api/universities/stats-simple?${params.toString()}`
+      ];
+
+      let response;
+      let data;
+      let endpointUsed = '';
+
+      for (const endpoint of endpoints) {
+        try {
+          endpointUsed = endpoint;
+          // Add cache-busting for development
+          const cacheBuster = process.env.NODE_ENV === 'development' ? `&t=${Date.now()}` : '';
+          response = await fetch(`${endpoint}${cacheBuster}`, {
+            headers: {
+              'Cache-Control': 'no-cache',
+            },
+          });
+          
+          if (response.ok) {
+            data = await response.json();
+            break; // Success, exit loop
+          }
+        } catch (endpointError) {
+          console.warn(`Failed to fetch from ${endpoint}:`, endpointError);
+          continue; // Try next endpoint
+        }
       }
 
-      const data = await response.json();
+      if (!response || !response.ok || !data) {
+        throw new Error(`Failed to fetch from all endpoints. Last status: ${response?.status}`);
+      }
+
+      console.log(`Successfully fetched from: ${endpointUsed}`);
       
       if (reset || currentPage === 1) {
         setUniversities(data.universities);
