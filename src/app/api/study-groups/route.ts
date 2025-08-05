@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { StreamClient } from '@stream-io/node-sdk';
-import { createStudyGroupRoom, listActiveStudyGroupRooms, endStudyGroupRoom } from '@/lib/db-utils';
+import { 
+  createStudyGroupRoom, 
+  listActiveStudyGroupRooms, 
+  listActiveStudyGroupRoomsOptimized,
+  getStudyGroupRoomByCallId,
+  endStudyGroupRoom 
+} from '@/lib/db-utils';
 import prisma from '@/db/prisma';
 import { createRateLimit, ROOM_CREATION_RATE_LIMIT } from '@/lib/rate-limit';
 
@@ -49,7 +55,13 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const rooms = await listActiveStudyGroupRooms();
+    // 🚀 Use optimized database query with pagination and search
+    const { rooms, pagination } = await listActiveStudyGroupRoomsOptimized({
+      page,
+      limit,
+      search
+    });
+
     if (!apiKey || !apiSecret) {
       const emptyResult = {
         data: [],
@@ -79,25 +91,18 @@ export async function GET(req: NextRequest) {
     const ids = rooms.map(r => r.callId);
     
     if (ids.length === 0) {
-      const emptyResult = {
+      const result = {
         data: [],
-        pagination: {
-          page,
-          limit,
-          total: 0,
-          totalPages: 0,
-          hasNext: false,
-          hasPrev: false
-        }
+        pagination
       };
       
       roomCache.set(cacheKey, {
-        data: emptyResult,
+        data: result,
         timestamp: Date.now()
       });
       
       return NextResponse.json({
-        ...emptyResult,
+        ...result,
         cached: false,
         cacheTimestamp: Date.now()
       });
@@ -114,10 +119,8 @@ export async function GET(req: NextRequest) {
       const room = rooms.find(r => r.callId === callId);
       if (!room) continue;
       
-      // Double-check if the room is actually ended in the database
-      const dbRoom = await prisma.studyGroupRoom.findFirst({
-        where: { callId }
-      });
+      // 🚀 Use optimized database check
+      const dbRoom = await getStudyGroupRoomByCallId(callId);
       
       console.log(`Database check for room ${room.roomName} (${callId}): ended=${dbRoom?.ended}, exists=${!!dbRoom}`);
       
@@ -180,28 +183,10 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Apply search filter if provided
-    let filteredResults = results;
-    if (search) {
-      filteredResults = results.filter(room => 
-        room.roomName.toLowerCase().includes(search.toLowerCase())
-      );
-    }
-
-    // Apply pagination
-    const offset = (page - 1) * limit;
-    const paginatedResults = filteredResults.slice(offset, offset + limit);
-    
+    // 🚀 Search and pagination already handled by database query
     const result = {
-      data: paginatedResults,
-      pagination: {
-        page,
-        limit,
-        total: filteredResults.length,
-        totalPages: Math.ceil(filteredResults.length / limit),
-        hasNext: page < Math.ceil(filteredResults.length / limit),
-        hasPrev: page > 1
-      }
+      data: results,
+      pagination
     };
 
     // Cache the result
@@ -218,7 +203,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    console.log(`Returning ${paginatedResults.length} active rooms (page ${page} of ${Math.ceil(filteredResults.length / limit)})`);
+    console.log(`Returning ${results.length} active rooms (page ${page} of ${pagination.totalPages})`);
     
     return NextResponse.json({
       ...result,

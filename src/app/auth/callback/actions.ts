@@ -48,12 +48,21 @@ export async function checkAuthStatus() {
           },
         });
       } else {
-        await prisma.user.create({
-          data: {
+        // Use upsert to handle potential constraint violations gracefully
+        // This will create if not exists, or update if exists
+        await prisma.user.upsert({
+          where: { id: user.id },
+          update: {
+            email: user.email!,
+            name: user.given_name + " " + user.family_name,
+            image: user.picture,
+          },
+          create: {
             id: user.id,
             email: user.email!,
             name: user.given_name + " " + user.family_name,
             image: user.picture,
+            // customerId will be null by default
           },
         });
         console.log('✅ New user created successfully');
@@ -78,60 +87,30 @@ export async function checkAuthStatus() {
   } catch (error) {
     console.error('❌ Error in checkAuthStatus:', error);
     
-    // If it's a unique constraint error, try to handle it gracefully
+    // If it's a unique constraint error, try one more approach
     if ((error as any).code === 'P2002') {
-      console.log('⚠️  Unique constraint violation. Attempting to resolve conflict...');
+      console.log('⚠️  Unique constraint violation. Trying alternative approach...');
       
-      // Try to find the user by email and update their ID if needed
-      if (user.email) {
-        try {
-          const existingUserByEmail = await prisma.user.findUnique({ 
-            where: { email: user.email } 
-          });
-          
-          if (existingUserByEmail) {
-            console.log('🔄 Found user by email, updating user info...');
-            // Update the existing user's info (but keep the original ID)
-            await prisma.user.update({
-              where: { email: user.email },
-              data: {
-                name: user.given_name + " " + user.family_name,
-                image: user.picture,
-              },
-            });
-            console.log('✅ User info updated successfully');
-            return { success: true };
-          }
-        } catch (updateError) {
-          console.error('❌ Error updating user ID:', updateError);
-        }
-      }
-      
-      // If we can't resolve by email, try to find by customerId
-      console.log('🔍 Attempting to find user by other criteria...');
       try {
-        // Check if there's a user with the same email but different ID
-        const allUsers = await prisma.user.findMany({
-          where: { email: user.email || '' }
+        // Try to find and update existing user by email
+        const existingUser = await prisma.user.findUnique({ 
+          where: { email: user.email } 
         });
         
-        if (allUsers.length > 0) {
-          console.log('🔄 Found conflicting users, attempting to merge...');
-          // Keep the first user and update it (but don't change the ID)
-          const userToKeep = allUsers[0];
+        if (existingUser) {
+          console.log('✅ Found existing user by email, updating...');
           await prisma.user.update({
-            where: { id: userToKeep.id },
+            where: { email: user.email },
             data: {
-              email: user.email!,
+              id: user.id, // Update to current Kinde ID
               name: user.given_name + " " + user.family_name,
               image: user.picture,
             },
           });
-          console.log('✅ User merged successfully');
           return { success: true };
         }
-      } catch (mergeError) {
-        console.error('❌ Error merging users:', mergeError);
+      } catch (fallbackError) {
+        console.error('❌ Fallback approach also failed:', fallbackError);
       }
     }
     

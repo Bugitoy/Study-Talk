@@ -312,6 +312,87 @@ export async function listActiveStudyGroupRooms() {
   }
 }
 
+// 🚀 OPTIMIZED Study Group Room Functions
+export async function listActiveStudyGroupRoomsOptimized(options: {
+  page?: number;
+  limit?: number;
+  search?: string;
+} = {}) {
+  try {
+    const { page = 1, limit = 20, search = '' } = options;
+    const offset = (page - 1) * limit;
+
+    // Build where clause with database-level search
+    const whereClause: any = { ended: false };
+    if (search.trim()) {
+      whereClause.roomName = {
+        contains: search.trim(),
+        mode: 'insensitive' as const
+      };
+    }
+
+    // Get total count for pagination
+    const total = await prisma.studyGroupRoom.count({ where: whereClause });
+
+    // Get paginated results with optimized select
+    const rooms = await prisma.studyGroupRoom.findMany({
+      where: whereClause,
+      select: {
+        callId: true,
+        roomName: true,
+        hostId: true,
+        createdAt: true
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip: offset
+    });
+
+    return {
+      rooms,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page * limit < total,
+        hasPrev: page > 1
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching optimized study group rooms:', error);
+    return {
+      rooms: [],
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: false
+      }
+    };
+  }
+}
+
+export async function getStudyGroupRoomByCallId(callId: string) {
+  try {
+    return await prisma.studyGroupRoom.findFirst({
+      where: { callId },
+      select: {
+        callId: true,
+        roomName: true,
+        hostId: true,
+        ended: true,
+        createdAt: true
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching study group room by callId:', error);
+    return null;
+  }
+}
+
 export async function endStudyGroupRoom(callId: string) {
   try {
     // Check if room exists and is not already ended
@@ -359,6 +440,87 @@ export async function listActiveCompeteRooms() {
   } catch (error) {
     console.error('Error fetching compete rooms:', error);
     return [];
+  }
+}
+
+// 🚀 OPTIMIZED Compete Room Functions
+export async function listActiveCompeteRoomsOptimized(options: {
+  page?: number;
+  limit?: number;
+  search?: string;
+} = {}) {
+  try {
+    const { page = 1, limit = 20, search = '' } = options;
+    const offset = (page - 1) * limit;
+
+    // Build where clause with database-level search
+    const whereClause: any = { ended: false };
+    if (search.trim()) {
+      whereClause.roomName = {
+        contains: search.trim(),
+        mode: 'insensitive' as const
+      };
+    }
+
+    // Get total count for pagination
+    const total = await prisma.competeRoom.count({ where: whereClause });
+
+    // Get paginated results with optimized select
+    const rooms = await prisma.competeRoom.findMany({
+      where: whereClause,
+      select: {
+        callId: true,
+        roomName: true,
+        hostId: true,
+        createdAt: true
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip: offset
+    });
+
+    return {
+      rooms,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page * limit < total,
+        hasPrev: page > 1
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching optimized compete rooms:', error);
+    return {
+      rooms: [],
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: false
+      }
+    };
+  }
+}
+
+export async function getCompeteRoomByCallId(callId: string) {
+  try {
+    return await prisma.competeRoom.findFirst({
+      where: { callId },
+      select: {
+        callId: true,
+        roomName: true,
+        hostId: true,
+        ended: true,
+        createdAt: true
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching compete room by callId:', error);
+    return null;
   }
 }
 
@@ -2354,9 +2516,10 @@ export async function getConfessionsInfiniteOptimized(options: {
   sortBy?: 'recent' | 'hot';
   search?: string;
   userId?: string;
+  authorId?: string;
 }) {
   try {
-    const { cursor, limit = 20, universityId, sortBy = 'recent', search, userId } = options;
+    const { cursor, limit = 20, universityId, sortBy = 'recent', search, userId, authorId } = options;
 
     const where: any = {
       isHidden: false,
@@ -2371,6 +2534,11 @@ export async function getConfessionsInfiniteOptimized(options: {
         { title: { contains: search, mode: 'insensitive' } },
         { content: { contains: search, mode: 'insensitive' } },
       ];
+    }
+
+    // Filter by author if authorId is provided (for user's own confessions)
+    if (authorId) {
+      where.authorId = authorId;
     }
 
     // Simplified cursor logic for better performance

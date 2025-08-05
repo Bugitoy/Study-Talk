@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { useInfiniteConfessions, Confession } from "@/hooks/useInfiniteConfessions";
 import { useSavedConfessions } from "@/hooks/useSavedConfessions";
+import { useUserConfessions } from "@/hooks/useUserConfessions";
 import { useUniversities } from "@/hooks/useUniversities";
 import { useRegions } from "@/hooks/useRegions";
 import { useRouter } from "next/navigation";
@@ -27,6 +28,7 @@ const tabs = [
   { key: "hottest", label: "Hottest" },
   { key: "universities", label: "Universities" },
   { key: "saved", label: "Saved" },
+  { key: "my-posts", label: "My Posts" },
 ];
 
 export default function ConfessionsPage() {
@@ -94,6 +96,20 @@ export default function ConfessionsPage() {
     isConfessionSaved,
     voteOnConfession: voteOnSavedConfession
   } = useSavedConfessions(user?.id);
+  
+  const { 
+    confessions: userConfessions, 
+    loading: userConfessionsLoading,
+    loadingMore: userConfessionsLoadingMore,
+    hasMore: userConfessionsHasMore,
+    loadMore: loadMoreUserConfessions,
+    refresh: refreshUserConfessions,
+  } = useUserConfessions({ 
+    sortBy, 
+    search: activeTab === "my-posts" ? searchQuery : undefined,
+    autoRefresh: true,
+    userId: user?.id,
+  });
   
   const { universities, pagination, loading: universitiesLoading, loadMore: loadMoreUniversities } = useUniversities(
     activeTab === "universities" ? selectedRegion : undefined,
@@ -234,6 +250,7 @@ export default function ConfessionsPage() {
       
       // Refresh confessions and daily count
       refreshConfessions();
+      refreshUserConfessions();
       fetchDailyConfessionCount();
       
       toast({
@@ -259,6 +276,11 @@ export default function ConfessionsPage() {
         // Use saved confessions vote function for saved section
         voteOnSavedConfession(confessionId, voteType).catch(error => {
           console.error("Failed to vote on saved confession:", error);
+        });
+      } else if (activeTab === "my-posts") {
+        // Use main confessions vote function for my-posts section
+        voteOnConfession(confessionId, voteType).catch(error => {
+          console.error("Failed to vote on user confession:", error);
         });
       } else {
         // Use main confessions vote function for posts/hottest sections
@@ -658,6 +680,28 @@ export default function ConfessionsPage() {
           <p className="mt-6 text-center text-gray-600">No saved confessions yet.</p>
         );
         
+      case "my-posts":
+        if (!user) {
+          return <div className="mt-6 text-center text-gray-600">Please log in to view your posts.</div>;
+        }
+        return (
+          <InfiniteScrollContainer
+            hasMore={userConfessionsHasMore}
+            loadMore={loadMoreUserConfessions}
+            loading={userConfessionsLoading}
+            loadingMore={userConfessionsLoadingMore}
+            className="mt-6"
+          >
+            {userConfessionsLoading ? (
+              <ConfessionListSkeleton count={5} />
+            ) : userConfessions.length > 0 ? (
+              renderPosts(userConfessions)
+            ) : (
+              <p className="mt-6 text-center text-gray-600">You haven't posted any confessions yet.</p>
+            )}
+          </InfiniteScrollContainer>
+        );
+        
       default:
         return null;
     }
@@ -679,24 +723,36 @@ export default function ConfessionsPage() {
           )} */}
         </div>
         {/* Tab Bar */}
-        <div className="flex gap-6 sm:gap-6 lg:gap-[4rem] border-b border-gray-300 mb-4 overflow-x-auto justify-center items-center">
+        <div className="flex gap-2 sm:gap-4 lg:gap-6 xl:gap-[4rem] border-b border-gray-300 mb-4 overflow-x-auto justify-center items-center px-2 sm:px-0">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => {
                 setActiveTab(tab.key);
                 // Reset search and region filter when switching away from universities tab
-                if (tab.key !== "universities") {
+                if (tab.key !== "universities" && tab.key !== "my-posts") {
                   setSearchQuery("");
                   setSelectedRegion("all");
                 }
               }}
               className={clsx(
-                "py-2 text-sm sm:text-base lg:text-lg font-medium whitespace-nowrap transition-colors",
+                "py-2 text-xs sm:text-sm md:text-base lg:text-lg font-medium whitespace-nowrap transition-colors px-1 sm:px-2",
                 activeTab === tab.key ? "border-b-4 border-black text-gray-900" : "text-gray-500 hover:text-gray-800"
               )}
             >
-              {tab.label}
+              {tab.key === "hottest" ? (
+                <span className="hidden sm:inline">Hottest</span>
+              ) : tab.key === "my-posts" ? (
+                <span className="hidden sm:inline">My Posts</span>
+              ) : (
+                tab.label
+              )}
+              {tab.key === "hottest" && (
+                <span className="sm:hidden">Hot</span>
+              )}
+              {tab.key === "my-posts" && (
+                <span className="sm:hidden">Me</span>
+              )}
             </button>
           ))}
         </div>
@@ -710,6 +766,8 @@ export default function ConfessionsPage() {
               placeholder={
                 activeTab === "universities"
                   ? "Search for a university"
+                  : activeTab === "my-posts"
+                  ? "Search your posts"
                   : "Search for a post"
               }
               className="w-full sm:flex-1 min-w-[200px] px-3 sm:px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-400 focus:outline-none text-base sm:text-lg shadow-sm transition-colors"

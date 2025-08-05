@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { StreamClient } from '@stream-io/node-sdk';
-import { createCompeteRoom, listActiveCompeteRooms, endCompeteRoom } from '@/lib/db-utils';
+import { 
+  createCompeteRoom, 
+  listActiveCompeteRooms, 
+  listActiveCompeteRoomsOptimized,
+  getCompeteRoomByCallId,
+  endCompeteRoom 
+} from '@/lib/db-utils';
 import prisma from '@/db/prisma';
 import { createRateLimit, COMPETE_ROOMS_RATE_LIMIT } from '@/lib/rate-limit';
 import { sanitizeInput } from '@/lib/security-utils';
 
 const apiKey = process.env.NEXT_PUBLIC_STREAM_API_KEY;
 const apiSecret = process.env.STREAM_SECRET_KEY;
+
+// Shared cache for room listings (can be invalidated by webhooks)
+const roomCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 5 * 1000; // 5 seconds for more real-time updates
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,19 +28,81 @@ export async function GET(req: NextRequest) {
       return rateLimitResult;
     }
 
-    const rooms = await listActiveCompeteRooms();
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const search = searchParams.get('search') || '';
+    
+    // Validate parameters
+    if (page < 1 || limit < 1 || limit > 100) {
+      return NextResponse.json({ error: 'Invalid pagination parameters' }, { status: 400 });
+    }
+
+    // Check cache first
+    const cacheKey = `compete-rooms-${page}-${limit}-${search}`;
+    const cached = roomCache.get(cacheKey);
+    
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return NextResponse.json({
+        ...cached.data,
+        cached: true,
+        cacheTimestamp: cached.timestamp
+      });
+    }
+
+    // 🚀 Use optimized database query with pagination and search
+    const { rooms, pagination } = await listActiveCompeteRoomsOptimized({
+      page,
+      limit,
+      search
+    });
+
     console.log('Active rooms from database:', rooms.length, rooms.map(r => r.roomName));
     
     if (!apiKey || !apiSecret) {
-      return NextResponse.json([], { status: 200 });
+      const emptyResult = {
+        data: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          totalPages: 0,
+          hasNext: false,
+          hasPrev: false
+        }
+      };
+      
+      roomCache.set(cacheKey, {
+        data: emptyResult,
+        timestamp: Date.now()
+      });
+      
+      return NextResponse.json({
+        ...emptyResult,
+        cached: false,
+        cacheTimestamp: Date.now()
+      });
     }
     
     const client = new StreamClient(apiKey, apiSecret);
     const ids = rooms.map(r => r.callId);
     
     if (ids.length === 0) {
-      console.log('No room IDs to query, returning empty array');
-      return NextResponse.json([]);
+      const result = {
+        data: [],
+        pagination
+      };
+      
+      roomCache.set(cacheKey, {
+        data: result,
+        timestamp: Date.now()
+      });
+      
+      return NextResponse.json({
+        ...result,
+        cached: false,
+        cacheTimestamp: Date.now()
+      });
     }
     
     console.log('Call IDs to query:', ids);
@@ -46,10 +118,8 @@ export async function GET(req: NextRequest) {
       const room = rooms.find(r => r.callId === callId);
       if (!room) continue;
       
-      // Double-check if the room is actually ended in the database
-      const dbRoom = await prisma.competeRoom.findFirst({
-        where: { callId }
-      });
+      // 🚀 Use optimized database check
+      const dbRoom = await getCompeteRoomByCallId(callId);
       
       console.log(`Database check for room ${room.roomName} (${callId}): ended=${dbRoom?.ended}, exists=${!!dbRoom}`);
       
@@ -111,8 +181,34 @@ export async function GET(req: NextRequest) {
         }),
       });
     }
-    console.log(`Returning ${results.length} active compete rooms`);
-    return NextResponse.json(results);
+
+    // 🚀 Search and pagination already handled by database query
+    const result = {
+      data: results,
+      pagination
+    };
+
+    // Cache the result
+    roomCache.set(cacheKey, {
+      data: result,
+      timestamp: Date.now()
+    });
+
+    // Clean up old cache entries (older than 2 minutes)
+    const now = Date.now();
+    for (const [key, value] of Array.from(roomCache.entries())) {
+      if (now - value.timestamp > 2 * 60 * 1000) {
+        roomCache.delete(key);
+      }
+    }
+
+    console.log(`Returning ${results.length} active compete rooms (page ${page} of ${pagination.totalPages})`);
+    
+    return NextResponse.json({
+      ...result,
+      cached: false,
+      cacheTimestamp: Date.now()
+    });
   } catch (error) {
     console.error('Error listing compete rooms:', error);
     return NextResponse.json({ error: 'Failed' }, { status: 500 });
@@ -148,6 +244,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Room name cannot be empty' }, { status: 400 });
     }
 
+    // Clear cache when new room is created
+    roomCache.clear();
+    
     const room = await createCompeteRoom({ 
       callId, 
       roomName: sanitizedRoomName, 

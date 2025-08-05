@@ -80,7 +80,7 @@ const Compete = () => {
   const router = useRouter();
   const [meetingState, setMeetingState] = useState<"isJoiningMeeting" | undefined>(undefined);
   const [values, setValues] = useState(initialValues);
-  const rooms = useCompeteRooms();
+  const { rooms, loading: roomsLoading, error: roomsError } = useCompeteRooms();
   const { user, isAuthenticated } = useKindeBrowserClient();
   const { dailyHours, isLoadingHours } = useStreamStudyTimeTracker();
   const { user: userInfo, loading: userLoading } = useCurrentUser();
