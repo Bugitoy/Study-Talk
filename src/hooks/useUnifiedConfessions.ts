@@ -129,7 +129,7 @@ export function useUnifiedConfessions(userId?: string) {
 
       // Update saved IDs if fetching saved confessions
       if (tab === 'saved') {
-        setSavedIds(new Set(syncedConfessions.map(c => c.id)));
+        setSavedIds(new Set(syncedConfessions.map((c: Confession) => c.id)));
       }
 
     } catch (error) {
@@ -270,7 +270,7 @@ export function useUnifiedConfessions(userId?: string) {
           saved: prev.saved.filter(c => c.id !== confessionId),
         }));
       } else {
-        setSavedIds(prev => new Set([...prev, confessionId]));
+        setSavedIds(prev => new Set(Array.from(prev).concat([confessionId])));
         // Refresh saved confessions to get the full confession data
         await fetchConfessions('saved');
       }
