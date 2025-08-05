@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Confession } from './useInfiniteConfessions';
+import { useVoteState } from './useVoteState';
 
 export interface UseUserConfessionsOptions {
   limit?: number;
@@ -19,6 +20,7 @@ export function useUserConfessions(options: UseUserConfessionsOptions = {}) {
     userId,
   } = options;
 
+  const { getVoteState } = useVoteState();
   const [confessions, setConfessions] = useState<Confession[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -54,10 +56,24 @@ export function useUserConfessions(options: UseUserConfessionsOptions = {}) {
 
       const data = await response.json();
       
+      // Sync confessions with global vote state
+      const syncedConfessions = data.confessions.map((confession: Confession) => {
+        const globalState = getVoteState(confession.id);
+        if (globalState && globalState.lastUpdated > Date.now() - 30000) { // Only use recent state (30 seconds)
+          return {
+            ...confession,
+            believeCount: globalState.believeCount,
+            doubtCount: globalState.doubtCount,
+            userVote: globalState.userVote,
+          };
+        }
+        return confession;
+      });
+      
       if (cursor) {
-        setConfessions(prev => [...prev, ...data.confessions]);
+        setConfessions(prev => [...prev, ...syncedConfessions]);
       } else {
-        setConfessions(data.confessions);
+        setConfessions(syncedConfessions);
       }
       
       setHasMore(data.hasMore);

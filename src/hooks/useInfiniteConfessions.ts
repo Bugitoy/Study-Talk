@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useVoteState } from './useVoteState';
 
 export interface Confession {
   id: string;
@@ -47,6 +48,7 @@ export function useInfiniteConfessions(options: UseInfiniteConfessionsOptions = 
     userId,
   } = options;
 
+  const { getVoteState, updateVoteState, completeVote, isVotePending } = useVoteState();
   const [confessions, setConfessions] = useState<Confession[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -107,9 +109,23 @@ export function useInfiniteConfessions(options: UseInfiniteConfessionsOptions = 
       const data = await response.json();
       const { confessions: newConfessions, nextCursor: newNextCursor, hasMore: moreAvailable } = data;
       
+      // Sync confessions with global vote state
+      const syncedConfessions = newConfessions.map((confession: Confession) => {
+        const globalState = getVoteState(confession.id);
+        if (globalState && globalState.lastUpdated > Date.now() - 30000) { // Only use recent state (30 seconds)
+          return {
+            ...confession,
+            believeCount: globalState.believeCount,
+            doubtCount: globalState.doubtCount,
+            userVote: globalState.userVote,
+          };
+        }
+        return confession;
+      });
+      
       if (append) {
         // Append to existing confessions
-        setConfessions(prev => [...prev, ...newConfessions]);
+        setConfessions(prev => [...prev, ...syncedConfessions]);
       } else if (isRefresh) {
         // Handle refresh - check for new posts
         const currentFirstId = confessions.length > 0 ? confessions[0]?.id : null;
@@ -129,12 +145,12 @@ export function useInfiniteConfessions(options: UseInfiniteConfessionsOptions = 
         }
         
         // No new posts or first refresh
-        setConfessions(newConfessions);
+        setConfessions(syncedConfessions);
         setNewPostsCount(0);
         setShouldShowNewPostsBanner(false);
       } else {
         // Initial load
-        setConfessions(newConfessions);
+        setConfessions(syncedConfessions);
       }
 
       setNextCursor(newNextCursor);
@@ -252,51 +268,49 @@ export function useInfiniteConfessions(options: UseInfiniteConfessionsOptions = 
 
       const currentUserVote = currentConfession.userVote;
       let action: 'vote' | 'unvote';
-      let newUserVote: 'BELIEVE' | 'DOUBT' | null;
-      let believeChange = 0;
-      let doubtChange = 0;
 
       if (currentUserVote === voteType) {
         // User clicked the same button - unvote
         action = 'unvote';
-        newUserVote = null;
-        if (voteType === 'BELIEVE') believeChange = -1;
-        if (voteType === 'DOUBT') doubtChange = -1;
       } else {
         // User clicked different button or no previous vote
         action = 'vote';
-        newUserVote = voteType;
-        
-        if (currentUserVote === 'BELIEVE') {
-          // Had BELIEVE, switching to DOUBT
-          believeChange = -1;
-          doubtChange = 1;
-        } else if (currentUserVote === 'DOUBT') {
-          // Had DOUBT, switching to BELIEVE
-          believeChange = 1;
-          doubtChange = -1;
-        } else {
-          // No previous vote
-          if (voteType === 'BELIEVE') believeChange = 1;
-          if (voteType === 'DOUBT') doubtChange = 1;
-        }
       }
 
-      // Immediate optimistic update
-      setConfessions(prev => {
-        const updated = prev.map(confession => {
+      // Check if vote is already pending
+      if (isVotePending(confessionId, voteType)) {
+        return; // Vote already in progress, ignore this click
+      }
+
+      // Update global vote state (this will prevent duplicate votes across tabs)
+      const stateUpdated = updateVoteState(
+        confessionId,
+        voteType,
+        action,
+        currentConfession.believeCount,
+        currentConfession.doubtCount,
+        currentUserVote
+      );
+
+      if (!stateUpdated) {
+        return; // Vote already in progress
+      }
+
+      // Apply optimistic update to local state
+      const globalState = getVoteState(confessionId);
+      if (globalState) {
+        setConfessions(prev => prev.map(confession => {
           if (confession.id === confessionId) {
             return {
               ...confession,
-              believeCount: Math.max(0, confession.believeCount + believeChange),
-              doubtCount: Math.max(0, confession.doubtCount + doubtChange),
-              userVote: newUserVote,
+              believeCount: globalState.believeCount,
+              doubtCount: globalState.doubtCount,
+              userVote: globalState.userVote,
             };
           }
           return confession;
-        });
-        return updated;
-      });
+        }));
+      }
 
       // API call
       const requestBody = action === 'unvote' 
@@ -311,22 +325,31 @@ export function useInfiniteConfessions(options: UseInfiniteConfessionsOptions = 
 
       if (!response.ok) {
         // Revert optimistic update on error
+        completeVote(confessionId, voteType, false);
+        
+        // Revert local state
         setConfessions(prev => prev.map(confession => {
           if (confession.id === confessionId) {
             return {
               ...confession,
-              believeCount: Math.max(0, confession.believeCount - believeChange),
-              doubtCount: Math.max(0, confession.doubtCount - doubtChange),
+              believeCount: currentConfession.believeCount,
+              doubtCount: currentConfession.doubtCount,
               userVote: currentUserVote,
             };
           }
           return confession;
         }));
+        
         throw new Error('Failed to vote on confession');
       }
 
+      // Mark vote as completed successfully
+      completeVote(confessionId, voteType, true);
+
       return await response.json();
     } catch (error) {
+      // Mark vote as failed
+      completeVote(confessionId, voteType, false);
       throw error;
     }
   };
