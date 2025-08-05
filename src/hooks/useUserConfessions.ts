@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Confession } from './useInfiniteConfessions';
 import { useVoteState } from './useVoteState';
+import { useTabVisibility } from './useTabVisibility';
 
 export interface UseUserConfessionsOptions {
   limit?: number;
@@ -20,7 +21,7 @@ export function useUserConfessions(options: UseUserConfessionsOptions = {}) {
     userId,
   } = options;
 
-  const { getVoteState } = useVoteState();
+  const { getVoteState, updateVoteState, completeVote, isVotePending, subscribeToVoteState, syncAllVoteStates } = useVoteState();
   const [confessions, setConfessions] = useState<Confession[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -101,6 +102,102 @@ export function useUserConfessions(options: UseUserConfessionsOptions = {}) {
     fetchUserConfessions();
   }, [fetchUserConfessions]);
 
+  const voteOnConfession = async (confessionId: string, voteType: 'BELIEVE' | 'DOUBT') => {
+    if (!userId) return;
+
+    try {
+      // Get current state to determine action
+      const currentConfession = confessions.find(c => c.id === confessionId);
+      if (!currentConfession) return;
+
+      const currentUserVote = currentConfession.userVote || null;
+      let action: 'vote' | 'unvote';
+
+      if (currentUserVote === voteType) {
+        // User clicked the same button - unvote
+        action = 'unvote';
+      } else {
+        // User clicked different button or no previous vote
+        action = 'vote';
+      }
+
+      // Check if vote is already pending
+      if (isVotePending(confessionId, voteType)) {
+        return; // Vote already in progress, ignore this click
+      }
+
+      // Update global vote state (this will prevent duplicate votes across tabs)
+      const stateUpdated = updateVoteState(
+        confessionId,
+        voteType,
+        action,
+        currentConfession.believeCount,
+        currentConfession.doubtCount,
+        currentUserVote
+      );
+
+      if (!stateUpdated) {
+        return; // Vote already in progress
+      }
+
+      // Apply optimistic update to local state
+      const globalState = getVoteState(confessionId);
+      if (globalState) {
+        setConfessions(prev => prev.map(confession => {
+          if (confession.id === confessionId) {
+            return {
+              ...confession,
+              believeCount: globalState.believeCount,
+              doubtCount: globalState.doubtCount,
+              userVote: globalState.userVote,
+            };
+          }
+          return confession;
+        }));
+      }
+
+      // API call
+      const requestBody = action === 'unvote' 
+        ? { userId, confessionId, action: 'unvote' }
+        : { userId, confessionId, voteType, action: 'vote' };
+
+      const response = await fetch('/api/confessions/vote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        // Revert optimistic update on error
+        completeVote(confessionId, voteType, false);
+        
+        // Revert local state
+        setConfessions(prev => prev.map(confession => {
+          if (confession.id === confessionId) {
+            return {
+              ...confession,
+              believeCount: currentConfession.believeCount,
+              doubtCount: currentConfession.doubtCount,
+              userVote: currentUserVote,
+            };
+          }
+          return confession;
+        }));
+        
+        throw new Error('Failed to vote on confession');
+      }
+
+      // Mark vote as completed successfully
+      completeVote(confessionId, voteType, true);
+
+      return await response.json();
+    } catch (error) {
+      // Mark vote as failed
+      completeVote(confessionId, voteType, false);
+      throw error;
+    }
+  };
+
   // Initial load
   useEffect(() => {
     fetchUserConfessions();
@@ -117,6 +214,63 @@ export function useUserConfessions(options: UseUserConfessionsOptions = {}) {
     return () => clearInterval(interval);
   }, [autoRefresh, refresh]);
 
+  // Function to sync vote states with current confessions
+  const syncVoteStates = useCallback(() => {
+    setConfessions(prev => prev.map(confession => {
+      const globalState = getVoteState(confession.id);
+      if (globalState && globalState.lastUpdated > Date.now() - 30000) { // Only use recent state (30 seconds)
+        return {
+          ...confession,
+          believeCount: globalState.believeCount,
+          doubtCount: globalState.doubtCount,
+          userVote: globalState.userVote,
+        };
+      }
+      return confession;
+    }));
+  }, [getVoteState]);
+
+  // Subscribe to vote state changes for real-time updates
+  useEffect(() => {
+    const unsubscribe = subscribeToVoteState((confessionId, voteState) => {
+      // Update the confession in user confessions if it exists
+      setConfessions(prev => prev.map(confession => {
+        if (confession.id === confessionId) {
+          if (voteState) {
+            return {
+              ...confession,
+              believeCount: voteState.believeCount,
+              doubtCount: voteState.doubtCount,
+              userVote: voteState.userVote,
+            };
+          } else {
+            // Vote was reverted, we need to fetch fresh data
+            // This is a fallback - ideally we'd have the original state
+            return confession;
+          }
+        }
+        return confession;
+      }));
+    });
+
+    return unsubscribe;
+  }, [subscribeToVoteState]);
+
+  // Sync vote states when component mounts or when data changes
+  useEffect(() => {
+    if (confessions.length > 0) {
+      // Small delay to ensure any pending vote states are processed
+      const timeoutId = setTimeout(() => {
+        syncVoteStates();
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [confessions.length, syncVoteStates]);
+
+  // Sync vote states when tab becomes visible
+  useTabVisibility(syncVoteStates);
+
   return {
     confessions,
     loading,
@@ -125,5 +279,6 @@ export function useUserConfessions(options: UseUserConfessionsOptions = {}) {
     hasMore,
     loadMore,
     refresh,
+    voteOnConfession,
   };
 } 

@@ -27,11 +27,16 @@ Created a global state manager that tracks votes across all components:
 // Global state to track votes across all components
 const globalVoteState = new Map<string, VoteState>();
 const pendingVotes = new Set<string>(); // Track confessionId + voteType combinations
+
+// Subscription system for real-time updates
+type VoteStateListener = (confessionId: string, voteState: VoteState | null) => void;
+const voteStateListeners = new Set<VoteStateListener>();
 ```
 
 **Key Features:**
 - **Duplicate Prevention**: Tracks pending votes to prevent multiple simultaneous votes
 - **Cross-Tab Synchronization**: All tabs share the same vote state
+- **Real-time Updates**: Subscription system for immediate vote state changes
 - **Optimistic Updates**: Maintains consistent optimistic updates across all components
 - **Error Handling**: Reverts optimistic updates on API failures
 
@@ -79,8 +84,50 @@ if (!stateUpdated) {
 
 ### 3. State Synchronization
 
-Added synchronization logic to ensure all components display consistent vote counts:
+Added multiple layers of synchronization to ensure all components display consistent vote counts:
 
+#### Real-time Subscription System
+```typescript
+// Subscribe to vote state changes for real-time updates
+useEffect(() => {
+  const unsubscribe = subscribeToVoteState((confessionId, voteState) => {
+    // Update the confession in saved confessions if it exists
+    setSavedConfessions(prev => prev.map(confession => {
+      if (confession.id === confessionId) {
+        if (voteState) {
+          return {
+            ...confession,
+            believeCount: voteState.believeCount,
+            doubtCount: voteState.doubtCount,
+            userVote: voteState.userVote,
+          };
+        }
+      }
+      return confession;
+    }));
+  });
+
+  return unsubscribe;
+}, [subscribeToVoteState]);
+```
+
+#### Tab Visibility Detection
+```typescript
+// Sync vote states when tab becomes visible
+useTabVisibility(syncVoteStates);
+```
+
+#### Tab Switching Sync
+```typescript
+// Sync vote states when switching to saved or my-posts tabs
+if (tab.key === "saved" || tab.key === "my-posts") {
+  setTimeout(() => {
+    syncAllVoteStates();
+  }, 100);
+}
+```
+
+#### Data Fetching Sync
 ```typescript
 // Sync confessions with global vote state
 const syncedConfessions = newConfessions.map((confession: Confession) => {
@@ -105,19 +152,35 @@ const syncedConfessions = newConfessions.map((confession: Confession) => {
    - Global vote state manager
    - Prevents duplicate votes
    - Manages optimistic updates
+   - Real-time subscription system
+   - Tab switching synchronization
 
-2. **`src/hooks/useInfiniteConfessions.ts`**
+2. **`src/hooks/useTabVisibility.ts`** (NEW)
+   - Detects when tabs become visible/active
+   - Triggers vote state synchronization
+
+3. **`src/hooks/useInfiniteConfessions.ts`**
    - Updated to use global vote state
    - Added state synchronization
    - Prevents race conditions
 
-3. **`src/hooks/useSavedConfessions.ts`**
+4. **`src/hooks/useSavedConfessions.ts`**
    - Updated to use global vote state
-   - Added state synchronization
+   - Added real-time subscription
+   - Added tab visibility detection
+   - Added automatic vote state sync
 
-4. **`src/hooks/useUserConfessions.ts`**
+5. **`src/hooks/useUserConfessions.ts`**
    - Updated to use global vote state
-   - Added state synchronization
+   - Added real-time subscription
+   - Added tab visibility detection
+   - Added automatic vote state sync
+   - Added `voteOnConfession` function for my-posts tab
+
+6. **`src/app/meetups/confessions/page.tsx`**
+   - Updated to use correct vote functions for each tab
+   - Added `voteOnUserConfession` for my-posts tab
+   - Added tab switching synchronization trigger
 
 ### Key Functions
 
@@ -135,20 +198,41 @@ const syncedConfessions = newConfessions.map((confession: Confession) => {
 - Cleans up pending vote tracking
 - Handles error scenarios
 
+#### `subscribeToVoteState()`
+- Subscribes to real-time vote state changes
+- Notifies all listeners when vote state updates
+- Enables immediate synchronization across tabs
+
+#### `syncAllVoteStates()`
+- Forces synchronization of all vote states across all tabs
+- Called when switching to saved/my-posts tabs
+- Ensures immediate consistency after tab switches
+
+#### `useTabVisibility()`
+- Detects when browser tab becomes visible/active
+- Triggers vote state synchronization automatically
+- Handles cases where users switch between browser tabs
+
 ## Testing
 
-Created test script `scripts/test-vote-race-condition.ts` to verify:
-- Rapid voting doesn't create duplicate votes
-- Only one vote exists per user per confession
-- Vote counts are consistent across tabs
+Created test scripts to verify the fix:
+- **`scripts/test-vote-race-condition.ts`**: Tests rapid voting doesn't create duplicate votes
+- **`scripts/test-all-tabs-vote-sync.ts`**: Tests all tabs (posts, hottest, saved, my-posts) are synchronized
+- **`scripts/test-realtime-vote-sync.ts`**: Tests real-time vote synchronization across all tabs
+- **`scripts/test-tab-switching-sync.ts`**: Tests immediate synchronization when switching between tabs
+- Verifies only one vote exists per user per confession
+- Confirms vote counts are consistent across all tabs
+- Validates immediate updates when switching between tabs
+- Tests tab visibility detection and synchronization
 
 ## Benefits
 
 1. **Prevents Race Conditions**: Users can't exploit tab switching to create duplicate votes
 2. **Consistent UI**: All tabs show the same vote counts
-3. **Better UX**: No confusing vote count jumps
-4. **Data Integrity**: Backend and frontend stay in sync
-5. **Performance**: Optimistic updates still work for instant feedback
+3. **Real-time Synchronization**: Vote changes appear immediately across all tabs
+4. **Better UX**: No confusing vote count jumps or delays
+5. **Data Integrity**: Backend and frontend stay in sync
+6. **Performance**: Optimistic updates still work for instant feedback
 
 ## Usage
 

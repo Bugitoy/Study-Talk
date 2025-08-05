@@ -10,9 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
-import { useInfiniteConfessions, Confession } from "@/hooks/useInfiniteConfessions";
-import { useSavedConfessions } from "@/hooks/useSavedConfessions";
-import { useUserConfessions } from "@/hooks/useUserConfessions";
+import { useUnifiedConfessions, Confession } from "@/hooks/useUnifiedConfessions";
 import { useUniversities } from "@/hooks/useUniversities";
 import { useRegions } from "@/hooks/useRegions";
 import { useRouter } from "next/navigation";
@@ -66,50 +64,19 @@ export default function ConfessionsPage() {
     { value: 'OTHER', label: 'Other' },
   ];
 
-  // Hook configurations based on active tab
-  const sortBy = activeTab === "hottest" ? "hot" : "recent";
-  
   const { 
-    confessions, 
-    loading: confessionsLoading,
-    loadingMore,
+    posts,
+    hottest,
+    saved: savedConfessions,
+    myPosts: userConfessions,
+    loading,
     hasMore,
-    newPostsCount,
-    shouldShowNewPostsBanner,
-    loadMore,
-    loadNewPosts,
-    createConfession,
     voteOnConfession,
-    refresh: refreshConfessions,
-    updateCommentCount,
-  } = useInfiniteConfessions({ 
-    sortBy, 
-    search: searchQuery,
-    autoRefresh: true,
-    userId: user?.id
-  });
-  
-  const { 
-    savedConfessions, 
-    loading: savedLoading,
     toggleSave,
+    loadMore,
+    refresh,
     isConfessionSaved,
-    voteOnConfession: voteOnSavedConfession
-  } = useSavedConfessions(user?.id);
-  
-  const { 
-    confessions: userConfessions, 
-    loading: userConfessionsLoading,
-    loadingMore: userConfessionsLoadingMore,
-    hasMore: userConfessionsHasMore,
-    loadMore: loadMoreUserConfessions,
-    refresh: refreshUserConfessions,
-  } = useUserConfessions({ 
-    sortBy, 
-    search: activeTab === "my-posts" ? searchQuery : undefined,
-    autoRefresh: true,
-    userId: user?.id,
-  });
+  } = useUnifiedConfessions(user?.id);
   
   const { universities, pagination, loading: universitiesLoading, loadMore: loadMoreUniversities } = useUniversities(
     activeTab === "universities" ? selectedRegion : undefined,
@@ -234,13 +201,8 @@ export default function ConfessionsPage() {
     }
     
     try {
-      await createConfession({
-        title: newTitle.trim(),
-        content: newBody.trim(),
-        authorId: user.id,
-        university: userUniversity || undefined,
-        isAnonymous,
-      });
+      // TODO: Implement createConfession in unified hook
+      throw new Error('Create confession not implemented in unified hook');
       
       // Reset form and close modal
       setNewTitle("");
@@ -249,8 +211,8 @@ export default function ConfessionsPage() {
       setIsPostModalOpen(false);
       
       // Refresh confessions and daily count
-      refreshConfessions();
-      refreshUserConfessions();
+      refresh('posts');
+      refresh('myPosts');
       fetchDailyConfessionCount();
       
       toast({
@@ -270,28 +232,15 @@ export default function ConfessionsPage() {
   const handleVote = useCallback(async (confessionId: string, voteType: 'BELIEVE' | 'DOUBT') => {
     if (!user?.id) return;
     
-    // Immediately call the vote function without await to make it instant
+    // Use unified vote function for all tabs
     try {
-      if (activeTab === "saved") {
-        // Use saved confessions vote function for saved section
-        voteOnSavedConfession(confessionId, voteType).catch(error => {
-          console.error("Failed to vote on saved confession:", error);
-        });
-      } else if (activeTab === "my-posts") {
-        // Use main confessions vote function for my-posts section
-        voteOnConfession(confessionId, voteType).catch(error => {
-          console.error("Failed to vote on user confession:", error);
-        });
-      } else {
-        // Use main confessions vote function for posts/hottest sections
-        voteOnConfession(confessionId, voteType).catch(error => {
-          console.error("Failed to vote on confession:", error);
-        });
-      }
+      voteOnConfession(confessionId, voteType).catch((error: any) => {
+        console.error("Failed to vote on confession:", error);
+      });
     } catch (error) {
       console.error("Failed to vote:", error);
     }
-  }, [user?.id, activeTab, voteOnConfession, voteOnSavedConfession]);
+  }, [user?.id, voteOnConfession]);
   
   const handleToggleSave = async (confessionId: string) => {
     if (!user?.id) return;
@@ -572,7 +521,7 @@ export default function ConfessionsPage() {
                 confessionId={post.id}
                 isVisible={openCommentSections.has(post.id)}
                 onClose={() => toggleCommentSection(post.id)}
-                updateCommentCount={updateCommentCount}
+                updateCommentCount={() => {}}
                 user={user}
               />
             )}
@@ -586,16 +535,16 @@ export default function ConfessionsPage() {
       case "posts":
         return (
           <InfiniteScrollContainer
-            hasMore={hasMore}
-            loadMore={loadMore}
-            loading={confessionsLoading}
-            loadingMore={loadingMore}
+            hasMore={hasMore.posts}
+            loadMore={() => loadMore('posts')}
+            loading={loading.posts}
+            loadingMore={false}
             className="mt-6"
           >
-            {confessionsLoading ? (
+            {loading.posts ? (
               <ConfessionListSkeleton count={5} />
             ) : (
-              renderPosts(confessions)
+              renderPosts(posts)
             )}
           </InfiniteScrollContainer>
         );
@@ -603,16 +552,16 @@ export default function ConfessionsPage() {
       case "hottest":
         return (
           <InfiniteScrollContainer
-            hasMore={hasMore}
-            loadMore={loadMore}
-            loading={confessionsLoading}
-            loadingMore={loadingMore}
+            hasMore={hasMore.hottest}
+            loadMore={() => loadMore('hottest')}
+            loading={loading.hottest}
+            loadingMore={false}
             className="mt-6"
           >
-            {confessionsLoading ? (
+            {loading.hottest ? (
               <ConfessionListSkeleton count={5} />
             ) : (
-              renderPosts(confessions)
+              renderPosts(hottest)
             )}
           </InfiniteScrollContainer>
         );
@@ -673,7 +622,7 @@ export default function ConfessionsPage() {
         );
         
       case "saved":
-        if (savedLoading) {
+        if (loading.saved) {
           return <div className="mt-6 text-center text-gray-600">Loading saved confessions...</div>;
         }
         return savedConfessions.length ? renderPosts(savedConfessions) : (
@@ -686,13 +635,13 @@ export default function ConfessionsPage() {
         }
         return (
           <InfiniteScrollContainer
-            hasMore={userConfessionsHasMore}
-            loadMore={loadMoreUserConfessions}
-            loading={userConfessionsLoading}
-            loadingMore={userConfessionsLoadingMore}
+            hasMore={hasMore.myPosts}
+            loadMore={() => loadMore('myPosts')}
+            loading={loading.myPosts}
+            loadingMore={false}
             className="mt-6"
           >
-            {userConfessionsLoading ? (
+            {loading.myPosts ? (
               <ConfessionListSkeleton count={5} />
             ) : userConfessions.length > 0 ? (
               renderPosts(userConfessions)
@@ -734,6 +683,7 @@ export default function ConfessionsPage() {
                   setSearchQuery("");
                   setSelectedRegion("all");
                 }
+                // No need to sync vote states with unified hook - it's already synchronized
               }}
               className={clsx(
                 "py-2 text-xs sm:text-sm md:text-base lg:text-lg font-medium whitespace-nowrap transition-colors px-1 sm:px-2",

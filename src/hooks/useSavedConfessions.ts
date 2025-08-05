@@ -2,9 +2,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Confession } from './useConfessions';
 import { useVoteState } from './useVoteState';
+import { useTabVisibility } from './useTabVisibility';
 
 export function useSavedConfessions(userId?: string) {
-  const { getVoteState, updateVoteState, completeVote, isVotePending } = useVoteState();
+  const { getVoteState, updateVoteState, completeVote, isVotePending, subscribeToVoteState, syncAllVoteStates } = useVoteState();
   const [savedConfessions, setSavedConfessions] = useState<Confession[]>([]);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -124,7 +125,7 @@ export function useSavedConfessions(userId?: string) {
       const currentConfession = savedConfessions.find(c => c.id === confessionId);
       if (!currentConfession) return;
 
-      const currentUserVote = currentConfession.userVote;
+      const currentUserVote = currentConfession.userVote || null;
       let action: 'vote' | 'unvote';
 
       if (currentUserVote === voteType) {
@@ -217,6 +218,63 @@ export function useSavedConfessions(userId?: string) {
       fetchSavedConfessions();
     }
   }, [userId, fetchSavedConfessions]);
+
+  // Function to sync vote states with current confessions
+  const syncVoteStates = useCallback(() => {
+    setSavedConfessions(prev => prev.map(confession => {
+      const globalState = getVoteState(confession.id);
+      if (globalState && globalState.lastUpdated > Date.now() - 30000) { // Only use recent state (30 seconds)
+        return {
+          ...confession,
+          believeCount: globalState.believeCount,
+          doubtCount: globalState.doubtCount,
+          userVote: globalState.userVote,
+        };
+      }
+      return confession;
+    }));
+  }, [getVoteState]);
+
+  // Subscribe to vote state changes for real-time updates
+  useEffect(() => {
+    const unsubscribe = subscribeToVoteState((confessionId, voteState) => {
+      // Update the confession in saved confessions if it exists
+      setSavedConfessions(prev => prev.map(confession => {
+        if (confession.id === confessionId) {
+          if (voteState) {
+            return {
+              ...confession,
+              believeCount: voteState.believeCount,
+              doubtCount: voteState.doubtCount,
+              userVote: voteState.userVote,
+            };
+          } else {
+            // Vote was reverted, we need to fetch fresh data
+            // This is a fallback - ideally we'd have the original state
+            return confession;
+          }
+        }
+        return confession;
+      }));
+    });
+
+    return unsubscribe;
+  }, [subscribeToVoteState]);
+
+  // Sync vote states when component mounts or when data changes
+  useEffect(() => {
+    if (savedConfessions.length > 0) {
+      // Small delay to ensure any pending vote states are processed
+      const timeoutId = setTimeout(() => {
+        syncVoteStates();
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [savedConfessions.length, syncVoteStates]);
+
+  // Sync vote states when tab becomes visible
+  useTabVisibility(syncVoteStates);
 
   return {
     savedConfessions,
