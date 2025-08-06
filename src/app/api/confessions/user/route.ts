@@ -1,33 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server';
 import { getConfessionsInfiniteOptimized } from '@/lib/db-utils';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
+    // Server-side authentication
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+    
+    if (!user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const cursor = searchParams.get('cursor') || undefined;
     const limit = parseInt(searchParams.get('limit') || '20');
     const sortBy = (searchParams.get('sortBy') as 'recent' | 'hot') || 'recent';
     const search = searchParams.get('search') || undefined;
-    
-    // Get the current user's ID from the session
-    // For now, we'll get it from the query params, but in a real implementation
-    // you'd get it from the session
-    const userId = searchParams.get('userId');
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
 
-    // Use the existing function but pass the userId as authorId to filter by author
+    // Use the existing function but pass the authenticated user.id as authorId to filter by author
     const result = await getConfessionsInfiniteOptimized({
       cursor,
       limit,
       sortBy,
       search,
-      userId, // This is for getting user's vote information
-      authorId: userId, // This will filter confessions by the author
+      userId: user.id, // This is for getting user's vote information
+      authorId: user.id, // This will filter confessions by the author
     });
 
     const response = NextResponse.json(result);
