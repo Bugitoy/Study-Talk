@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 
 export interface University {
   id: string;
@@ -11,6 +11,7 @@ export interface University {
   totalVotes: number;
   createdAt: string;
   updatedAt: string;
+  isPinned?: boolean;
 }
 
 export interface PaginationInfo {
@@ -21,12 +22,13 @@ export interface PaginationInfo {
   hasMore: boolean;
 }
 
-export function useUniversities(region?: string, country?: string, search?: string, page: number = 1) {
+export function useUniversities(region?: string, country?: string, search?: string, page: number = 1, userId?: string) {
   const [universities, setUniversities] = useState<University[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pinnedUniversities, setPinnedUniversities] = useState<University[]>([]);
 
   const fetchUniversities = useCallback(async (reset: boolean = false) => {
     try {
@@ -109,6 +111,73 @@ export function useUniversities(region?: string, country?: string, search?: stri
     fetchUniversities(true);
   }, [fetchUniversities]);
 
+  // Fetch pinned universities
+  const fetchPinnedUniversities = useCallback(async () => {
+    if (!userId) return;
+    
+    try {
+      const response = await fetch('/api/universities/pin');
+      if (response.ok) {
+        const data = await response.json();
+        setPinnedUniversities(data.pinnedUniversities || []);
+      }
+    } catch (error) {
+      console.error('Error fetching pinned universities:', error);
+    }
+  }, [userId]);
+
+  // Pin a university
+  const pinUniversity = useCallback(async (universityId: string) => {
+    if (!userId) return false;
+    
+    try {
+      const response = await fetch('/api/universities/pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ universityId })
+      });
+      
+      if (response.ok) {
+        await fetchPinnedUniversities();
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error pinning university:', error);
+      return false;
+    }
+  }, [userId, fetchPinnedUniversities]);
+
+  // Unpin a university
+  const unpinUniversity = useCallback(async (universityId: string) => {
+    if (!userId) return false;
+    
+    try {
+      const response = await fetch(`/api/universities/pin?universityId=${universityId}`, {
+        method: 'DELETE'
+      });
+      
+      if (response.ok) {
+        await fetchPinnedUniversities();
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error unpinning university:', error);
+      return false;
+    }
+  }, [userId, fetchPinnedUniversities]);
+
+  // Toggle pin status
+  const togglePinUniversity = useCallback(async (universityId: string) => {
+    const isPinned = pinnedUniversities.some(uni => uni.id === universityId);
+    if (isPinned) {
+      return await unpinUniversity(universityId);
+    } else {
+      return await pinUniversity(universityId);
+    }
+  }, [pinnedUniversities, pinUniversity, unpinUniversity]);
+
   useEffect(() => {
     setCurrentPage(1);
     fetchUniversities(true);
@@ -120,12 +189,31 @@ export function useUniversities(region?: string, country?: string, search?: stri
     }
   }, [currentPage]);
 
+  useEffect(() => {
+    fetchPinnedUniversities();
+  }, [fetchPinnedUniversities]);
+
+  // Combine pinned and regular universities, with pinned ones first
+  const allUniversities = useMemo(() => {
+    const pinnedIds = new Set(pinnedUniversities.map(uni => uni.id));
+    const regularUniversities = universities.filter(uni => !pinnedIds.has(uni.id));
+    
+    return [
+      ...pinnedUniversities.map(uni => ({ ...uni, isPinned: true })),
+      ...regularUniversities.map(uni => ({ ...uni, isPinned: false }))
+    ];
+  }, [pinnedUniversities, universities]);
+
   return {
-    universities,
+    universities: allUniversities,
     pagination,
     loading,
     error,
     loadMore,
     refresh,
+    pinUniversity,
+    unpinUniversity,
+    togglePinUniversity,
+    pinnedUniversities,
   };
 } 

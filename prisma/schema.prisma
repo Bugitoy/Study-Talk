@@ -72,6 +72,7 @@ model User {
   confessionVotes ConfessionVote[]
   confessionComments ConfessionComment[]
   savedConfessions SavedConfession[]
+  pinnedUniversities PinnedUniversity[]
 
   // User Quizzes
   userQuizzes UserQuiz[]
@@ -280,6 +281,7 @@ model University {
   confessionCount Int @default(0) // Counter for performance optimization
   
   confessions Confession[]
+  pinnedBy PinnedUniversity[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -373,6 +375,20 @@ model SavedConfession {
   
   @@unique([userId, confessionId])
   @@index([userId])
+}
+
+model PinnedUniversity {
+  id           String @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String
+  universityId String @db.ObjectId
+  
+  user         User @relation(fields: [userId], references: [id])
+  university   University @relation(fields: [universityId], references: [id])
+  
+  createdAt    DateTime @default(now())
+  
+  @@unique([userId, universityId])
+  @@index([universityId])
 }
 
 enum ReportType {

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import NextLayout from "@/components/NextLayout";
-import { User as UserIcon, ThumbsUp, ThumbsDown, MessageCircle, Bookmark, Plus, Flag } from "lucide-react";
+import { User as UserIcon, ThumbsUp, ThumbsDown, MessageCircle, Bookmark, Plus, Flag, Pin } from "lucide-react";
 import Image from "next/image";
 import clsx from "clsx";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -78,11 +78,21 @@ export default function ConfessionsPage() {
     isConfessionSaved,
   } = useUnifiedConfessions(user?.id);
   
-  const { universities, pagination, loading: universitiesLoading, loadMore: loadMoreUniversities } = useUniversities(
+  const { 
+    universities, 
+    pagination, 
+    loading: universitiesLoading, 
+    loadMore: loadMoreUniversities,
+    togglePinUniversity 
+  } = useUniversities(
     activeTab === "universities" ? selectedRegion : undefined,
     undefined, // country - not used for now
-    activeTab === "universities" ? searchQuery : undefined
+    activeTab === "universities" ? searchQuery : undefined,
+    1,
+    user?.id
   );
+
+
   const { regions, loading: regionsLoading } = useRegions();
 
   // Fetch user's university information
@@ -323,7 +333,10 @@ export default function ConfessionsPage() {
     return date.toLocaleDateString();
   };
   
-  const formatNumber = (num: number) => {
+  const formatNumber = (num: number | undefined | null) => {
+    if (num === undefined || num === null) {
+      return '0';
+    }
     if (num >= 1000) {
       return `${(num / 1000).toFixed(1)}k`;
     }
@@ -584,26 +597,83 @@ export default function ConfessionsPage() {
                 </span>
               )}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {universities.map((uni) => (
-              <div
-                key={uni.id}
-                className="rounded-[12px] border border-gray-300 bg-white p-4 sm:p-6 lg:p-8 shadow-sm hover:shadow-md h-48 sm:h-64 lg:h-72 flex flex-col cursor-pointer"
-                onClick={() => router.push(`/meetups/confessions/university/${uni.id}?name=${encodeURIComponent(uni.name)}`)}
-              >
-                <div className="mb-[2rem] sm:mb-[3rem]">
-                  <h3 className="font-semibold text-gray-800 text-base sm:text-lg lg:text-xl">
-                    {uni.name}
-                  </h3>
-                </div>
-                
-                <div className="space-y-1 text-xs sm:text-sm text-gray-600">
-                    <div>{formatNumber(uni.confessionCount)} confessions</div>
-                    <div>{formatNumber(uni.studentCount)} students</div>
-                    <div>{formatNumber(uni.totalVotes)} votes</div>
-                  </div>
-                </div>
-              ))}
+            
+            {/* Pinned Universities Section Header */}
+            {universities.some((uni: any) => uni.isPinned) && (
+              <div className="mb-4 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg">
+                <h3 className="text-sm font-semibold text-yellow-800 flex items-center gap-2">
+                  <Pin className="w-4 h-4 fill-current" />
+                  Pinned Universities
+                </h3>
+                <p className="text-xs text-yellow-700 mt-1">
+                  Your pinned universities appear at the top for quick access
+                </p>
+              </div>
+            )}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {universities.map((uni: any) => (
+                <div
+                  key={uni.id}
+                      className={`rounded-[12px] border p-4 sm:p-6 lg:p-8 shadow-sm hover:shadow-md h-48 sm:h-64 lg:h-72 flex flex-col cursor-pointer relative transition-all duration-200 ${
+                        uni.isPinned 
+                          ? 'border-yellow-400 bg-gradient-to-br from-yellow-50 to-white' 
+                          : 'border-gray-300 bg-white'
+                      }`}
+                      onClick={() => router.push(`/meetups/confessions/university/${uni.id}?name=${encodeURIComponent(uni.name)}`)}
+                    >
+                      {/* Pin Icon - Top Right Corner */}
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (!user) {
+                            toast({ title: 'Login Required', description: 'Please log in to pin universities.', variant: 'destructive' });
+                            return;
+                          }
+                          const success = await togglePinUniversity(uni.id);
+                          if (success) {
+                            toast({ 
+                              title: uni.isPinned ? 'University Unpinned' : 'University Pinned', 
+                              description: uni.isPinned 
+                                ? `${uni.name} has been unpinned` 
+                                : `${uni.name} has been pinned and will appear at the top of the list`,
+                              variant: 'default'
+                            });
+                          } else {
+                            toast({ 
+                              title: 'Error', 
+                              description: 'Failed to update pin status. Please try again.', 
+                              variant: 'destructive' 
+                            });
+                          }
+                        }}
+                        className={`absolute top-3 right-3 z-10 p-2 rounded-full transition-all duration-200 ${
+                          uni.isPinned 
+                            ? 'bg-yellow-400 text-white hover:bg-yellow-500' 
+                            : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                        }`}
+                        title={uni.isPinned ? 'Unpin university' : 'Pin university'}
+                      >
+                        <Pin className={`w-4 h-4 ${uni.isPinned ? 'fill-current' : ''}`} />
+                      </button>
+
+                      <div className="mb-[2rem] sm:mb-[3rem]">
+                        <h3 className="font-semibold text-gray-800 text-base sm:text-lg lg:text-xl">
+                          {uni.name}
+                        </h3>
+                        {uni.isPinned && (
+                          <div className="mt-2 text-xs text-yellow-600 font-medium">
+                            ★ Pinned
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-1 text-xs sm:text-sm text-gray-600">
+                        <div>{formatNumber(uni.confessionCount)} confessions</div>
+                        <div>{formatNumber(uni.studentCount)} students</div>
+                        <div>{formatNumber(uni.totalVotes)} votes</div>
+                      </div>
+                    </div>
+                  ))}
             </div>
             
             {/* Load More Button */}
