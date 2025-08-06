@@ -365,6 +365,35 @@ export function useUnifiedConfessions() {
         throw error;
       }
     },
+
+    // Delete confession function
+    deleteConfession: async (confessionId: string) => {
+      try {
+        const response = await fetch(`/api/confessions/${confessionId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to delete confession');
+        }
+
+        // Remove the confession from all lists
+        setState(prev => ({
+          ...prev,
+          posts: prev.posts.filter(c => c.id !== confessionId),
+          hottest: prev.hottest.filter(c => c.id !== confessionId),
+          saved: prev.saved.filter(c => c.id !== confessionId),
+          myPosts: prev.myPosts.filter(c => c.id !== confessionId),
+        }));
+
+        return { message: 'Confession deleted successfully' };
+      } catch (error) {
+        console.error('Error deleting confession:', error);
+        throw error;
+      }
+    },
     updateCommentCount: () => {},
     newPostsCount: 0,
     shouldShowNewPostsBanner: false,

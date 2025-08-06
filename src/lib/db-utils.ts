@@ -3179,3 +3179,35 @@ export async function getConfessionCommentsAggregated(confessionId: string) {
     return getConfessionCommentsOptimized(confessionId);
   }
 }
+
+export async function deleteConfession(confessionId: string) {
+  try {
+    // Use a transaction to ensure all related data is deleted atomically
+    await prisma.$transaction(async (tx) => {
+      // Delete all votes on this confession
+      await tx.confessionVote.deleteMany({
+        where: { confessionId }
+      });
+
+      // Delete all comments on this confession (including replies)
+      await tx.confessionComment.deleteMany({
+        where: { confessionId }
+      });
+
+      // Delete all saved references to this confession
+      await tx.savedConfession.deleteMany({
+        where: { confessionId }
+      });
+
+      // Finally, delete the confession itself
+      await tx.confession.delete({
+        where: { id: confessionId }
+      });
+    });
+
+    console.log(`Confession ${confessionId} deleted successfully`);
+  } catch (error) {
+    console.error('Error deleting confession:', error);
+    throw error;
+  }
+}

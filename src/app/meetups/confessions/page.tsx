@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import NextLayout from "@/components/NextLayout";
-import { User as UserIcon, ThumbsUp, ThumbsDown, MessageCircle, Bookmark, Plus, Flag, Pin } from "lucide-react";
+import { User as UserIcon, ThumbsUp, ThumbsDown, MessageCircle, Bookmark, Plus, Flag, Pin, Trash2 } from "lucide-react";
 import Image from "next/image";
 import clsx from "clsx";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -56,6 +56,10 @@ export default function ConfessionsPage() {
   const [reportType, setReportType] = useState('INAPPROPRIATE_BEHAVIOR');
   const [selectedConfessionId, setSelectedConfessionId] = useState('');
   
+  // Delete confirmation functionality
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [confessionToDelete, setConfessionToDelete] = useState<{ id: string; title: string } | null>(null);
+  
   const reportTypes = [
     { value: 'INAPPROPRIATE_BEHAVIOR', label: 'Inappropriate Behavior' },
     { value: 'HARASSMENT', label: 'Harassment' },
@@ -77,6 +81,7 @@ export default function ConfessionsPage() {
     refresh,
     isConfessionSaved,
     createConfession,
+    deleteConfession,
   } = useUnifiedConfessions();
   
   const { 
@@ -305,6 +310,63 @@ export default function ConfessionsPage() {
     }
   };
 
+  const handleDeleteConfession = async (confessionId: string) => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "Please log in to delete confessions.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await deleteConfession(confessionId);
+      toast({
+        title: "Success",
+        description: "Confession deleted successfully!",
+      });
+    } catch (error) {
+      console.error("Failed to delete confession:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete confession. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteClick = (confessionId: string, confessionTitle: string) => {
+    setConfessionToDelete({ id: confessionId, title: confessionTitle });
+    setShowDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confessionToDelete) return;
+
+    try {
+      await deleteConfession(confessionToDelete.id);
+      toast({
+        title: "Success",
+        description: "Confession deleted successfully!",
+      });
+      setShowDeleteDialog(false);
+      setConfessionToDelete(null);
+    } catch (error) {
+      console.error("Failed to delete confession:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete confession. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteDialog(false);
+    setConfessionToDelete(null);
+  };
+
   const toggleCommentSection = (confessionId: string) => {
     setOpenCommentSections(prev => {
       const newSet = new Set(prev);
@@ -339,7 +401,7 @@ export default function ConfessionsPage() {
     return num.toString();
   };
 
-  const renderPosts = (posts: Confession[]) => (
+  const renderPosts = (posts: Confession[], showDeleteIcon = false) => (
     <div className="flex flex-col gap-4 sm:gap-6 mt-4 sm:mt-6">
       {posts.map((post, index) => (
           <div
@@ -349,16 +411,32 @@ export default function ConfessionsPage() {
               animation: `fadeInUp 0.5s ease-out ${index * 0.1}s both`,
             }}
           >
-            {/* Shield Badge - Top Right Corner */}
-            {!post.isAnonymous && (
-              <div className="absolute top-2 sm:top-3 right-2 sm:right-3 z-10">
+            {/* Top Right Corner - Shield Badge and Delete Icon */}
+            <div className="absolute top-2 sm:top-3 right-2 sm:right-3 z-10 flex items-center gap-2">
+              {/* Delete Icon - Only show for user's own posts AND when showDeleteIcon is true */}
+              {showDeleteIcon && user && post.authorId === user.id && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDeleteClick(post.id, post.title);
+                  }}
+                  className="p-1 rounded-full bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 transition-colors"
+                  title="Delete post"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+              
+              {/* Shield Badge */}
+              {!post.isAnonymous && (
                 <UserReputationBadge 
                   userId={post.authorId} 
                   variant="shield"
                   className="hover:scale-110 transition-transform duration-200"
                 />
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Header */}
             <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
@@ -553,7 +631,7 @@ export default function ConfessionsPage() {
             {loading.posts ? (
               <ConfessionListSkeleton count={5} />
             ) : (
-              renderPosts(posts)
+              renderPosts(posts, false)
             )}
           </InfiniteScrollContainer>
         );
@@ -570,7 +648,7 @@ export default function ConfessionsPage() {
             {loading.hottest ? (
               <ConfessionListSkeleton count={5} />
             ) : (
-              renderPosts(hottest)
+              renderPosts(hottest, false)
             )}
           </InfiniteScrollContainer>
         );
@@ -691,7 +769,7 @@ export default function ConfessionsPage() {
         if (loading.saved) {
           return <div className="mt-6 text-center text-gray-600">Loading saved confessions...</div>;
         }
-        return savedConfessions.length ? renderPosts(savedConfessions) : (
+        return savedConfessions.length ? renderPosts(savedConfessions, false) : (
           <p className="mt-6 text-center text-gray-600">No saved confessions yet.</p>
         );
         
@@ -710,7 +788,7 @@ export default function ConfessionsPage() {
             {loading.myPosts ? (
               <ConfessionListSkeleton count={5} />
             ) : userConfessions.length > 0 ? (
-              renderPosts(userConfessions)
+              renderPosts(userConfessions, true)
             ) : (
               <p className="mt-6 text-center text-gray-600">You haven't posted any confessions yet.</p>
             )}
@@ -984,6 +1062,41 @@ export default function ConfessionsPage() {
                   disabled={!reportReason.trim()}
                 >
                   Submit
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Dialog */}
+        {showDeleteDialog && confessionToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+            <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md shadow-lg">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <Trash2 className="w-5 h-5 text-red-600" />
+                </div>
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Delete Confession</h2>
+              </div>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete this confession? This action cannot be undone.
+              </p>
+              <div className="bg-gray-50 rounded-lg p-3 mb-6">
+                <p className="text-sm text-gray-800 font-medium mb-1">Confession Title:</p>
+                <p className="text-sm text-gray-600">{confessionToDelete.title}</p>
+              </div>
+              <div className="flex flex-col sm:flex-row justify-end gap-2">
+                <button
+                  className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-black w-full sm:w-auto transition-colors"
+                  onClick={handleCancelDelete}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 w-full sm:w-auto transition-colors"
+                  onClick={handleConfirmDelete}
+                >
+                  Delete Confession
                 </button>
               </div>
             </div>
