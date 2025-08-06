@@ -604,7 +604,7 @@ export default function CreateRoom() {
             : 'bg-orange-300 hover:bg-orange-200'
         }`}
         onClick={handleNext}
-        disabled={isCreating || isRateLimited || !isRoomNameValid}
+        disabled={isCreating || isRateLimited}
         aria-label="Create study group room"
         aria-describedby="submit-help"
       >
