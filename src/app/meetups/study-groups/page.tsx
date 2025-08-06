@@ -835,7 +835,27 @@ const StudyGroups = () => {
             <>
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="animate-pulse">
-                  <div className="bg-gray-200 rounded-lg h-32 w-full"></div>
+                  <div className="bg-gray-100 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 flex flex-col items-center w-full max-w-xs mx-auto border border-gray-200 h-48 sm:h-56">
+                    {/* Title skeleton */}
+                    <div className="bg-gray-200 rounded-lg h-6 sm:h-7 w-3/4 mb-2"></div>
+                    
+                    {/* People count skeleton */}
+                    <div className="bg-slate-200 rounded-lg h-4 sm:h-5 w-1/2 mb-3"></div>
+                    
+                    {/* Profile pictures skeleton */}
+                    <div className="flex items-center justify-center mb-4">
+                      {Array.from({ length: 3 }).map((_, idx) => (
+                        <div
+                          key={idx}
+                          className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-200 border-2 border-white -ml-1 sm:-ml-2 first:ml-0 shadow"
+                          style={{ zIndex: 10 - idx }}
+                        ></div>
+                      ))}
+                    </div>
+                    
+                    {/* Join button skeleton */}
+                    <div className="w-full bg-slate-200 rounded-lg h-8 sm:h-10"></div>
+                  </div>
                 </div>
               ))}
             </>
