@@ -71,6 +71,7 @@ model User {
   confessions Confession[]
   confessionVotes ConfessionVote[]
   confessionComments ConfessionComment[]
+  commentVotes CommentVote[]
   savedConfessions SavedConfession[]
   pinnedUniversities PinnedUniversity[]
 
@@ -343,6 +344,22 @@ model ConfessionVote {
   @@index([confessionId])
 }
 
+model CommentVote {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String
+  commentId String @db.ObjectId
+  voteType  VoteType
+  
+  user      User @relation(fields: [userId], references: [id])
+  comment   ConfessionComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([userId, commentId])
+  @@index([commentId])
+  @@index([userId])
+}
+
 model ConfessionComment {
   id           String @id @default(auto()) @map("_id") @db.ObjectId
   content      String
@@ -350,11 +367,14 @@ model ConfessionComment {
   confessionId String @db.ObjectId
   parentId     String? @db.ObjectId // for reply threading
   isAnonymous  Boolean @default(true)
+  likeCount    Int    @default(0)
+  dislikeCount Int    @default(0)
   
   author       User @relation(fields: [authorId], references: [id])
   confession   Confession @relation(fields: [confessionId], references: [id])
   parent       ConfessionComment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   replies      ConfessionComment[] @relation("CommentReplies")
+  votes        CommentVote[]
   
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

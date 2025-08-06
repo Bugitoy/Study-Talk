@@ -76,6 +76,7 @@ export default function ConfessionsPage() {
     loadMore,
     refresh,
     isConfessionSaved,
+    createConfession,
   } = useUnifiedConfessions();
   
   const { 
@@ -211,8 +212,13 @@ export default function ConfessionsPage() {
     }
     
     try {
-      // TODO: Implement createConfession in unified hook
-      throw new Error('Create confession not implemented in unified hook');
+      // Use the createConfession function from the unified hook
+      await createConfession({
+        title: newTitle.trim(),
+        content: newBody.trim(),
+        university: userUniversity || undefined,
+        isAnonymous: isAnonymous
+      });
       
       // Reset form and close modal
       setNewTitle("");

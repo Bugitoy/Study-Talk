@@ -20,7 +20,7 @@ export async function GET(
     }
 
     const { id } = await params;
-    const comments = await getConfessionCommentsOptimized(id);
+    const comments = await getConfessionCommentsOptimized(id, user.id);
     
     const response = NextResponse.json(comments);
     

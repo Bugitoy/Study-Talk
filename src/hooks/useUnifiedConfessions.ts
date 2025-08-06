@@ -336,8 +336,35 @@ export function useUnifiedConfessions() {
     refresh,
     isConfessionSaved: (confessionId: string) => savedIds.has(confessionId),
     
-    // Placeholder functions for compatibility
-    createConfession: async () => { throw new Error('Not implemented in unified hook'); },
+    // Create confession function
+    createConfession: async (data: { title: string; content: string; university?: string; isAnonymous?: boolean }) => {
+      try {
+        const response = await fetch('/api/confessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to create confession');
+        }
+
+        const newConfession = await response.json();
+
+        // Add the new confession to the posts list
+        setState(prev => ({
+          ...prev,
+          posts: [newConfession, ...prev.posts],
+          myPosts: [newConfession, ...prev.myPosts],
+        }));
+
+        return newConfession;
+      } catch (error) {
+        console.error('Error creating confession:', error);
+        throw error;
+      }
+    },
     updateCommentCount: () => {},
     newPostsCount: 0,
     shouldShowNewPostsBanner: false,

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { User as UserIcon, Send, Reply } from 'lucide-react';
+import { User as UserIcon, Send, Reply, ThumbsUp, ThumbsDown } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,6 +14,9 @@ interface Comment {
   isAnonymous: boolean;
   parentId?: string;
   createdAt: string;
+  likeCount: number;
+  dislikeCount: number;
+  userVote?: 'BELIEVE' | 'DOUBT' | null;
   author: {
     id: string;
     name?: string;
@@ -36,6 +39,72 @@ export function CommentSection({ confessionId, isVisible, onClose, updateComment
   const [newComment, setNewComment] = useState('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState('');
+
+  // Vote mutation
+  const voteMutation = useMutation({
+    mutationFn: async ({ commentId, voteType }: { commentId: string; voteType: 'BELIEVE' | 'DOUBT' }) => {
+      const response = await fetch(`/api/confessions/${confessionId}/comments/${commentId}/vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voteType }),
+      });
+      if (!response.ok) throw new Error('Failed to vote on comment');
+      return response.json();
+    },
+    onMutate: async ({ commentId, voteType }) => {
+      await queryClient.cancelQueries({ queryKey: ['comments', confessionId] });
+      
+      const previousComments = queryClient.getQueryData(['comments', confessionId]);
+      
+      // Optimistically update the comment (keep same order)
+      queryClient.setQueryData(['comments', confessionId], (old: any) => 
+        old?.map((comment: any) => {
+          if (comment.id === commentId) {
+            const currentVote = comment.userVote;
+            let newLikeCount = comment.likeCount;
+            let newDislikeCount = comment.dislikeCount;
+            let newUserVote: 'BELIEVE' | 'DOUBT' | null = voteType;
+            
+            if (currentVote === voteType) {
+              // Remove vote
+              newUserVote = null;
+              if (voteType === 'BELIEVE') newLikeCount--;
+              else newDislikeCount--;
+            } else if (currentVote) {
+              // Change vote
+              if (currentVote === 'BELIEVE') newLikeCount--;
+              else newDislikeCount--;
+              if (voteType === 'BELIEVE') newLikeCount++;
+              else newDislikeCount++;
+            } else {
+              // New vote
+              if (voteType === 'BELIEVE') newLikeCount++;
+              else newDislikeCount++;
+            }
+            
+            return {
+              ...comment,
+              likeCount: newLikeCount,
+              dislikeCount: newDislikeCount,
+              userVote: newUserVote,
+            };
+          }
+          return comment;
+        })
+      );
+      
+      return { previousComments };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousComments) {
+        queryClient.setQueryData(['comments', confessionId], context.previousComments);
+      }
+    },
+    onSettled: () => {
+      // Don't invalidate queries immediately - let the optimistic update stay
+      // Only refetch when user refreshes or navigates away and back
+    },
+  });
 
   // React Query for comments with aggressive caching
   const { data: comments = [], isLoading: loading, refetch } = useQuery({
@@ -81,6 +150,9 @@ export function CommentSection({ confessionId, isVisible, onClose, updateComment
         authorId: user?.id,
         isAnonymous: false,
         createdAt: new Date().toISOString(),
+        likeCount: 0,
+        dislikeCount: 0,
+        userVote: null,
         author: {
           id: user?.id,
           name: user?.name,
@@ -100,8 +172,8 @@ export function CommentSection({ confessionId, isVisible, onClose, updateComment
       }
     },
     onSettled: () => {
-      // Always refetch after error or success
-      queryClient.invalidateQueries({ queryKey: ['comments', confessionId] });
+      // Don't invalidate queries immediately - let the optimistic update stay
+      // Only refetch when user refreshes or navigates away and back
     },
     onSuccess: () => {
       setNewComment('');
@@ -137,6 +209,9 @@ export function CommentSection({ confessionId, isVisible, onClose, updateComment
         isAnonymous: false,
         parentId,
         createdAt: new Date().toISOString(),
+        likeCount: 0,
+        dislikeCount: 0,
+        userVote: null,
         author: {
           id: user?.id,
           name: user?.name,
@@ -160,7 +235,8 @@ export function CommentSection({ confessionId, isVisible, onClose, updateComment
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['comments', confessionId] });
+      // Don't invalidate queries immediately - let the optimistic update stay
+      // Only refetch when user refreshes or navigates away and back
     },
     onSuccess: () => {
       setReplyContent('');
@@ -190,6 +266,11 @@ export function CommentSection({ confessionId, isVisible, onClose, updateComment
     }
 
     replyMutation.mutate({ content: replyContent, parentId });
+  };
+
+  const handleVote = (commentId: string, voteType: 'BELIEVE' | 'DOUBT') => {
+    if (!user?.id) return;
+    voteMutation.mutate({ commentId, voteType });
   };
 
   const formatTimeAgo = (dateString: string) => {
@@ -290,13 +371,46 @@ export function CommentSection({ confessionId, isVisible, onClose, updateComment
                       </span>
                     </div>
                     <p className="text-gray-700 whitespace-pre-line text-xs sm:text-sm">{comment.content}</p>
-                    <button
-                      onClick={() => setReplyingTo(comment.id)}
-                      className="mt-2 text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1"
-                    >
-                      <Reply className="w-3 h-3" />
-                      <span className="hidden sm:inline">Reply</span>
-                    </button>
+                    
+                    {/* Vote and Reply Actions */}
+                    <div className="flex items-center gap-4 mt-2">
+                      {/* Like Button */}
+                      <button
+                        onClick={() => handleVote(comment.id, 'BELIEVE')}
+                        disabled={voteMutation.isPending}
+                        className={`flex items-center gap-1 text-xs transition-colors ${
+                          comment.userVote === 'BELIEVE' 
+                            ? 'text-green-600 font-semibold' 
+                            : 'text-gray-600 hover:text-green-600'
+                        }`}
+                      >
+                        <ThumbsUp className={`w-3 h-3 ${comment.userVote === 'BELIEVE' ? 'fill-current' : ''}`} />
+                        <span>{comment.likeCount || 0}</span>
+                      </button>
+                      
+                      {/* Dislike Button */}
+                      <button
+                        onClick={() => handleVote(comment.id, 'DOUBT')}
+                        disabled={voteMutation.isPending}
+                        className={`flex items-center gap-1 text-xs transition-colors ${
+                          comment.userVote === 'DOUBT' 
+                            ? 'text-red-600 font-semibold' 
+                            : 'text-gray-600 hover:text-red-600'
+                        }`}
+                      >
+                        <ThumbsDown className={`w-3 h-3 ${comment.userVote === 'DOUBT' ? 'fill-current' : ''}`} />
+                        <span>{comment.dislikeCount || 0}</span>
+                      </button>
+                      
+                      {/* Reply Button */}
+                      <button
+                        onClick={() => setReplyingTo(comment.id)}
+                        className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1"
+                      >
+                        <Reply className="w-3 h-3" />
+                        <span className="hidden sm:inline">Reply</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -351,6 +465,37 @@ export function CommentSection({ confessionId, isVisible, onClose, updateComment
                               </span>
                             </div>
                             <p className="text-xs sm:text-sm text-gray-700 whitespace-pre-line">{reply.content}</p>
+                            
+                            {/* Vote Actions for Replies */}
+                            <div className="flex items-center gap-3 mt-2">
+                              {/* Like Button */}
+                              <button
+                                onClick={() => handleVote(reply.id, 'BELIEVE')}
+                                disabled={voteMutation.isPending}
+                                className={`flex items-center gap-1 text-xs transition-colors ${
+                                  reply.userVote === 'BELIEVE' 
+                                    ? 'text-green-600 font-semibold' 
+                                    : 'text-gray-600 hover:text-green-600'
+                                }`}
+                              >
+                                <ThumbsUp className={`w-3 h-3 ${reply.userVote === 'BELIEVE' ? 'fill-current' : ''}`} />
+                                <span>{reply.likeCount || 0}</span>
+                              </button>
+                              
+                              {/* Dislike Button */}
+                              <button
+                                onClick={() => handleVote(reply.id, 'DOUBT')}
+                                disabled={voteMutation.isPending}
+                                className={`flex items-center gap-1 text-xs transition-colors ${
+                                  reply.userVote === 'DOUBT' 
+                                    ? 'text-red-600 font-semibold' 
+                                    : 'text-gray-600 hover:text-red-600'
+                                }`}
+                              >
+                                <ThumbsDown className={`w-3 h-3 ${reply.userVote === 'DOUBT' ? 'fill-current' : ''}`} />
+                                <span>{reply.dislikeCount || 0}</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>

@@ -1525,9 +1525,27 @@ export async function createConfessionComment(data: {
 
 export async function saveConfession(userId: string, confessionId: string) {
   try {
-    return await prisma.savedConfession.create({
-      data: { userId, confessionId },
+    // Use transaction to ensure atomicity
+    const result = await prisma.$transaction(async (tx) => {
+      // Create the saved confession
+      const saved = await tx.savedConfession.create({
+        data: { userId, confessionId },
+      });
+
+      // Increment the saved count
+      await tx.confession.update({
+        where: { id: confessionId },
+        data: {
+          savedCount: {
+            increment: 1
+          }
+        }
+      });
+
+      return saved;
     });
+
+    return result;
   } catch (error) {
     console.error('Error saving confession:', error);
     throw error;
@@ -1536,14 +1554,32 @@ export async function saveConfession(userId: string, confessionId: string) {
 
 export async function unsaveConfession(userId: string, confessionId: string) {
   try {
-    return await prisma.savedConfession.delete({
-      where: {
-        userId_confessionId: {
-          userId,
-          confessionId,
+    // Use transaction to ensure atomicity
+    const result = await prisma.$transaction(async (tx) => {
+      // Delete the saved confession
+      const deleted = await tx.savedConfession.delete({
+        where: {
+          userId_confessionId: {
+            userId,
+            confessionId,
+          },
         },
-      },
+      });
+
+      // Decrement the saved count
+      await tx.confession.update({
+        where: { id: confessionId },
+        data: {
+          savedCount: {
+            decrement: 1
+          }
+        }
+      });
+
+      return deleted;
     });
+
+    return result;
   } catch (error) {
     console.error('Error unsaving confession:', error);
     throw error;
@@ -2465,9 +2501,9 @@ export async function getDailyConfessionCount(userId: string, date?: Date) {
   }
 }
 
-export async function getConfessionCommentsOptimized(confessionId: string) {
+export async function getConfessionCommentsOptimized(confessionId: string, userId?: string) {
   try {
-    // Single query to get all comments with their replies in one go
+    // Single query to get all comments with their replies and user votes in one go
     const allComments = await prisma.confessionComment.findMany({
       where: {
         confessionId,
@@ -2476,6 +2512,10 @@ export async function getConfessionCommentsOptimized(confessionId: string) {
         author: {
           select: { id: true, name: true, image: true },
         },
+        votes: userId ? {
+          where: { userId },
+          select: { voteType: true },
+        } : false,
       },
       orderBy: [
         { parentId: 'asc' }, // Top-level comments first (parentId is null)
@@ -2500,13 +2540,76 @@ export async function getConfessionCommentsOptimized(confessionId: string) {
     const commentsWithReplies = topLevelComments.map(comment => ({
       ...comment,
       replies: repliesMap.get(comment.id) || [],
+      userVote: comment.votes?.[0]?.voteType || null,
     }));
 
-    return commentsWithReplies;
+    // Apply TikTok-like sorting algorithm only on fresh fetches
+    return sortCommentsTikTokStyle(commentsWithReplies);
   } catch (error) {
     console.error('Error fetching confession comments:', error);
     throw error;
   }
+}
+
+// TikTok-like comment sorting algorithm
+function sortCommentsTikTokStyle(comments: any[]) {
+  return comments.sort((a, b) => {
+    // Calculate engagement score for each comment
+    const scoreA = calculateCommentScore(a);
+    const scoreB = calculateCommentScore(b);
+    
+    // Primary sort by engagement score (descending)
+    if (scoreA !== scoreB) {
+      return scoreB - scoreA;
+    }
+    
+    // Secondary sort by recency (newer comments get slight boost)
+    const timeA = new Date(a.createdAt).getTime();
+    const timeB = new Date(b.createdAt).getTime();
+    const timeDiff = timeA - timeB;
+    
+    // If comments are within 1 hour of each other, newer gets slight boost
+    if (Math.abs(timeDiff) < 60 * 60 * 1000) {
+      return timeDiff;
+    }
+    
+    // Otherwise, stick with engagement score order
+    return 0;
+  });
+}
+
+// Calculate engagement score similar to TikTok's algorithm
+function calculateCommentScore(comment: any) {
+  const now = new Date().getTime();
+  const commentTime = new Date(comment.createdAt).getTime();
+  const hoursSinceCreation = (now - commentTime) / (1000 * 60 * 60);
+  
+  // Base engagement metrics
+  const likes = comment.likeCount || 0;
+  const dislikes = comment.dislikeCount || 0;
+  const replies = comment.replies?.length || 0;
+  
+  // Calculate net engagement (likes - dislikes)
+  const netEngagement = likes - dislikes;
+  
+  // Time decay factor (comments lose relevance over time)
+  const timeDecay = Math.pow(0.95, hoursSinceCreation / 24); // 5% decay per day
+  
+  // Engagement velocity (how quickly the comment gained engagement)
+  const engagementVelocity = netEngagement / Math.max(hoursSinceCreation, 1);
+  
+  // Reply bonus (comments that spark discussion get higher scores)
+  const replyBonus = replies * 2;
+  
+  // Controversy factor (comments with both likes and dislikes get slight boost)
+  const controversyFactor = Math.min(likes, dislikes) * 0.5;
+  
+  // Final score calculation
+  const baseScore = netEngagement + replyBonus + controversyFactor;
+  const timeAdjustedScore = baseScore * timeDecay;
+  const velocityBoost = engagementVelocity * 10;
+  
+  return timeAdjustedScore + velocityBoost;
 }
 
 export async function getConfessionsInfiniteOptimized(options: {
