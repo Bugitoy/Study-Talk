@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server';
 import { getConfessionById } from '@/lib/db-utils';
 
 export async function GET(
@@ -6,11 +7,17 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId') || undefined;
+    // Server-side authentication
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+    
+    if (!user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    const confession = await getConfessionById(id, userId);
+    const { id } = await params;
+
+    const confession = await getConfessionById(id, user.id); // Use authenticated user ID
 
     if (!confession) {
       return NextResponse.json({ error: 'Confession not found' }, { status: 404 });

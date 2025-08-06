@@ -56,7 +56,7 @@ export default function ConfessionPostPage() {
   const [reportReason, setReportReason] = useState('');
   const [reportType, setReportType] = useState('INAPPROPRIATE_BEHAVIOR');
   
-  const { toggleSave, isConfessionSaved } = useSavedConfessions(user?.id);
+  const { toggleSave, isConfessionSaved } = useSavedConfessions();
 
   const reportTypes = [
     { value: 'INAPPROPRIATE_BEHAVIOR', label: 'Inappropriate Behavior' },
@@ -69,7 +69,7 @@ export default function ConfessionPostPage() {
   useEffect(() => {
     const fetchConfession = async () => {
       try {
-        const res = await fetch(`/api/confessions/${confessionId}?userId=${user?.id || ''}`);
+        const res = await fetch(`/api/confessions/${confessionId}`);
         if (res.ok) {
           const data = await res.json();
           setConfession(data);
@@ -97,17 +97,16 @@ export default function ConfessionPostPage() {
     if (confessionId) {
       fetchConfession();
     }
-  }, [confessionId, user?.id, router, toast]);
+  }, [confessionId, router, toast]);
 
   const handleVote = async (voteType: 'BELIEVE' | 'DOUBT') => {
-    if (!user?.id || !confession) return;
+    if (!confession) return;
     
     try {
       const res = await fetch('/api/confessions/vote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user.id,
           confessionId: confession.id,
           voteType,
         }),
@@ -149,7 +148,7 @@ export default function ConfessionPostPage() {
   };
 
   const handleToggleSave = async () => {
-    if (!user?.id || !confession) return;
+    if (!confession) return;
     
     try {
       await toggleSave(confession.id);
@@ -168,7 +167,7 @@ export default function ConfessionPostPage() {
   };
 
   const handleReport = async () => {
-    if (!user?.id || !confession || !reportReason.trim()) {
+    if (!confession || !reportReason.trim()) {
       toast({
         title: "Error",
         description: "Please fill all fields.",
@@ -182,7 +181,6 @@ export default function ConfessionPostPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          reporterId: user.id, 
           reason: reportReason, 
           reportType 
         }),

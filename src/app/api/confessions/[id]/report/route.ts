@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server';
 import prisma from '@/db/prisma';
 
 export async function POST(
@@ -6,10 +7,18 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { reporterId, reason, reportType } = await req.json();
+    // Server-side authentication
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+    
+    if (!user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { reason, reportType } = await req.json();
     const { id: confessionId } = await params;
     
-    if (!reporterId || !reason || !reportType || !confessionId) {
+    if (!reason || !reportType || !confessionId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -25,7 +34,7 @@ export async function POST(
 
     const report = await prisma.report.create({
       data: {
-        reporterId,
+        reporterId: user.id, // Use authenticated user ID
         reportedId: confession.authorId,
         confessionId,
         reason,

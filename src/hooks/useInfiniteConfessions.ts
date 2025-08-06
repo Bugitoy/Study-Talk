@@ -30,22 +30,20 @@ export interface Confession {
 }
 
 export interface UseInfiniteConfessionsOptions {
-  limit?: number;
   universityId?: string;
   sortBy?: 'recent' | 'hot';
   search?: string;
+  limit?: number;
   autoRefresh?: boolean;
-  userId?: string;
 }
 
 export function useInfiniteConfessions(options: UseInfiniteConfessionsOptions = {}) {
   const {
-    limit = 20,
     universityId,
     sortBy = 'recent',
     search,
-    autoRefresh = true,
-    userId,
+    limit = 20,
+    autoRefresh = false,
   } = options;
 
   const { getVoteState, updateVoteState, completeVote, isVotePending } = useVoteState();
@@ -96,7 +94,6 @@ export function useInfiniteConfessions(options: UseInfiniteConfessionsOptions = 
       if (cursor) params.append('cursor', cursor);
       if (universityId) params.append('universityId', universityId);
       if (search) params.append('search', search);
-      if (userId) params.append('userId', userId);
 
       const response = await fetch(`/api/confessions/infinite?${params}`, {
         signal,
@@ -166,7 +163,7 @@ export function useInfiniteConfessions(options: UseInfiniteConfessionsOptions = 
       setLoadingMore(false);
       setRefreshing(false);
     }
-  }, [limit, universityId, sortBy, search, userId, confessions]);
+  }, [limit, universityId, sortBy, search]);
 
   const updateCommentCount = useCallback((confessionId: string, newCount: number) => {
     setConfessions(prev =>
@@ -259,8 +256,6 @@ export function useInfiniteConfessions(options: UseInfiniteConfessionsOptions = 
   };
 
   const voteOnConfession = async (confessionId: string, voteType: 'BELIEVE' | 'DOUBT') => {
-    if (!userId) return;
-
     try {
       // Get current state to determine action
       const currentConfession = confessions.find(c => c.id === confessionId);
@@ -314,8 +309,8 @@ export function useInfiniteConfessions(options: UseInfiniteConfessionsOptions = 
 
       // API call
       const requestBody = action === 'unvote' 
-        ? { userId, confessionId, action: 'unvote' }
-        : { userId, confessionId, voteType, action: 'vote' };
+        ? { confessionId, action: 'unvote' }
+        : { confessionId, voteType, action: 'vote' };
 
       const response = await fetch('/api/confessions/vote', {
         method: 'POST',
@@ -357,7 +352,7 @@ export function useInfiniteConfessions(options: UseInfiniteConfessionsOptions = 
   // Initial load when dependencies change
   useEffect(() => {
     reset();
-  }, [universityId, sortBy, search, userId]);
+  }, [universityId, sortBy, search]);
 
   // Auto-refresh for new posts (but don't replace current view)
   useEffect(() => {

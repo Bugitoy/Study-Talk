@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server';
 import { voteConfession, removeVoteOnConfession } from '@/lib/db-utils';
 import { createRateLimit } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
   try {
+    // Server-side authentication
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+    
+    if (!user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     // Apply rate limiting for voting (very generous)
     const VOTE_RATE_LIMIT = {
       maxAttempts: 100, // 100 votes per 5 minutes
@@ -17,22 +26,29 @@ export async function POST(req: NextRequest) {
       return rateLimitResult;
     }
 
-    const { confessionId, userId, voteType, action } = await req.json();
+    const { confessionId, voteType, action } = await req.json();
 
-    if (!confessionId || !userId) {
+    if (!confessionId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     if (action === 'unvote') {
       // Handle unvote - remove the vote completely
-      const result = await removeVoteOnConfession({ userId, confessionId });
+      const result = await removeVoteOnConfession({ 
+        userId: user.id, // Use authenticated user ID
+        confessionId 
+      });
       return NextResponse.json({ success: true, action: 'unvote', result });
     } else {
       // Handle vote - requires voteType
       if (!voteType) {
         return NextResponse.json({ error: 'Missing voteType for vote action' }, { status: 400 });
       }
-      const result = await voteConfession(confessionId, userId, voteType);
+      const result = await voteConfession(
+        confessionId, 
+        user.id, // Use authenticated user ID
+        voteType
+      );
       return NextResponse.json({ success: true, action: 'vote', result });
     }
   } catch (error) {

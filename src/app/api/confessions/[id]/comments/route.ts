@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server';
 import { getConfessionCommentsOptimized, createConfessionComment } from '@/lib/db-utils';
 import { createRateLimit } from '@/lib/rate-limit';
 import { sanitizeInput } from '@/lib/security-utils';
@@ -10,6 +11,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Server-side authentication
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+    
+    if (!user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await params;
     const comments = await getConfessionCommentsOptimized(id);
     
@@ -31,6 +40,14 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Server-side authentication
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+    
+    if (!user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     // Apply rate limiting for comments (more generous than confessions)
     const COMMENT_RATE_LIMIT = {
       maxAttempts: 50, // 50 comments per 5 minutes
@@ -45,10 +62,10 @@ export async function POST(
     }
 
     const { id } = await params;
-    const { content, authorId, isAnonymous = true, parentId } = await req.json();
+    const { content, isAnonymous = true, parentId } = await req.json();
 
-    // Input validation
-    if (!content || !authorId) {
+    // Input validation - remove authorId since we use authenticated user
+    if (!content) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -66,7 +83,7 @@ export async function POST(
 
     const comment = await createConfessionComment({
       content: sanitizedContent,
-      authorId,
+      authorId: user.id, // Use authenticated user ID
       confessionId: id,
       isAnonymous,
       parentId,

@@ -42,18 +42,15 @@ export default function UniversityConfessionsPage() {
     universityId,
     sortBy, 
     search: searchQuery,
-    autoRefresh: true,
-    userId: user?.id
+    autoRefresh: true
   });
   
   const { 
     toggleSave,
     isConfessionSaved 
-  } = useSavedConfessions(user?.id);
+  } = useSavedConfessions();
 
   const handleVote = async (confessionId: string, voteType: 'BELIEVE' | 'DOUBT') => {
-    if (!user?.id) return;
-    
     try {
       await voteOnConfession(confessionId, voteType);
     } catch (error) {
@@ -62,8 +59,6 @@ export default function UniversityConfessionsPage() {
   };
   
   const handleToggleSave = async (confessionId: string) => {
-    if (!user?.id) return;
-    
     try {
       await toggleSave(confessionId);
     } catch (error) {

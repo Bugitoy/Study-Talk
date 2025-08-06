@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server';
 import { 
   saveConfession, 
   unsaveConfession, 
@@ -8,15 +9,16 @@ import {
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
+    // Server-side authentication
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+    
+    if (!user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Temporarily use the working method until aggregation is fixed
-    const savedConfessions = await getSavedConfessions(userId);
+    // Use authenticated user ID instead of client-provided userId
+    const savedConfessions = await getSavedConfessions(user.id);
     return NextResponse.json(savedConfessions);
   } catch (error) {
     console.error('Error fetching saved confessions:', error);
@@ -26,17 +28,25 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, confessionId, action } = await req.json();
+    // Server-side authentication
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+    
+    if (!user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    if (!userId || !confessionId || !action) {
+    const { confessionId, action } = await req.json();
+
+    if (!confessionId || !action) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     if (action === 'save') {
-      const saved = await saveConfession(userId, confessionId);
+      const saved = await saveConfession(user.id, confessionId); // Use authenticated user ID
       return NextResponse.json(saved);
     } else if (action === 'unsave') {
-      await unsaveConfession(userId, confessionId);
+      await unsaveConfession(user.id, confessionId); // Use authenticated user ID
       return NextResponse.json({ success: true });
     } else {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

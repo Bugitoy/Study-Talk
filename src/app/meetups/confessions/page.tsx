@@ -76,7 +76,7 @@ export default function ConfessionsPage() {
     loadMore,
     refresh,
     isConfessionSaved,
-  } = useUnifiedConfessions(user?.id);
+  } = useUnifiedConfessions();
   
   const { 
     universities, 
@@ -240,8 +240,6 @@ export default function ConfessionsPage() {
   };
   
   const handleVote = useCallback(async (confessionId: string, voteType: 'BELIEVE' | 'DOUBT') => {
-    if (!user?.id) return;
-    
     // Use unified vote function for all tabs
     try {
       voteOnConfession(confessionId, voteType).catch((error: any) => {
@@ -250,11 +248,9 @@ export default function ConfessionsPage() {
     } catch (error) {
       console.error("Failed to vote:", error);
     }
-  }, [user?.id, voteOnConfession]);
+  }, [voteOnConfession]);
   
   const handleToggleSave = async (confessionId: string) => {
-    if (!user?.id) return;
-    
     try {
       await toggleSave(confessionId);
     } catch (error) {
@@ -263,7 +259,7 @@ export default function ConfessionsPage() {
   };
   
   const handleReport = async () => {
-    if (!user?.id || !selectedConfessionId || !reportReason.trim()) {
+    if (!selectedConfessionId || !reportReason.trim()) {
       toast({
         title: "Error",
         description: "Please fill all fields.",
@@ -277,7 +273,6 @@ export default function ConfessionsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          reporterId: user.id, 
           reason: reportReason, 
           reportType 
         }),
@@ -288,25 +283,20 @@ export default function ConfessionsPage() {
           title: "Success",
           description: "Report submitted successfully!",
         });
+        setShowReportDialog(false);
+        setReportReason('');
+        setSelectedConfessionId('');
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to submit report.",
-          variant: "destructive",
-        });
+        throw new Error('Failed to submit report');
       }
-    } catch (err) {
+    } catch (error) {
+      console.error("Failed to submit report:", error);
       toast({
         title: "Error",
-        description: "Failed to submit report.",
+        description: "Failed to submit report. Please try again.",
         variant: "destructive",
       });
     }
-    
-    setShowReportDialog(false);
-    setReportReason('');
-    setSelectedConfessionId('');
-    setReportType('INAPPROPRIATE_BEHAVIOR');
   };
 
   const toggleCommentSection = (confessionId: string) => {

@@ -4,61 +4,38 @@ import { Confession } from './useConfessions';
 import { useVoteState } from './useVoteState';
 import { useTabVisibility } from './useTabVisibility';
 
-export function useSavedConfessions(userId?: string) {
-  const { getVoteState, updateVoteState, completeVote, isVotePending, subscribeToVoteState, syncAllVoteStates } = useVoteState();
+export function useSavedConfessions() {
   const [savedConfessions, setSavedConfessions] = useState<Confession[]>([]);
-  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchSavedConfessions = useCallback(async () => {
-    if (!userId) return;
-
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/confessions/saved?userId=${userId}`);
+      const response = await fetch('/api/confessions/saved');
       if (!response.ok) {
         throw new Error('Failed to fetch saved confessions');
       }
 
-      const confessions = await response.json();
-      
-      // Sync confessions with global vote state
-      const syncedConfessions = confessions.map((confession: Confession) => {
-        const globalState = getVoteState(confession.id);
-        if (globalState && globalState.lastUpdated > Date.now() - 30000) { // Only use recent state (30 seconds)
-          return {
-            ...confession,
-            believeCount: globalState.believeCount,
-            doubtCount: globalState.doubtCount,
-            userVote: globalState.userVote,
-          };
-        }
-        return confession;
-      });
-      
-      setSavedConfessions(syncedConfessions);
-      setSavedIds(new Set(syncedConfessions.map((c: Confession) => c.id)));
+      const data = await response.json();
+      setSavedConfessions(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : 'Failed to fetch saved confessions');
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, []);
 
-  const saveConfession = async (confessionId: string) => {
-    if (!userId) return;
-
+  const saveConfession = useCallback(async (confessionId: string) => {
     try {
       const response = await fetch('/api/confessions/saved', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId,
           confessionId,
-          action: 'save',
+          action: 'save'
         }),
       });
 
@@ -66,26 +43,21 @@ export function useSavedConfessions(userId?: string) {
         throw new Error('Failed to save confession');
       }
 
-      setSavedIds(prev => new Set(Array.from(prev).concat([confessionId])));
-      // Refresh the full list to get the complete confession data
+      // Refresh the list
       await fetchSavedConfessions();
     } catch (error) {
-      console.error('Error saving confession:', error);
       throw error;
     }
-  };
+  }, [fetchSavedConfessions]);
 
-  const unsaveConfession = async (confessionId: string) => {
-    if (!userId) return;
-
+  const unsaveConfession = useCallback(async (confessionId: string) => {
     try {
       const response = await fetch('/api/confessions/saved', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId,
           confessionId,
-          action: 'unsave',
+          action: 'unsave'
         }),
       });
 
@@ -93,88 +65,87 @@ export function useSavedConfessions(userId?: string) {
         throw new Error('Failed to unsave confession');
       }
 
-      setSavedIds(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(confessionId);
-        return newSet;
-      });
-      setSavedConfessions(prev => prev.filter(c => c.id !== confessionId));
+      // Refresh the list
+      await fetchSavedConfessions();
     } catch (error) {
-      console.error('Error unsaving confession:', error);
       throw error;
     }
-  };
+  }, [fetchSavedConfessions]);
 
-  const toggleSave = async (confessionId: string) => {
-    if (savedIds.has(confessionId)) {
-      await unsaveConfession(confessionId);
-    } else {
-      await saveConfession(confessionId);
+  const toggleSave = useCallback(async (confessionId: string) => {
+    try {
+      const isCurrentlySaved = savedConfessions.some(c => c.id === confessionId);
+      
+      if (isCurrentlySaved) {
+        await unsaveConfession(confessionId);
+      } else {
+        await saveConfession(confessionId);
+      }
+    } catch (error) {
+      throw error;
     }
-  };
+  }, [savedConfessions, saveConfession, unsaveConfession]);
 
-  const isConfessionSaved = (confessionId: string) => {
-    return savedIds.has(confessionId);
-  };
+  const isConfessionSaved = useCallback((confessionId: string) => {
+    return savedConfessions.some(c => c.id === confessionId);
+  }, [savedConfessions]);
 
-  const voteOnConfession = async (confessionId: string, voteType: 'BELIEVE' | 'DOUBT') => {
-    if (!userId) return;
-
+  // Vote on confession
+  const voteOnConfession = useCallback(async (confessionId: string, voteType: 'BELIEVE' | 'DOUBT') => {
     try {
       // Get current state to determine action
       const currentConfession = savedConfessions.find(c => c.id === confessionId);
       if (!currentConfession) return;
 
-      const currentUserVote = currentConfession.userVote || null;
+      const currentUserVote = currentConfession.userVote;
       let action: 'vote' | 'unvote';
+      let newUserVote: 'BELIEVE' | 'DOUBT' | null;
+      let believeChange = 0;
+      let doubtChange = 0;
 
       if (currentUserVote === voteType) {
         // User clicked the same button - unvote
         action = 'unvote';
+        newUserVote = null;
+        if (voteType === 'BELIEVE') believeChange = -1;
+        if (voteType === 'DOUBT') doubtChange = -1;
       } else {
         // User clicked different button or no previous vote
         action = 'vote';
+        newUserVote = voteType;
+        
+        if (currentUserVote === 'BELIEVE') {
+          // Had BELIEVE, switching to DOUBT
+          believeChange = -1;
+          doubtChange = 1;
+        } else if (currentUserVote === 'DOUBT') {
+          // Had DOUBT, switching to BELIEVE
+          believeChange = 1;
+          doubtChange = -1;
+        } else {
+          // No previous vote
+          if (voteType === 'BELIEVE') believeChange = 1;
+          if (voteType === 'DOUBT') doubtChange = 1;
+        }
       }
 
-      // Check if vote is already pending
-      if (isVotePending(confessionId, voteType)) {
-        return; // Vote already in progress, ignore this click
-      }
-
-      // Update global vote state (this will prevent duplicate votes across tabs)
-      const stateUpdated = updateVoteState(
-        confessionId,
-        voteType,
-        action,
-        currentConfession.believeCount,
-        currentConfession.doubtCount,
-        currentUserVote
-      );
-
-      if (!stateUpdated) {
-        return; // Vote already in progress
-      }
-
-      // Apply optimistic update to local state
-      const globalState = getVoteState(confessionId);
-      if (globalState) {
-        setSavedConfessions(prev => prev.map(confession => {
-          if (confession.id === confessionId) {
-            return {
-              ...confession,
-              believeCount: globalState.believeCount,
-              doubtCount: globalState.doubtCount,
-              userVote: globalState.userVote,
-            };
-          }
-          return confession;
-        }));
-      }
+      // Optimistic update
+      setSavedConfessions(prev => prev.map(confession => {
+        if (confession.id === confessionId) {
+          return {
+            ...confession,
+            believeCount: Math.max(0, confession.believeCount + believeChange),
+            doubtCount: Math.max(0, confession.doubtCount + doubtChange),
+            userVote: newUserVote,
+          };
+        }
+        return confession;
+      }));
 
       // API call
       const requestBody = action === 'unvote' 
-        ? { userId, confessionId, action: 'unvote' }
-        : { userId, confessionId, voteType, action: 'vote' };
+        ? { confessionId, action: 'unvote' }
+        : { confessionId, voteType, action: 'vote' };
 
       const response = await fetch('/api/confessions/vote', {
         method: 'POST',
@@ -184,97 +155,30 @@ export function useSavedConfessions(userId?: string) {
 
       if (!response.ok) {
         // Revert optimistic update on error
-        completeVote(confessionId, voteType, false);
-        
-        // Revert local state
         setSavedConfessions(prev => prev.map(confession => {
           if (confession.id === confessionId) {
             return {
               ...confession,
-              believeCount: currentConfession.believeCount,
-              doubtCount: currentConfession.doubtCount,
+              believeCount: Math.max(0, confession.believeCount - believeChange),
+              doubtCount: Math.max(0, confession.doubtCount - doubtChange),
               userVote: currentUserVote,
             };
           }
           return confession;
         }));
-        
         throw new Error('Failed to vote on confession');
       }
 
-      // Mark vote as completed successfully
-      completeVote(confessionId, voteType, true);
-
       return await response.json();
     } catch (error) {
-      // Mark vote as failed
-      completeVote(confessionId, voteType, false);
       throw error;
     }
-  };
+  }, [savedConfessions]);
 
+  // Initial load
   useEffect(() => {
-    if (userId) {
-      fetchSavedConfessions();
-    }
-  }, [userId, fetchSavedConfessions]);
-
-  // Function to sync vote states with current confessions
-  const syncVoteStates = useCallback(() => {
-    setSavedConfessions(prev => prev.map(confession => {
-      const globalState = getVoteState(confession.id);
-      if (globalState && globalState.lastUpdated > Date.now() - 30000) { // Only use recent state (30 seconds)
-        return {
-          ...confession,
-          believeCount: globalState.believeCount,
-          doubtCount: globalState.doubtCount,
-          userVote: globalState.userVote,
-        };
-      }
-      return confession;
-    }));
-  }, [getVoteState]);
-
-  // Subscribe to vote state changes for real-time updates
-  useEffect(() => {
-    const unsubscribe = subscribeToVoteState((confessionId, voteState) => {
-      // Update the confession in saved confessions if it exists
-      setSavedConfessions(prev => prev.map(confession => {
-        if (confession.id === confessionId) {
-          if (voteState) {
-            return {
-              ...confession,
-              believeCount: voteState.believeCount,
-              doubtCount: voteState.doubtCount,
-              userVote: voteState.userVote,
-            };
-          } else {
-            // Vote was reverted, we need to fetch fresh data
-            // This is a fallback - ideally we'd have the original state
-            return confession;
-          }
-        }
-        return confession;
-      }));
-    });
-
-    return unsubscribe;
-  }, [subscribeToVoteState]);
-
-  // Sync vote states when component mounts or when data changes
-  useEffect(() => {
-    if (savedConfessions.length > 0) {
-      // Small delay to ensure any pending vote states are processed
-      const timeoutId = setTimeout(() => {
-        syncVoteStates();
-      }, 100);
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [savedConfessions.length, syncVoteStates]);
-
-  // Sync vote states when tab becomes visible
-  useTabVisibility(syncVoteStates);
+    fetchSavedConfessions();
+  }, [fetchSavedConfessions]);
 
   return {
     savedConfessions,

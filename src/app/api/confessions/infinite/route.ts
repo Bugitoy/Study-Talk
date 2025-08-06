@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server';
 import { 
   getConfessionsInfiniteOptimized,
   getConfessionsAggregated
@@ -8,13 +9,23 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
+    // Server-side authentication
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+    
+    if (!user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const cursor = searchParams.get('cursor') || undefined;
     const limit = parseInt(searchParams.get('limit') || '20');
     const universityId = searchParams.get('universityId') || undefined;
     const sortBy = (searchParams.get('sortBy') as 'recent' | 'hot') || 'recent';
     const search = searchParams.get('search') || undefined;
-    const userId = searchParams.get('userId') || undefined;
+    
+    // Use authenticated user ID instead of client-provided userId
+    const userId = user.id;
     
     // Temporarily use the working method until aggregation is fixed
     const result = await getConfessionsInfiniteOptimized({

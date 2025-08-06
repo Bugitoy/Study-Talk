@@ -35,7 +35,6 @@ export interface UseConfessionsOptions {
   sortBy?: 'recent' | 'hot';
   search?: string;
   autoRefresh?: boolean;
-  userId?: string;
 }
 
 export function useConfessions(options: UseConfessionsOptions = {}) {
@@ -46,7 +45,6 @@ export function useConfessions(options: UseConfessionsOptions = {}) {
     sortBy = 'recent',
     search,
     autoRefresh = false,
-    userId,
   } = options;
 
   const [confessions, setConfessions] = useState<Confession[]>([]);
@@ -72,7 +70,6 @@ export function useConfessions(options: UseConfessionsOptions = {}) {
 
       if (universityId) params.append('universityId', universityId);
       if (search) params.append('search', search);
-      if (userId) params.append('userId', userId);
 
       const response = await fetch(`/api/confessions?${params}`);
       if (!response.ok) {
@@ -103,7 +100,7 @@ export function useConfessions(options: UseConfessionsOptions = {}) {
         setIsBackgroundRefreshing(false);
       }
     }
-  }, [page, limit, universityId, sortBy, search, userId]);
+  }, [page, limit, universityId, sortBy, search]);
 
   // Smart merge function that preserves UI state while updating data
   const smoothMergeConfessions = (existing: Confession[], fresh: Confession[]): Confession[] => {
@@ -151,7 +148,6 @@ export function useConfessions(options: UseConfessionsOptions = {}) {
   const createConfession = async (data: {
     title: string;
     content: string;
-    authorId: string;
     university?: string;
     isAnonymous?: boolean;
   }) => {
@@ -184,8 +180,6 @@ export function useConfessions(options: UseConfessionsOptions = {}) {
   };
 
   const voteOnConfession = async (confessionId: string, voteType: 'BELIEVE' | 'DOUBT') => {
-    if (!userId) return;
-
     try {
       // Get current state to determine action
       const currentConfession = confessions.find(c => c.id === confessionId);
@@ -238,8 +232,8 @@ export function useConfessions(options: UseConfessionsOptions = {}) {
 
       // API call
       const requestBody = action === 'unvote' 
-        ? { userId, confessionId, action: 'unvote' }
-        : { userId, confessionId, voteType, action: 'vote' };
+        ? { confessionId, action: 'unvote' }
+        : { confessionId, voteType, action: 'vote' };
 
       const response = await fetch('/api/confessions/vote', {
         method: 'POST',

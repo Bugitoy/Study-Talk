@@ -30,7 +30,7 @@ interface UnifiedConfessionsState {
   };
 }
 
-export function useUnifiedConfessions(userId?: string) {
+export function useUnifiedConfessions() {
   const { getVoteState, updateVoteState, completeVote, isVotePending, subscribeToVoteState } = useVoteState();
   
   const [state, setState] = useState<UnifiedConfessionsState>({
@@ -66,8 +66,6 @@ export function useUnifiedConfessions(userId?: string) {
     cursor?: string,
     append = false
   ) => {
-    if (!userId && (tab === 'saved' || tab === 'myPosts')) return;
-
     try {
       setState(prev => ({
         ...prev,
@@ -88,11 +86,9 @@ export function useUnifiedConfessions(userId?: string) {
           break;
         case 'saved':
           endpoint = '/api/confessions/saved';
-          params.set('userId', userId!);
           break;
         case 'myPosts':
           endpoint = '/api/confessions/user';
-          params.set('userId', userId!);
           params.set('sortBy', 'recent');
           break;
       }
@@ -139,12 +135,10 @@ export function useUnifiedConfessions(userId?: string) {
         loading: { ...prev.loading, [tab]: false }
       }));
     }
-  }, [userId, getVoteState]);
+  }, [getVoteState]);
 
   // Vote on confession (unified across all tabs)
   const voteOnConfession = useCallback(async (confessionId: string, voteType: 'BELIEVE' | 'DOUBT') => {
-    if (!userId) return;
-
     try {
       // Find confession in any tab to get current state
       const allConfessions = [...state.posts, ...state.hottest, ...state.saved, ...state.myPosts];
@@ -199,8 +193,8 @@ export function useUnifiedConfessions(userId?: string) {
 
       // API call
       const requestBody = action === 'unvote'
-        ? { userId, confessionId, action: 'unvote' }
-        : { userId, confessionId, voteType, action: 'vote' };
+        ? { confessionId, action: 'unvote' }
+        : { confessionId, voteType, action: 'vote' };
 
       const response = await fetch('/api/confessions/vote', {
         method: 'POST',
@@ -241,12 +235,10 @@ export function useUnifiedConfessions(userId?: string) {
       completeVote(confessionId, voteType, false);
       throw error;
     }
-  }, [userId, state, isVotePending, updateVoteState, getVoteState, completeVote]);
+  }, [state, isVotePending, updateVoteState, getVoteState, completeVote]);
 
   // Save/unsave confession
   const toggleSave = useCallback(async (confessionId: string) => {
-    if (!userId) return;
-
     try {
       const isCurrentlySaved = savedIds.has(confessionId);
       const action = isCurrentlySaved ? 'unsave' : 'save';
@@ -254,7 +246,7 @@ export function useUnifiedConfessions(userId?: string) {
       const response = await fetch('/api/confessions/saved', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, confessionId, action }),
+        body: JSON.stringify({ confessionId, action }),
       });
 
       if (!response.ok) throw new Error(`Failed to ${action} confession`);
@@ -278,7 +270,7 @@ export function useUnifiedConfessions(userId?: string) {
       console.error('Error toggling save:', error);
       throw error;
     }
-  }, [userId, savedIds, fetchConfessions]);
+  }, [savedIds, fetchConfessions]);
 
   // Subscribe to vote state changes
   useEffect(() => {
@@ -313,11 +305,9 @@ export function useUnifiedConfessions(userId?: string) {
   useEffect(() => {
     fetchConfessions('posts');
     fetchConfessions('hottest');
-    if (userId) {
-      fetchConfessions('saved');
-      fetchConfessions('myPosts');
-    }
-  }, [userId, fetchConfessions]);
+    fetchConfessions('saved');
+    fetchConfessions('myPosts');
+  }, [fetchConfessions]);
 
   // Load more for a specific tab
   const loadMore = useCallback((tab: 'posts' | 'hottest' | 'saved' | 'myPosts') => {

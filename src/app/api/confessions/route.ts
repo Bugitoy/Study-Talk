@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server';
 import { 
   createConfession, 
   getConfessions, 
@@ -11,6 +12,14 @@ import prisma from '@/db/prisma';
 
 export async function GET(req: NextRequest) {
   try {
+    // Server-side authentication
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+    
+    if (!user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
@@ -18,7 +27,8 @@ export async function GET(req: NextRequest) {
     const sortBy = (searchParams.get('sortBy') as 'recent' | 'hot') || 'recent';
     const search = searchParams.get('search') || undefined;
 
-    const userId = searchParams.get('userId') || undefined;
+    // Use authenticated user ID instead of client-provided userId
+    const userId = user.id;
     
     const confessions = await getConfessions({
       page,
@@ -38,6 +48,14 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    // Server-side authentication
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+    
+    if (!user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     // Apply rate limiting
     const rateLimit = createRateLimit(CONFESSION_RATE_LIMIT);
     const rateLimitResult = rateLimit(req);
@@ -46,32 +64,32 @@ export async function POST(req: NextRequest) {
       return rateLimitResult;
     }
 
-    const { title, content, authorId, university, isAnonymous } = await req.json();
+    const { title, content, university, isAnonymous } = await req.json();
 
-    // Input validation
-    if (!title || !content || !authorId) {
+    // Input validation - remove authorId since we use authenticated user
+    if (!title || !content) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Check user's plan and daily confession limit
-    const user = await prisma.user.findUnique({
-      where: { id: authorId },
+    // Check user's plan and daily confession limit using authenticated user ID
+    const userInfo = await prisma.user.findUnique({
+      where: { id: user.id },
       select: { plan: true }
     });
 
-    if (!user) {
+    if (!userInfo) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Check daily limit for free users (1 confession per day)
-    if (user.plan === 'free') {
-      const dailyCount = await getDailyConfessionCount(authorId);
+    if (userInfo.plan === 'free') {
+      const dailyCount = await getDailyConfessionCount(user.id);
       
       if (dailyCount >= 1) {
-        logSecurityEvent('CONFESSION_LIMIT_EXCEEDED', authorId, { 
+        logSecurityEvent('CONFESSION_LIMIT_EXCEEDED', user.id, { 
           currentCount: dailyCount, 
           limit: 1,
-          plan: user.plan 
+          plan: userInfo.plan 
         });
         return NextResponse.json({ 
           error: 'Daily confession limit reached. Free users can only post 1 confession per day. Upgrade to Plus or Premium to post more.' 
@@ -80,14 +98,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Check daily limit for plus users (15 confessions per day)
-    if (user.plan === 'plus') {
-      const dailyCount = await getDailyConfessionCount(authorId);
+    if (userInfo.plan === 'plus') {
+      const dailyCount = await getDailyConfessionCount(user.id);
       
       if (dailyCount >= 15) {
-        logSecurityEvent('CONFESSION_LIMIT_EXCEEDED', authorId, { 
+        logSecurityEvent('CONFESSION_LIMIT_EXCEEDED', user.id, { 
           currentCount: dailyCount, 
           limit: 15,
-          plan: user.plan 
+          plan: userInfo.plan 
         });
         return NextResponse.json({ 
           error: 'Daily confession limit reached. Plus users can only post 15 confessions per day. Upgrade to Premium for unlimited posts.' 
@@ -125,7 +143,7 @@ export async function POST(req: NextRequest) {
     const confession = await createConfession({
       title: sanitizedTitle,
       content: sanitizedContent,
-      authorId,
+      authorId: user.id, // Use authenticated user ID
       universityId,
       isAnonymous,
     });
