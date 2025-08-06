@@ -11,16 +11,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Server-side authentication
+    // Optional authentication - allow public access for viewing comments
     const { getUser } = getKindeServerSession();
     const user = await getUser();
     
-    if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { id } = await params;
-    const comments = await getConfessionCommentsOptimized(id, user.id);
+    // Pass user ID if authenticated, otherwise undefined for public access
+    const comments = await getConfessionCommentsOptimized(id, user?.id);
     
     const response = NextResponse.json(comments);
     

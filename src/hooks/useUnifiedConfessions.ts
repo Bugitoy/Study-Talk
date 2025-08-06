@@ -4,6 +4,7 @@ import { Confession } from './useInfiniteConfessions';
 
 export type { Confession };
 import { useVoteState } from './useVoteState';
+import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs';
 
 interface UnifiedConfessionsState {
   posts: Confession[];
@@ -32,6 +33,7 @@ interface UnifiedConfessionsState {
 
 export function useUnifiedConfessions() {
   const { getVoteState, updateVoteState, completeVote, isVotePending, subscribeToVoteState } = useVoteState();
+  const { user } = useKindeBrowserClient();
   
   const [state, setState] = useState<UnifiedConfessionsState>({
     posts: [],
@@ -139,6 +141,12 @@ export function useUnifiedConfessions() {
 
   // Vote on confession (unified across all tabs)
   const voteOnConfession = useCallback(async (confessionId: string, voteType: 'BELIEVE' | 'DOUBT') => {
+    // Check if user is authenticated
+    if (!user?.id) {
+      console.log('User not authenticated, cannot vote');
+      return;
+    }
+    
     try {
       // Find confession in any tab to get current state
       const allConfessions = [...state.posts, ...state.hottest, ...state.saved, ...state.myPosts];
@@ -239,6 +247,12 @@ export function useUnifiedConfessions() {
 
   // Save/unsave confession
   const toggleSave = useCallback(async (confessionId: string) => {
+    // Check if user is authenticated
+    if (!user?.id) {
+      console.log('User not authenticated, cannot save confession');
+      return;
+    }
+    
     try {
       const isCurrentlySaved = savedIds.has(confessionId);
       const action = isCurrentlySaved ? 'unsave' : 'save';
@@ -303,11 +317,26 @@ export function useUnifiedConfessions() {
 
   // Initial load
   useEffect(() => {
+    // Always fetch public tabs
     fetchConfessions('posts');
     fetchConfessions('hottest');
-    fetchConfessions('saved');
-    fetchConfessions('myPosts');
-  }, [fetchConfessions]);
+    
+    // Only fetch authenticated tabs if user is logged in
+    if (user?.id) {
+      fetchConfessions('saved');
+      fetchConfessions('myPosts');
+    } else {
+      // User is not authenticated, set authenticated tabs to empty
+      setState(prev => ({
+        ...prev,
+        saved: [],
+        myPosts: [],
+        loading: { ...prev.loading, saved: false, myPosts: false },
+        hasMore: { ...prev.hasMore, saved: false, myPosts: false },
+        nextCursor: { ...prev.nextCursor, saved: null, myPosts: null },
+      }));
+    }
+  }, [fetchConfessions, user?.id]);
 
   // Load more for a specific tab
   const loadMore = useCallback((tab: 'posts' | 'hottest' | 'saved' | 'myPosts') => {
@@ -338,6 +367,11 @@ export function useUnifiedConfessions() {
     
     // Create confession function
     createConfession: async (data: { title: string; content: string; university?: string; isAnonymous?: boolean }) => {
+      // Check if user is authenticated
+      if (!user?.id) {
+        throw new Error('You must be logged in to create a confession');
+      }
+      
       try {
         const response = await fetch('/api/confessions', {
           method: 'POST',

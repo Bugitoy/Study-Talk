@@ -21,13 +21,22 @@ import { useToast } from '@/hooks/use-toast';
 import ShareButton from "@/components/ShareButton";
 import { UserReputationBadge } from '@/components/UserReputationBadge';
 
-const tabs = [
-  { key: "posts", label: "Posts" },
-  { key: "hottest", label: "Hottest" },
-  { key: "universities", label: "Universities" },
-  { key: "saved", label: "Saved" },
-  { key: "my-posts", label: "My Posts" },
-];
+const getTabs = (isAuthenticated: boolean) => {
+  const baseTabs = [
+    { key: "posts", label: "Posts" },
+    { key: "hottest", label: "Hottest" },
+    { key: "universities", label: "Universities" },
+  ];
+  
+  if (isAuthenticated) {
+    baseTabs.push(
+      { key: "saved", label: "Saved" },
+      { key: "my-posts", label: "My Posts" }
+    );
+  }
+  
+  return baseTabs;
+};
 
 export default function ConfessionsPage() {
   const { user } = useKindeBrowserClient();
@@ -766,6 +775,9 @@ export default function ConfessionsPage() {
         );
         
       case "saved":
+        if (!user) {
+          return <div className="mt-6 text-center text-gray-600">Please log in to view your saved confessions.</div>;
+        }
         if (loading.saved) {
           return <div className="mt-6 text-center text-gray-600">Loading saved confessions...</div>;
         }
@@ -817,7 +829,7 @@ export default function ConfessionsPage() {
         </div>
         {/* Tab Bar */}
         <div className="flex gap-2 sm:gap-4 lg:gap-6 xl:gap-[4rem] border-b border-gray-300 mb-4 overflow-x-auto justify-center items-center px-2 sm:px-0">
-          {tabs.map((tab) => (
+          {getTabs(!!user?.id).map((tab) => (
             <button
               key={tab.key}
               onClick={() => {
@@ -915,7 +927,7 @@ export default function ConfessionsPage() {
               disabled={!user || hasReachedConfessionLimit || userLoading || confessionCountLoading}
             >
               <Plus className="w-4 h-4 sm:h-8" />
-              {!user ? 'Make a post' : hasReachedConfessionLimit ? 'Daily Limit Reached' : 'Make a post'}
+              {!user ? 'Login to Post' : hasReachedConfessionLimit ? 'Daily Limit Reached' : 'Make a post'}
             </Button>
         </div>
         {/* Content */}
