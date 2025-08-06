@@ -270,6 +270,10 @@ export function UserReputationBadge({ userId, showDetails = false, className = '
             <div className="text-sm">
               <p>Reputation: {reputation.reputationScore}</p>
               <p>Level: {reputation.reputationLevel}</p>
+              <p>Plan: {reputation.plan?.toUpperCase() || 'FREE'}</p>
+              {reputation.plan === 'free' && reputation.verificationLevel === 'USER' && (
+                <p className="text-blue-600">Upgrade to Plus/Premium for verification</p>
+              )}
               {reputation.botProbability > 0 && (
                 <p className="text-red-600">Bot Probability: {reputation.botProbability}%</p>
               )}

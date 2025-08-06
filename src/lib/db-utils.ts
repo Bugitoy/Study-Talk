@@ -2044,6 +2044,13 @@ export async function calculateUserReputation(userId: string): Promise<void> {
     // Determine reputation level
     const reputationLevel = determineReputationLevel(reputationScore);
 
+    // Calculate verification level with plan consideration
+    const verificationLevel = getVerificationLevel(
+      reputationScore,
+      botDetectionResult.probability,
+      user.plan
+    );
+
     // Update user reputation
     await prisma.user.update({
       where: { id: userId },
@@ -2054,6 +2061,7 @@ export async function calculateUserReputation(userId: string): Promise<void> {
         trustScore: Math.round(trustScore),
         botProbability: Math.round(botDetectionResult.probability),
         reputationLevel,
+        verificationLevel,
         isFlagged: botDetectionResult.riskLevel === 'CRITICAL' || botDetectionResult.riskLevel === 'HIGH',
         updatedAt: new Date()
       }
@@ -2398,10 +2406,22 @@ function hasSuspiciousPatterns(user: any) {
 }
 
 // Get verification level based on reputation and bot probability
-function getVerificationLevel(reputationScore: number, botProbability: number): string {
+function getVerificationLevel(reputationScore: number, botProbability: number, userPlan: string): string {
   if (botProbability > 70) return 'SUSPICIOUS';
-  if (reputationScore > 500) return 'TRUSTED';
-  if (reputationScore > 200) return 'VERIFIED';
+  
+  // If reputation is too low, stay as NEW_USER regardless of plan
+  if (reputationScore < 100) return 'NEW_USER';
+  
+  // Free users get "USER" badge after they're no longer new
+  if (userPlan === 'free') {
+    return 'USER';
+  }
+  
+  // Plus/Premium users get "VERIFIED" badge after they're no longer new
+  if (userPlan === 'plus' || userPlan === 'premium') {
+    return 'VERIFIED';
+  }
+  
   return 'NEW_USER';
 }
 
@@ -2443,10 +2463,18 @@ export async function getUserReputation(userId: string) {
         botProbability: true,
         verificationLevel: true,
         isFlagged: true,
+        plan: true,
       },
     });
     
     if (!user) return null;
+
+    // Calculate verification level with plan consideration
+    const verificationLevel = getVerificationLevel(
+      user.reputationScore, 
+      user.botProbability, 
+      user.plan
+    );
 
     return {
       reputationScore: user.reputationScore,
@@ -2454,9 +2482,10 @@ export async function getUserReputation(userId: string) {
       qualityScore: user.qualityScore,
       trustScore: user.trustScore,
       botProbability: user.botProbability,
-      verificationLevel: user.verificationLevel,
+      verificationLevel,
       isFlagged: user.isFlagged,
       reputationLevel: getReputationLevel(user.reputationScore),
+      plan: user.plan,
     };
   } catch (error) {
     console.error('Error getting user reputation:', error);

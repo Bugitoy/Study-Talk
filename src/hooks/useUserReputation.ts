@@ -9,6 +9,7 @@ export interface UserReputation {
   verificationLevel: string;
   isFlagged: boolean;
   reputationLevel: string;
+  plan?: string;
 }
 
 export function useUserReputation(userId?: string) {
@@ -65,6 +66,8 @@ export function useUserReputation(userId?: string) {
         return { text: '✓ Trusted', color: 'bg-green-100 text-green-800' };
       case 'VERIFIED':
         return { text: '✓ Verified', color: 'bg-blue-100 text-blue-800' };
+      case 'USER':
+        return { text: 'User', color: 'bg-gray-100 text-gray-800' };
       case 'SUSPICIOUS':
         return { text: '⚠ Suspicious', color: 'bg-red-100 text-red-800' };
       default:

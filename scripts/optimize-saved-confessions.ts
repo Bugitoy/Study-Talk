@@ -1,5 +1,5 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 const dbUtilsPath = path.join(__dirname, '../src/lib/db-utils.ts');
 

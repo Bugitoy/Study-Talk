@@ -67,7 +67,8 @@ const pricingList: PricingProps[] = [
       "30 max study-group participants",
       "30 max compete participants",
       "15 max confessions per day",
-      "full access to the talk page"
+      "full access to the talk page",
+      "Verified badge"
     ],
     href: "/api/auth/login",
     paymentLink: process.env.NEXT_PUBLIC_STRIPE_PLUS_MONTHLY_PLAN_LINK,
@@ -92,7 +93,8 @@ const pricingList: PricingProps[] = [
       "Unlimited compete participants",
       "Post unlimited confessions",
       "full access to the talk page",
-      "Priority support"
+      "Priority support",
+      "Verified badge"
     ],
     href: "/api/auth/login",
     paymentLink: process.env.NEXT_PUBLIC_STRIPE_PREMIUM_MONTHLY_PLAN_LINK,

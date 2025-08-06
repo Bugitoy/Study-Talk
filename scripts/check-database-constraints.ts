@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function checkDatabaseConstraints() {
@@ -111,8 +111,8 @@ async function checkDatabaseConstraints() {
     // 5. Check if there's a database trigger or function
     console.log('\n5. Checking database structure...');
     try {
-      // Try to get database info
-      const dbInfo = await prisma.$queryRaw`db.getCollectionNames()`;
+      // Try to get database info using $runCommandRaw instead
+      const dbInfo = await prisma.$runCommandRaw({ listCollections: 1 });
       console.log('📊 Database collections:', dbInfo);
     } catch (dbError) {
       console.log('❌ Could not get database info:', (dbError as any).message);
