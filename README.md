@@ -42,7 +42,7 @@ Pictures of how it works:
 
 Home Page:
 
-<img width="1147" height="1301" alt="Image" src="https://github.com/user-attachments/assets/d5ae60f3-f047-4516-a79a-475a064dc24b" />
+<img width="50" height="100" alt="Image" src="https://github.com/user-attachments/assets/d5ae60f3-f047-4516-a79a-475a064dc24b" />
 
 <img width="1148" height="1300" alt="Homepage-bottom" src="https://github.com/user-attachments/assets/14d16dc2-b099-449f-97b2-01d273bb4fa0" />
 
