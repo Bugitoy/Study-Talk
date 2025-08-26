@@ -54,17 +54,9 @@ Pricing Page:
 
 <img width="1148" height="1317" alt="pricingPage" src="https://github.com/user-attachments/assets/2cddc1f8-0bc3-4691-9dce-e1deda54e653" />
 
-<img width="1148" height="1318" alt="PricingPage-middle" src="https://github.com/user-attachments/assets/c1916990-df9b-43e1-bd40-066109405db8" />
-
-<img width="1144" height="1317" alt="PricingPage-bottom" src="https://github.com/user-attachments/assets/bb786ea3-7e9a-43d7-ae65-ffaf7a467448" />
-
 About Page:
 
 <img width="1150" height="1319" alt="AboutPage" src="https://github.com/user-attachments/assets/9c6e608a-4ac5-4bb2-92c4-762a46e7629c" />
-
-<img width="1148" height="1317" alt="AboutPage-middle" src="https://github.com/user-attachments/assets/c2feff79-fa58-4d54-8771-f6b1c062f7bf" />
-
-<img width="1148" height="1317" alt="AboutPage-bottom" src="https://github.com/user-attachments/assets/0ad4d74c-9a66-43da-a569-56bdb0ebcc88" />
 
 Account Page:
 
@@ -132,3 +124,392 @@ Talk Page:
 
 <img width="1900" height="928" alt="laptop-talkPage" src="https://github.com/user-attachments/assets/725cc21a-2e4f-42ee-a2fb-6cf319e4bf5a" />
 
+# 🏆 User Reputation System
+
+My most proudest achievement is the user reputation system which was implemented on the confesssions posts. The reputation system led me to learn about the different ways social media websites create strong and robust algorithms. It is designed to distinguish quality users from spam bots and improve content quality on the confession platform. It uses multiple factors to calculate a comprehensive reputation score and detect suspicious activity patterns.
+
+## 🎯 Key Features
+
+### **Multi-Factor Reputation Scoring**
+- **Activity Score (25%)**: Account age, confession count, voting activity, recent engagement
+- **Quality Score (35%)**: Average votes received, positive vote ratio, comment engagement, content length
+- **Trust Score (40%)**: Report history, account verification, consistent activity, suspicious pattern detection
+
+### **Bot Detection Algorithm**
+- **Activity Rate Analysis**: Detects rapid posting patterns
+- **Content Repetition**: Identifies duplicate or similar content
+- **Timing Patterns**: Detects unnatural posting intervals
+- **Engagement Analysis**: Flags accounts with no community interaction
+- **Suspicious Patterns**: Identifies generic content and short posts
+
+### **Verification Levels**
+- **NEW_USER**: Default for new accounts
+- **VERIFIED**: Users with reputation > 200
+- **TRUSTED**: Users with reputation > 500
+- **SUSPICIOUS**: Users with bot probability > 70%
+
+## 📊 Reputation Levels
+
+| Level | Score Range | Description |
+|-------|-------------|-------------|
+| **LEGENDARY** | 800+ | Top contributors, highly trusted |
+| **EXPERT** | 600-799 | Experienced, reliable users |
+| **TRUSTED** | 400-599 | Verified, active community members |
+| **ACTIVE** | 200-399 | Regular contributors |
+| **REGULAR** | 100-199 | Established users |
+| **NEW** | 0-99 | New or low-activity users |
+
+## 🔧 Technical Implementation
+
+### Database Schema
+
+```prisma
+model User {
+  // Reputation fields
+  reputationScore    Int @default(0)
+  activityScore      Int @default(0)
+  qualityScore       Int @default(0)
+  trustScore         Int @default(0)
+  
+  // Activity tracking
+  lastActivityAt     DateTime?
+  dailyConfessionCount Int @default(0)
+  dailyVoteCount      Int @default(0)
+  dailyCommentCount   Int @default(0)
+  
+  // Bot detection
+  botProbability     Int @default(0)
+  isFlagged          Boolean @default(false)
+  verificationLevel   String @default("NEW_USER")
+  
+  // Audit trail
+  reputationHistory  ReputationHistory[]
+}
+
+model ReputationHistory {
+  id              String @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String
+  changeType      String
+  changeAmount    Int
+  reason          String
+  previousScore   Int
+  newScore        Int
+  createdAt       DateTime @default(now())
+}
+```
+
+### Core Functions
+
+#### `calculateUserReputation(userId: string)`
+Calculates comprehensive reputation score based on:
+- Activity patterns
+- Content quality metrics
+- Community trust indicators
+- Bot detection analysis
+
+#### `monitorUserActivity(userId: string, action: 'confession' | 'vote' | 'comment')`
+Tracks user activity and triggers reputation recalculation every 10 actions.
+
+#### `detectBotActivity(user: User)`
+Analyzes user behavior for suspicious patterns:
+- High activity rates (>2 confessions/hour)
+- Repetitive content detection
+- Unnatural timing patterns
+- No engagement flags
+
+## 🛡️ Bot Detection Features
+
+### **Activity Rate Monitoring**
+```typescript
+const activityRate = user.confessions.length / accountAgeHours;
+if (activityRate > 2) {
+  botScore += 30; // High activity penalty
+}
+```
+
+### **Content Repetition Detection**
+```typescript
+// Check for duplicate titles and content
+const duplicateTitles = titles.filter((title, index) => 
+  titles.indexOf(title) !== index
+).length;
+```
+
+### **Timing Pattern Analysis**
+```typescript
+// Detect too-regular intervals (bot-like behavior)
+const regularIntervals = intervals.filter(interval => 
+  interval > 5000 && interval < 15000
+).length;
+```
+
+### **Suspicious Pattern Detection**
+```typescript
+// Check for generic content and short posts
+const genericTitles = user.confessions.filter(c => 
+  c.title.toLowerCase().includes('test') || 
+  c.title.toLowerCase().includes('hello')
+).length;
+```
+
+## 📈 Reputation Calculation
+
+### Activity Score (Max 1000 points)
+- **Account Age**: 1 point per day (max 365)
+- **Confession Activity**: 5 points per confession
+- **Voting Activity**: 1 point per vote
+- **Comment Activity**: 2 points per comment
+- **Recent Activity**: 3 points per confession in last 7 days
+
+### Quality Score (Max 1000 points)
+- **Average Votes**: 10 points per average vote received
+- **Positive Ratio**: Up to 200 points for 100% positive votes
+- **Comment Engagement**: 15 points per average comment received
+- **Content Length**: Up to 50 points for longer content
+
+### Trust Score (Max 300 points)
+- **No Reports**: 100 points bonus
+- **Account Verification**: 50 points bonus
+- **Consistent Activity**: 50 points bonus
+- **No Suspicious Patterns**: 100 points bonus
+
+## 🎨 UI Components
+
+### UserReputationBadge
+Displays user reputation and verification status with tooltips showing detailed metrics.
+
+```tsx
+<UserReputationBadge 
+  userId={user.id} 
+  showDetails={true} 
+/>
+```
+
+### Reputation Colors
+- **LEGENDARY**: Purple
+- **EXPERT**: Blue  
+- **TRUSTED**: Green
+- **ACTIVE**: Yellow
+- **REGULAR**: Orange
+- **NEW**: Gray
+
+## 🔄 Integration Points
+
+### Automatic Reputation Updates
+- **Confession Creation**: Triggers activity monitoring
+- **Voting**: Updates reputation every 10 votes
+- **Commenting**: Tracks engagement patterns
+- **Background Processing**: Periodic recalculation
+
+### API Endpoints
+- `GET /api/user/reputation/[id]`: Get user reputation data
+- Integrated with existing confession and voting APIs
+
+## 🚀 Benefits
+
+### **For Users**
+- **Quality Content**: Reputation encourages better contributions
+- **Community Trust**: Users can identify reliable sources
+- **Recognition**: Achievement system for active contributors
+
+### **For Platform**
+- **Spam Prevention**: Bot detection reduces low-quality content
+- **Content Quality**: Reputation incentivizes better posts
+- **Community Health**: Trust indicators improve user experience
+
+### **For Moderation**
+- **Automated Flagging**: Suspicious users are automatically flagged
+- **Audit Trail**: Complete history of reputation changes
+- **Risk Assessment**: Bot probability helps identify problematic accounts
+
+## 🔧 Maintenance
+
+### Daily Tasks
+- Monitor flagged users for manual review
+- Check reputation distribution for anomalies
+- Review bot detection accuracy
+
+### Weekly Tasks
+- Analyze reputation trends
+- Adjust scoring weights if needed
+- Review false positive/negative rates
+
+### Monthly Tasks
+- Comprehensive reputation audit
+- Update detection algorithms
+- Performance optimization
+
+## 📊 Monitoring & Analytics
+
+### Key Metrics
+- **Average Reputation Score**: Platform health indicator
+- **Bot Detection Rate**: Effectiveness of spam prevention
+- **Reputation Distribution**: User engagement levels
+- **False Positive Rate**: Accuracy of bot detection
+
+### Alerts
+- High bot probability users (>70%)
+- Rapid reputation changes
+- Suspicious activity patterns
+- System performance issues
+
+## 🛠️ Future Enhancements
+
+### Planned Features
+- **Reputation Decay**: Scores decrease over inactivity
+- **Community Moderation**: User-powered reputation adjustments
+- **Advanced Bot Detection**: Machine learning-based detection
+- **Reputation Marketplace**: Gamification elements
+
+### Potential Improvements
+- **Real-time Updates**: Live reputation score changes
+- **Reputation Challenges**: User engagement activities
+- **Reputation Transfer**: Legacy account benefits
+- **Reputation Insurance**: Protection against false flags
+
+---
+
+### **Step-by-Step Installation Process**
+
+#### **1. Clone Repository**
+```bash
+# Clone the main repository
+git clone https://github.com/yourusername/study-talk.git
+
+# Navigate to project directory
+cd study-talk
+
+# Verify you're in the correct directory
+ls -la
+```
+
+#### **2. Environment Variables Setup**
+
+Create a `.env` file in the root directory with the following variables:
+
+```bash
+# Database Configuration
+DATABASE_URL="mongodb+srv://username:password@cluster.mongodb.net/study-talk?retryWrites=true&w=majority"
+
+# Authentication (Kinde)
+KINDE_CLIENT_ID="your_kinde_client_id"
+KINDE_CLIENT_SECRET="your_kinde_client_secret"
+KINDE_ISSUER_URL="https://your-domain.kinde.com"
+KINDE_SITE_URL="http://localhost:3000"
+KINDE_POST_LOGOUT_REDIRECT_URL="http://localhost:3000"
+KINDE_POST_LOGIN_REDIRECT_URL="http://localhost:3000"
+
+# Stream Configuration
+STREAM_API_KEY="your_stream_api_key"
+STREAM_API_SECRET="your_stream_api_secret"
+
+# Redis Configuration
+REDIS_URL="redis://localhost:6379"
+
+# WebSocket Server
+WEBSOCKET_SERVER_URL="http://localhost:3001"
+
+# Stripe (for premium features)
+STRIPE_SECRET_KEY="sk_test_your_stripe_secret_key"
+STRIPE_WEBHOOK_SECRET="whsec_your_webhook_secret"
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_your_stripe_publishable_key"
+
+# Email Service (SendGrid)
+SENDGRID_API_KEY="your_sendgrid_api_key"
+FROM_EMAIL="noreply@studytalk.com"
+
+# Security
+JWT_SECRET="your_jwt_secret_key_here"
+NEXTAUTH_SECRET="your_nextauth_secret_here"
+NEXTAUTH_URL="http://localhost:3000"
+```
+
+**Required Service Setups:**
+
+**MongoDB Atlas:**
+1. Go to [MongoDB Atlas](https://www.mongodb.com/atlas)
+2. Create a free account and new cluster
+3. Create a database user with read/write permissions
+4. Get your connection string and replace in DATABASE_URL
+5. Add your IP address to the IP Access List
+
+**Stream Account:**
+1. Visit [GetStream.io](https://getstream.io/)
+2. Create a new app for video calling
+3. Copy your API Key and Secret from the dashboard
+4. Configure video calling settings in your Stream dashboard
+
+**Kinde Authentication:**
+1. Go to [Kinde.com](https://kinde.com/)
+2. Create a new application
+3. Configure OAuth settings and redirect URLs
+4. Copy your Client ID, Secret, and Issuer URL
+
+#### **3. Redis Setup with Docker**
+
+```bash
+# Start Redis container
+docker run -d \
+  --name study-talk-redis \
+  -p 6379:6379 \
+  redis:7-alpine
+
+# Verify Redis is running
+docker ps
+
+# Test Redis connection
+docker exec -it study-talk-redis redis-cli ping
+# Should return "PONG"
+
+# Optional: Persist Redis data
+docker run -d \
+  --name study-talk-redis \
+  -p 6379:6379 \
+  -v redis_data:/data \
+  redis:7-alpine
+```
+
+#### **4. Install Dependencies**
+
+```bash
+# Install Node.js dependencies
+npm install
+
+# Install additional development dependencies
+npm install -D @types/node @types/react @types/react-dom
+
+# Verify installation
+npm list --depth=0
+```
+
+#### **5. Database Setup**
+
+```bash
+# Generate Prisma client
+npx prisma generate
+
+# Push database schema to MongoDB
+npx prisma db push
+
+# Optional: Seed initial data
+npm run seed
+
+# Verify database connection
+npx prisma studio
+```
+
+#### **6. Start Development Server**
+
+```bash
+# Start the main Next.js application
+npm run dev
+
+# In a separate terminal, start the WebSocket server
+cd websocket
+npm install
+npm run dev
+
+# Verify both servers are running
+# Main app: http://localhost:3000
+# WebSocket: http://localhost:3001
+```
