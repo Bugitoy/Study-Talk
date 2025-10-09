@@ -46,11 +46,11 @@ This is an implementation I am **overwhelmingly proud of** as I had to learn to 
 
 <img width="1321" height="929" alt="compete-page-create-room1" src="https://github.com/user-attachments/assets/841d8024-405e-4135-8a81-cad74868e672" />
 
-<img width="904" height="824" alt="create-quiz" src="https://github.com/user-attachments/assets/e1d87d1f-62fe-42a8-84f7-77aa66f550cf" />
-
 <img width="1717" height="1319" alt="choose-a-Topic" src="https://github.com/user-attachments/assets/86f345cb-c22e-4c39-b78e-42eebf0d92bd" />
 
 <img width="1717" height="1316" alt="quizLibrary" src="https://github.com/user-attachments/assets/22fae118-06ca-4233-a012-9f5cd46b0bec" />
+
+<img width="904" height="824" alt="create-quiz" src="https://github.com/user-attachments/assets/e1d87d1f-62fe-42a8-84f7-77aa66f550cf" />
 
 <img width="1720" height="920" alt="quiz-questions" src="https://github.com/user-attachments/assets/4535d11a-872d-46e7-84ff-d4b29cd360ed" />
 
@@ -60,13 +60,8 @@ This is an implementation I am **overwhelmingly proud of** as I had to learn to 
 
 <img width="1145" height="1317" alt="ConfessionsPage" src="https://github.com/user-attachments/assets/cd167503-4dd2-4f02-a777-024a8f394b6e" />
 
-<img width="1718" height="1314" alt="Make a confessions post" src="https://github.com/user-attachments/assets/a005a126-61ce-4949-a0f6-535978edc4a1" />
-
-<img width="1704" height="1317" alt="Confessions-with-Comments" src="https://github.com/user-attachments/assets/3d51e8f2-b4c7-4784-9720-e7202ae5db3c" />
-
-<img width="1147" height="1316" alt="ConfessionsUniversitiesSection" src="https://github.com/user-attachments/assets/1ebd064d-cdc0-4590-bb0f-f09d5945cabb" />
-
 ### **Talk Page:**
+
 <img width="1900" height="928" alt="laptop-talkPage" src="https://github.com/user-attachments/assets/725cc21a-2e4f-42ee-a2fb-6cf319e4bf5a" />
 
 # 🏆 User Reputation System
