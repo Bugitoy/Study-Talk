@@ -22,35 +22,9 @@ This is an implementation I am **overwhelmingly proud of** as I had to learn to 
 
 ## 📸 **Pictures of How It Works**
 
-### **Home Page:**
-
-<img width="1148" height="1300" alt="Image" src="https://github.com/user-attachments/assets/d5ae60f3-f047-4516-a79a-475a064dc24b" />
-
-<img width="1148" height="1300" alt="Homepage-bottom" src="https://github.com/user-attachments/assets/14d16dc2-b099-449f-97b2-01d273bb4fa0" />
-
-### **Meetups Page:**
-
-<img width="1163" height="1318" alt="meetups" src="https://github.com/user-attachments/assets/280e41f2-bd2b-46ba-86d7-f603b166a023" />
-
-### **Pricing Page:**
-
-<img width="1148" height="1317" alt="pricingPage" src="https://github.com/user-attachments/assets/2cddc1f8-0bc3-4691-9dce-e1deda54e653" />
-
-### **About Page:**
-
-<img width="1150" height="1319" alt="AboutPage" src="https://github.com/user-attachments/assets/9c6e608a-4ac5-4bb2-92c4-762a46e7629c" />
-
-### **Account Page:**
-
-<img width="1161" height="1317" alt="AccountPage" src="https://github.com/user-attachments/assets/c00b9fad-81e2-41ac-9691-86c3c0a2b5fd" />
-
 ### **Login Page:**
 
 <img width="1163" height="1318" alt="loginPage" src="https://github.com/user-attachments/assets/8b070a4a-5851-46dc-b61b-8d719a7337bc" />
-
-### **Sign In Page:**
-
-<img width="1163" height="1319" alt="signin" src="https://github.com/user-attachments/assets/ace8cde0-e482-40b9-9676-5cd849b63fa1" />
 
 ### **Study Groups Page:**
 
