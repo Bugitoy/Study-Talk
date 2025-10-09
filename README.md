@@ -46,17 +46,11 @@ This is an implementation I am **overwhelmingly proud of** as I had to learn to 
 
 <img width="1321" height="929" alt="compete-page-create-room1" src="https://github.com/user-attachments/assets/841d8024-405e-4135-8a81-cad74868e672" />
 
-<img width="1713" height="1315" alt="compete-create-room" src="https://github.com/user-attachments/assets/f8c50683-f2c7-4788-975e-3ef09758d356" />
-
 <img width="904" height="824" alt="create-quiz" src="https://github.com/user-attachments/assets/e1d87d1f-62fe-42a8-84f7-77aa66f550cf" />
 
 <img width="1717" height="1319" alt="choose-a-Topic" src="https://github.com/user-attachments/assets/86f345cb-c22e-4c39-b78e-42eebf0d92bd" />
 
 <img width="1717" height="1316" alt="quizLibrary" src="https://github.com/user-attachments/assets/22fae118-06ca-4233-a012-9f5cd46b0bec" />
-
-<img width="1736" height="922" alt="setupPage" src="https://github.com/user-attachments/assets/38d30a47-0e96-444c-b251-d807f1f77f5a" />
-
-<img width="1738" height="927" alt="quizroom" src="https://github.com/user-attachments/assets/9ac2d029-9cd0-4565-9e48-c4adb3e8dd3f" />
 
 <img width="1720" height="920" alt="quiz-questions" src="https://github.com/user-attachments/assets/4535d11a-872d-46e7-84ff-d4b29cd360ed" />
 
