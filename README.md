@@ -28,9 +28,9 @@ This is an implementation I am **overwhelmingly proud of** as I had to learn to 
 
 ### **Study Groups Page:**
 
-<img width="365" height="813" alt="Screenshot 2025-08-25 222155" src="https://github.com/user-attachments/assets/636626d5-5dec-4c3e-9c4f-f797ed29e39b" />
-
 <img width="1254" height="885" alt="Screenshot 2025-08-25 155155" src="https://github.com/user-attachments/assets/24714fcb-c6e1-416c-bd28-80ff3f15e6a1" />
+
+<img width="365" height="813" alt="Screenshot 2025-08-25 222155" src="https://github.com/user-attachments/assets/636626d5-5dec-4c3e-9c4f-f797ed29e39b" />
 
 <img width="1160" height="1319" alt="Study-Group-Page" src="https://github.com/user-attachments/assets/5938d79b-ec55-4ab1-abe2-64a849982a93" />
 
@@ -44,9 +44,9 @@ This is an implementation I am **overwhelmingly proud of** as I had to learn to 
 
 <img width="926" height="928" alt="CompetePage" src="https://github.com/user-attachments/assets/c84473c2-557b-48b4-8bfa-e57a788408d1" />
 
-<img width="1321" height="929" alt="compete-page-create-room1" src="https://github.com/user-attachments/assets/841d8024-405e-4135-8a81-cad74868e672" />
-
 <img width="1717" height="1319" alt="choose-a-Topic" src="https://github.com/user-attachments/assets/86f345cb-c22e-4c39-b78e-42eebf0d92bd" />
+
+<img width="1321" height="929" alt="compete-page-create-room1" src="https://github.com/user-attachments/assets/841d8024-405e-4135-8a81-cad74868e672" />
 
 <img width="1717" height="1316" alt="quizLibrary" src="https://github.com/user-attachments/assets/22fae118-06ca-4233-a012-9f5cd46b0bec" />
 
