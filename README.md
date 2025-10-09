@@ -30,8 +30,6 @@ This is an implementation I am **overwhelmingly proud of** as I had to learn to 
 
 <img width="365" height="813" alt="Screenshot 2025-08-25 222155" src="https://github.com/user-attachments/assets/636626d5-5dec-4c3e-9c4f-f797ed29e39b" />
 
-<img width="555" height="809" alt="Screenshot 2025-08-25 222139" src="https://github.com/user-attachments/assets/3dbc2588-c304-44ec-9624-7c7b41358594" />
-
 <img width="1254" height="885" alt="Screenshot 2025-08-25 155155" src="https://github.com/user-attachments/assets/24714fcb-c6e1-416c-bd28-80ff3f15e6a1" />
 
 <img width="1160" height="1319" alt="Study-Group-Page" src="https://github.com/user-attachments/assets/5938d79b-ec55-4ab1-abe2-64a849982a93" />
@@ -75,9 +73,6 @@ This is an implementation I am **overwhelmingly proud of** as I had to learn to 
 <img width="1147" height="1316" alt="ConfessionsUniversitiesSection" src="https://github.com/user-attachments/assets/1ebd064d-cdc0-4590-bb0f-f09d5945cabb" />
 
 ### **Talk Page:**
-
-<img width="941" height="928" alt="talkPage" src="https://github.com/user-attachments/assets/01969c95-4cb4-46fd-b33a-0fddddb29c74" />
-
 <img width="1900" height="928" alt="laptop-talkPage" src="https://github.com/user-attachments/assets/725cc21a-2e4f-42ee-a2fb-6cf319e4bf5a" />
 
 # 🏆 User Reputation System
